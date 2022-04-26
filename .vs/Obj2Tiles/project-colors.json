@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "54da9b0d-75b8-43b5-a704-5870b8fda465": {
+      "ProjectGuid": "54da9b0d-75b8-43b5-a704-5870b8fda465",
+      "DisplayName": "Obj2Tiles.Library.Test",
+      "ColorIndex": 0
+    }
+  },
+  "NextColorIndex": 1
+}
