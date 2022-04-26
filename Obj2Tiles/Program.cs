@@ -23,8 +23,7 @@ namespace Obj2Tiles
             [Option('s', "stage", Required = false, HelpText = "Stage to stop at.", Default = Stage.Tiles)]
             public Stage StopAt { get; set; }
 
-            [Option('d', "divisions", Required = false, HelpText = "How many tiles divisions", Default = 2, Min = 0,
-                Max = 5)]
+            [Option('d', "divisions", Required = false, HelpText = "How many tiles divisions", Default = 2)]
             public int Divisions { get; set; }
 
             [Option('z', "zsplit", Required = false, HelpText = "Adds split along z axis", Default = false)]
