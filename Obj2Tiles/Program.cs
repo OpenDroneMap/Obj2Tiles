@@ -17,7 +17,7 @@ namespace Obj2Tiles
             [Option('i', "input", Required = true, HelpText = "Input OBJ file.")]
             public string Input { get; set; }
 
-            [Option('o', "output", Required = true, HelpText = "Output file / folder.")]
+            [Option('o', "output", Required = true, HelpText = "Output folder.")]
             public string Output { get; set; }
 
             [Option('s', "stage", Required = false, HelpText = "Stage to stop at.", Default = Stage.Tiles)]
@@ -80,6 +80,8 @@ namespace Obj2Tiles
                 $" ?> Done {count} edge splits in {sw.ElapsedMilliseconds}ms ({(double)count / sw.ElapsedMilliseconds:F2} split/ms)");
 
             Console.WriteLine(" -> Writing tiles");
+
+            Directory.CreateDirectory(opts.Output);
 
             sw.Restart();
 
