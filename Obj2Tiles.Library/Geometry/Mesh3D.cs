@@ -825,71 +825,51 @@ public class Mesh3D
                 }
                 case "f" when segs.Length == 4:
                 {
-                    var vertexIndices = new[]
-                    {
-                        segs[1].Split('/').Select(int.Parse).ToArray(),
-                        segs[2].Split('/').Select(int.Parse).ToArray(),
-                        segs[3].Split('/').Select(int.Parse).ToArray()
-                    };
+                    var first = segs[1].Split('/');
+                    var second = segs[2].Split('/');
+                    var third = segs[3].Split('/');
 
                     Face<Vertex3D> face = null;
+                  
+                    var hasTexture = first[1].Length > 0 && second[1].Length > 0 && third[1].Length > 0;
+                    
+                    // We ignore this
+                    // var hasNormals = vertexIndices[0][2] != null && vertexIndices[1][2] != null && vertexIndices[2][2] != null;
 
-                    switch (vertexIndices[0].Length)
+                    var v1 = int.Parse(first[0]);
+                    var v2 = int.Parse(second[0]);
+                    var v3 = int.Parse(third[0]);
+
+                    if (hasTexture)
                     {
-                        case 1:
-
-                            face = new Face<Vertex3D>(
-                                vertexIndices[0][0] - 1,
-                                vertexIndices[1][0] - 1,
-                                vertexIndices[2][0] - 1,
-                                vertices[vertexIndices[0][0] - 1],
-                                vertices[vertexIndices[1][0] - 1],
-                                vertices[vertexIndices[2][0] - 1]);
-
-                            break;
-
-                        case 2:
-
-                            face = new Face<Vertex3D>(
-                                vertexIndices[0][0] - 1,
-                                vertexIndices[1][0] - 1,
-                                vertexIndices[2][0] - 1,
-                                vertices[vertexIndices[0][0] - 1],
-                                vertices[vertexIndices[1][0] - 1],
-                                vertices[vertexIndices[2][0] - 1],
-                                vertexIndices[0][1] - 1,
-                                vertexIndices[1][1] - 1,
-                                vertexIndices[2][1] - 1,
-                                materialsDict[currentMaterial],
-                                textureVertices[vertexIndices[0][1] - 1],
-                                textureVertices[vertexIndices[1][1] - 1],
-                                textureVertices[vertexIndices[2][1] - 1]);
-
-                            break;
-
-                        case 3:
-
-                            // We ignore normals for now
-                            face = new Face<Vertex3D>(
-                                vertexIndices[0][0] - 1,
-                                vertexIndices[1][0] - 1,
-                                vertexIndices[2][0] - 1,
-                                vertices[vertexIndices[0][0] - 1],
-                                vertices[vertexIndices[1][0] - 1],
-                                vertices[vertexIndices[2][0] - 1],
-                                vertexIndices[0][1] - 1,
-                                vertexIndices[1][1] - 1,
-                                vertexIndices[2][1] - 1,
-                                materialsDict[currentMaterial],
-                                textureVertices[vertexIndices[0][1] - 1],
-                                textureVertices[vertexIndices[1][1] - 1],
-                                textureVertices[vertexIndices[2][1] - 1]);
-
-                            break;
-
-                        default:
-                            throw new InvalidOperationException($"Invalid vertex index: '{line}'");
+                        
+                        var vt1 = int.Parse(first[1]);
+                        var vt2 = int.Parse(second[1]);
+                        var vt3 = int.Parse(third[1]);
+                        
+                        face = new Face<Vertex3D>(
+                            v1 - 1,
+                            v2 - 1,
+                            v3 - 1,
+                            vertices[v1 - 1],
+                            vertices[v2 - 1],
+                            vertices[v3 - 1],
+                            vt1 - 1,
+                            vt2 - 1,
+                            vt3 - 1,
+                            materialsDict[currentMaterial],
+                            textureVertices[vt1 - 1],
+                            textureVertices[vt2 - 1],
+                            textureVertices[vt3 - 1]);
                     }
+                    else
+                        face = new Face<Vertex3D>(
+                            v1 - 1,
+                            v2 - 1,
+                            v3 - 1,
+                            vertices[v1 - 1],
+                            vertices[v2 - 1],
+                            vertices[v3 - 1]);
 
                     faces.Add(face);
                     break;
