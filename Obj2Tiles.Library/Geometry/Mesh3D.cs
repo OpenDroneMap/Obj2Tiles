@@ -90,9 +90,10 @@ public class Mesh3D
 
         var count = 0;
 
-        foreach (var face in Faces)
+        for (var index = 0; index < Faces.Count; index++)
         {
-
+            var face = Faces[index];
+            
             var aSide = utils.GetDimension(face.A) < q;
             var bSide = utils.GetDimension(face.B) < q;
             var cSide = utils.GetDimension(face.C) < q;
@@ -116,7 +117,6 @@ public class Mesh3D
                         leftFaces.Add(new Face<Vertex3D>(indexALeft, indexBLeft, indexCLeft, face.A, face.B, face.C,
                             indexATextureLeft, indexBTextureLeft, indexCTextureLeft,
                             face.MaterialIndex!.Value, face.TA!, face.TB!, face.TC!));
-
                     }
                     else
                     {
@@ -187,7 +187,7 @@ public class Mesh3D
                     else
                     {
                         // All on the right
-                        
+
                         var indexARight = rightVertices.AddIndex(face.A);
                         var indexBRight = rightVertices.AddIndex(face.B);
                         var indexCRight = rightVertices.AddIndex(face.C);
@@ -199,7 +199,6 @@ public class Mesh3D
                         rightFaces.Add(new Face<Vertex3D>(indexARight, indexBRight, indexCRight, face.A, face.B, face.C,
                             indexATextureRight, indexBTextureRight, indexCTextureRight,
                             face.MaterialIndex!.Value, face.TA!, face.TB!, face.TC!));
-
                     }
                 }
             }
@@ -243,8 +242,8 @@ public class Mesh3D
         var indexVLLeft = leftVertices.AddIndex(vL);
         var indexTextureVLLeft = leftTextureVertices.AddIndex(tVL);
 
-        if (Math.Abs(utils.GetDimension(vR1) - q) < double.Epsilon &&
-            Math.Abs(utils.GetDimension(vR2) - q) < double.Epsilon)
+        if (Math.Abs(utils.GetDimension(vR1) - q) < Common.Epsilon &&
+            Math.Abs(utils.GetDimension(vR2) - q) < Common.Epsilon)
         {
             // Right Vertices are on the line
 
@@ -328,8 +327,8 @@ public class Mesh3D
         var indexVRRight = rightVertices.AddIndex(vR);
         var indexTextureVRRight = rightTextureVertices.AddIndex(tVR);
 
-        if (Math.Abs(utils.GetDimension(vL1) - q) < double.Epsilon &&
-            Math.Abs(utils.GetDimension(vL2) - q) < double.Epsilon)
+        if (Math.Abs(utils.GetDimension(vL1) - q) < Common.Epsilon &&
+            Math.Abs(utils.GetDimension(vL2) - q) < Common.Epsilon)
         {
             // Left Vertices are on the line
 
@@ -500,9 +499,9 @@ public class Mesh3D
 
         var count = 0;
 
-        foreach (var face in Faces)
+        for (var index = 0; index < Faces.Count; index++)
         {
-
+            var face = Faces[index];
             var aSide = face.A.x < q;
             var bSide = face.B.x < q;
             var cSide = face.C.x < q;
@@ -513,7 +512,6 @@ public class Mesh3D
                 {
                     if (cSide)
                     {
-                        
                         // All on the left
 
                         var indexALeft = leftVertices.AddIndex(face.A);
@@ -521,11 +519,10 @@ public class Mesh3D
                         var indexCLeft = leftVertices.AddIndex(face.C);
 
                         leftFaces.Add(new Face<Vertex3D>(indexALeft, indexBLeft, indexCLeft, face.A, face.B, face.C));
-
                     }
                     else
                     {
-                        IntersectRight2D(utils, q, face.IndexC, face.IndexB, face.IndexA, leftVertices, rightVertices,
+                        IntersectRight2D(utils, q, face.IndexC, face.IndexA, face.IndexB, leftVertices, rightVertices,
                             leftFaces, rightFaces);
                         count++;
                     }
@@ -534,7 +531,7 @@ public class Mesh3D
                 {
                     if (cSide)
                     {
-                        IntersectRight2D(utils, q, face.IndexB, face.IndexA, face.IndexC, leftVertices, rightVertices,
+                        IntersectRight2D(utils, q, face.IndexB, face.IndexC, face.IndexA, leftVertices, rightVertices,
                             leftFaces, rightFaces);
                         count++;
                     }
@@ -558,7 +555,7 @@ public class Mesh3D
                     }
                     else
                     {
-                        IntersectLeft2D(utils, q, face.IndexB, face.IndexA, face.IndexC, leftVertices, rightVertices,
+                        IntersectLeft2D(utils, q, face.IndexB, face.IndexC, face.IndexA, leftVertices, rightVertices,
                             leftFaces, rightFaces);
                         count++;
                     }
@@ -574,13 +571,12 @@ public class Mesh3D
                     else
                     {
                         // All on the right
-                        
+
                         var indexARight = rightVertices.AddIndex(face.A);
                         var indexBRight = rightVertices.AddIndex(face.B);
                         var indexCRight = rightVertices.AddIndex(face.C);
                         rightFaces.Add(
                             new Face<Vertex3D>(indexARight, indexBRight, indexCRight, face.A, face.B, face.C));
-
                     }
                 }
             }
@@ -607,8 +603,8 @@ public class Mesh3D
 
         var indexVLLeft = leftVertices.AddIndex(vL);
 
-        if (Math.Abs(utils.GetDimension(vR1) - q) < double.Epsilon &&
-            Math.Abs(utils.GetDimension(vR2) - q) < double.Epsilon)
+        if (Math.Abs(utils.GetDimension(vR1) - q) < Common.Epsilon &&
+            Math.Abs(utils.GetDimension(vR2) - q) < Common.Epsilon)
         {
             // Right Vertices are on the line
 
@@ -640,7 +636,7 @@ public class Mesh3D
         var rface1 = new Face<Vertex3D>(indexT1Right, indexVR1Right, indexVR2Right, t1, vR1, vR2);
         rightFaces.Add(rface1);
 
-        var rface2 = new Face<Vertex3D>(indexT2Right, indexT1Right, indexVR2Right, t2, t1, vR2);
+        var rface2 = new Face<Vertex3D>(indexT1Right, indexVR2Right, indexT2Right, t1, vR2, t2);
         rightFaces.Add(rface2);
         
     }
@@ -655,8 +651,8 @@ public class Mesh3D
 
         var indexVRRight = rightVertices.AddIndex(vR);
 
-        if (Math.Abs(utils.GetDimension(vL1) - q) < double.Epsilon &&
-            Math.Abs(utils.GetDimension(vL2) - q) < double.Epsilon)
+        if (Math.Abs(utils.GetDimension(vL1) - q) < Common.Epsilon &&
+            Math.Abs(utils.GetDimension(vL2) - q) < Common.Epsilon)
         {
             // Left Vertices are on the line
             var indexVL1Right = rightVertices.AddIndex(vL1);
@@ -682,13 +678,13 @@ public class Mesh3D
         var indexT2Left = leftVertices.AddIndex(t2);
         var indexT2Right = rightVertices.AddIndex(t2);
 
-        var rface = new Face<Vertex3D>(indexVRRight, indexT2Right, indexT1Right, vR, t2, t1);
+        var rface = new Face<Vertex3D>(indexVRRight, indexT1Right, indexT2Right, vR, t1, t2);
         rightFaces.Add(rface);
 
-        var lface1 = new Face<Vertex3D>(indexT2Left, indexVL2Left, indexVL1Left, t2, vL2, vL1);
+        var lface1 = new Face<Vertex3D>(indexT2Left, indexVL1Left, indexVL2Left, t2, vL1, vL2);
         leftFaces.Add(lface1);
 
-        var lface2 = new Face<Vertex3D>(indexT2Left, indexVL1Left, indexT1Left, t2, vL1, t1);
+        var lface2 = new Face<Vertex3D>(indexT2Left, indexT1Left, indexVL1Left, t2, t1, vL1);
         leftFaces.Add(lface2);
 
     }
