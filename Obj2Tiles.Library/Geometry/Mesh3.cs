@@ -16,53 +16,6 @@ public class Mesh3
 
     public string Name { get; set; } = DefaultName;
 
-    public Box3 Bounds
-    {
-        get
-        {
-            var minX = double.MaxValue;
-            var minY = double.MaxValue;
-            var minZ = double.MaxValue;
-
-            var maxX = double.MinValue;
-            var maxY = double.MinValue;
-            var maxZ = double.MinValue;
-
-            foreach (var v in Vertices)
-            {
-                minX = minX < v.x ? minX : v.x;
-                minY = minY < v.y ? minY : v.y;
-                minZ = minZ < v.z ? minZ : v.z;
-
-                maxX = v.x > maxX ? maxX : v.x;
-                maxY = v.y > maxY ? maxY : v.y;
-                maxZ = v.z > maxZ ? maxZ : v.z;
-            }
-
-            return new Box3(minX, minY, minZ, maxX, maxY, maxZ);
-        }
-    }
-
-    public Vertex3 GetBaricenter()
-    {
-        var x = 0.0;
-        var y = 0.0;
-        var z = 0.0;
-
-        foreach (var v in Vertices)
-        {
-            x += v.x;
-            y += v.y;
-            z += v.z;
-        }
-
-        x /= Vertices.Count;
-        y /= Vertices.Count;
-        z /= Vertices.Count;
-
-        return new Vertex3(x, y, z);
-    }
-
     public Mesh3(string file)
     {
         InternalLoad(file);
@@ -510,9 +463,9 @@ public class Mesh3
         for (var index = 0; index < Faces.Count; index++)
         {
             var face = Faces[index];
-            var aSide = face.A.x < q;
-            var bSide = face.B.x < q;
-            var cSide = face.C.x < q;
+            var aSide = utils.GetDimension(face.A) < q;
+            var bSide = utils.GetDimension(face.B) < q;
+            var cSide = utils.GetDimension(face.C) < q;
 
             if (aSide)
             {
@@ -648,7 +601,7 @@ public class Mesh3
         rightFaces.Add(rface2);
     }
 
-    private void IntersectRight2D(IVertexUtils utils3, double q, int indexVR, int indexVL1, int indexVL2,
+    private void IntersectRight2D(IVertexUtils utils, double q, int indexVR, int indexVL1, int indexVL2,
         IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
         ICollection<Face<Vertex3>> leftFaces, ICollection<Face<Vertex3>> rightFaces)
     {
@@ -658,8 +611,8 @@ public class Mesh3
 
         var indexVRRight = rightVertices.AddIndex(vR);
 
-        if (Math.Abs(utils3.GetDimension(vL1) - q) < Common.Epsilon &&
-            Math.Abs(utils3.GetDimension(vL2) - q) < Common.Epsilon)
+        if (Math.Abs(utils.GetDimension(vL1) - q) < Common.Epsilon &&
+            Math.Abs(utils.GetDimension(vL2) - q) < Common.Epsilon)
         {
             // Left Vertices are on the line
             var indexVL1Right = rightVertices.AddIndex(vL1);
@@ -676,12 +629,12 @@ public class Mesh3
         // a on the right, b and c on the left
 
         // Prima intersezione
-        var t1 = utils3.CutEdge(vR, vL1, q);
+        var t1 = utils.CutEdge(vR, vL1, q);
         var indexT1Left = leftVertices.AddIndex(t1);
         var indexT1Right = rightVertices.AddIndex(t1);
 
         // Seconda intersezione
-        var t2 = utils3.CutEdge(vR, vL2, q);
+        var t2 = utils.CutEdge(vR, vL2, q);
         var indexT2Left = leftVertices.AddIndex(t2);
         var indexT2Right = rightVertices.AddIndex(t2);
 
@@ -699,6 +652,53 @@ public class Mesh3
 
     #region Utils
 
+    public Box3 Bounds
+    {
+        get
+        {
+            var minX = double.MaxValue;
+            var minY = double.MaxValue;
+            var minZ = double.MaxValue;
+
+            var maxX = double.MinValue;
+            var maxY = double.MinValue;
+            var maxZ = double.MinValue;
+
+            foreach (var v in Vertices)
+            {
+                minX = minX < v.x ? minX : v.x;
+                minY = minY < v.y ? minY : v.y;
+                minZ = minZ < v.z ? minZ : v.z;
+
+                maxX = v.x > maxX ? maxX : v.x;
+                maxY = v.y > maxY ? maxY : v.y;
+                maxZ = v.z > maxZ ? maxZ : v.z;
+            }
+
+            return new Box3(minX, minY, minZ, maxX, maxY, maxZ);
+        }
+    }
+
+    public Vertex3 GetBaricenter()
+    {
+        var x = 0.0;
+        var y = 0.0;
+        var z = 0.0;
+
+        foreach (var v in Vertices)
+        {
+            x += v.x;
+            y += v.y;
+            z += v.z;
+        }
+
+        x /= Vertices.Count;
+        y /= Vertices.Count;
+        z /= Vertices.Count;
+
+        return new Vertex3(x, y, z);
+    }
+    
     /// <summary>
     /// Gets the distance of P from A (in percent) relative to segment AB
     /// </summary>
