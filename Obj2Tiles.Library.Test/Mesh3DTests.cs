@@ -18,7 +18,7 @@ public class Mesh3DTests
     [Test]
     public void Cube_TrimTextures()
     {
-        var cube = new Mesh3D("TestData/cube/cube.obj");
+        var cube = new Mesh3("TestData/cube/cube.obj");
 
         cube.Split(xutils, 0, out var left, out var right);
         left.Split(yutils, 0, out var leftbottom, out var lefttop);

@@ -5,7 +5,7 @@ using Obj2Tiles.Library.Materials;
 
 namespace Obj2Tiles.Library.Geometry;
 
-public class Mesh3D
+public class Mesh3
 {
     public IReadOnlyList<Vertex3> Vertices;
     public IReadOnlyList<Vertex2> TextureVertices;
@@ -16,7 +16,7 @@ public class Mesh3D
 
     public string Name { get; set; } = DefaultName;
 
-    public Box3D Bounds
+    public Box3 Bounds
     {
         get
         {
@@ -39,7 +39,7 @@ public class Mesh3D
                 maxZ = v.z > maxZ ? maxZ : v.z;
             }
 
-            return new Box3D(minX, minY, minZ, maxX, maxY, maxZ);
+            return new Box3(minX, minY, minZ, maxX, maxY, maxZ);
         }
     }
 
@@ -63,12 +63,12 @@ public class Mesh3D
         return new Vertex3(x, y, z);
     }
 
-    public Mesh3D(string file)
+    public Mesh3(string file)
     {
         InternalLoad(file);
     }
 
-    public Mesh3D(IReadOnlyList<Vertex3> vertices, IReadOnlyList<Vertex2> textureVertices,
+    public Mesh3(IReadOnlyList<Vertex3> vertices, IReadOnlyList<Vertex2> textureVertices,
         IReadOnlyList<Face<Vertex3>> faces, IReadOnlyList<Material> materials)
     {
         Vertices = vertices;
@@ -77,8 +77,8 @@ public class Mesh3D
         Materials = materials;
     }
 
-    private int SplitWithTexture(IVertexUtils utils3, double q, out Mesh3D left,
-        out Mesh3D right)
+    private int SplitWithTexture(IVertexUtils utils3, double q, out Mesh3 left,
+        out Mesh3 right)
     {
         var leftVertices = new Dictionary<Vertex3, int>(Vertices.Count);
         var rightVertices = new Dictionary<Vertex3, int>(Vertices.Count);
@@ -217,14 +217,14 @@ public class Mesh3D
         var orderedLeftTextureVertices = leftTextureVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
         var orderedRightTextureVertices = rightTextureVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
 
-        left = new Mesh3D(orderedLeftVertices, orderedLeftTextureVertices, leftFaces, Materials);
-        right = new Mesh3D(orderedRightVertices, orderedRightTextureVertices, rightFaces, Materials);
+        left = new Mesh3(orderedLeftVertices, orderedLeftTextureVertices, leftFaces, Materials);
+        right = new Mesh3(orderedRightVertices, orderedRightTextureVertices, rightFaces, Materials);
 
         return count;
     }
 
 
-    public int Split(IVertexUtils utils, double q, out Mesh3D left, out Mesh3D right)
+    public int Split(IVertexUtils utils, double q, out Mesh3 left, out Mesh3 right)
     {
         return TextureVertices.Any()
             ? SplitWithTexture(utils, q, out left, out right)
@@ -469,7 +469,7 @@ public class Mesh3D
                 double maxX = double.MinValue, maxY = double.MinValue;
                 double minX = double.MaxValue, minY = double.MaxValue;
 
-                var boxes = new List<Box2D>();
+                var boxes = new List<Box2>();
 
                 foreach (var face in cluster)
                 {
@@ -479,7 +479,7 @@ public class Mesh3D
                     minX = Math.Min(Math.Min(Math.Min(minX, face.TC!.x), face.TB!.x), face.TA!.x);
                     minY = Math.Min(Math.Min(Math.Min(minY, face.TC!.y), face.TB!.y), face.TA!.y);
 
-                    boxes.Add(new Box2D(minX, minY, maxX, maxY));
+                    boxes.Add(new Box2(minX, minY, maxX, maxY));
                 }
 
                 var size = Math.Sqrt(boxes.Sum(b => b.Area));
@@ -496,8 +496,8 @@ public class Mesh3D
 
     #region No texture
 
-    public int SplitWithoutTexture(IVertexUtils utils, double q, out Mesh3D left,
-        out Mesh3D right)
+    public int SplitWithoutTexture(IVertexUtils utils, double q, out Mesh3 left,
+        out Mesh3 right)
     {
         var leftVertices = new Dictionary<Vertex3, int>(Vertices.Count);
         var rightVertices = new Dictionary<Vertex3, int>(Vertices.Count);
@@ -594,8 +594,8 @@ public class Mesh3D
         var orderedRightVertices = rightVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
 
         // Aggiungere split texture
-        left = new Mesh3D(orderedLeftVertices, TextureVertices, leftFaces, Materials);
-        right = new Mesh3D(orderedRightVertices, TextureVertices, rightFaces, Materials);
+        left = new Mesh3(orderedLeftVertices, TextureVertices, leftFaces, Materials);
+        right = new Mesh3(orderedRightVertices, TextureVertices, rightFaces, Materials);
 
         return count;
     }
@@ -911,7 +911,7 @@ public class Mesh3D
     private static readonly IVertexUtils xutils3 = new VertexUtilsX();
     private static readonly IVertexUtils zutils3 = new VertexUtilsZ();
     
-    public static async Task<int> RecurseSplitXY(Mesh3D mesh, int depth, ConcurrentBag<Mesh3D> meshes)
+    public static async Task<int> RecurseSplitXY(Mesh3 mesh, int depth, ConcurrentBag<Mesh3> meshes)
     {
         var center = mesh.GetBaricenter();
 
@@ -943,7 +943,7 @@ public class Mesh3D
         return count + tasks.Sum(t => t.Result);
     }
 
-    public static async Task<int> RecurseSplitXYZ(Mesh3D mesh, int depth, ConcurrentBag<Mesh3D> meshes)
+    public static async Task<int> RecurseSplitXYZ(Mesh3 mesh, int depth, ConcurrentBag<Mesh3> meshes)
     {
         var center = mesh.GetBaricenter();
 

@@ -1,17 +1,17 @@
 ﻿namespace Obj2Tiles.Library.Geometry;
 
-public class Box2D
+public class Box2
 {
     public readonly Vertex2 Min;
     public readonly Vertex2 Max;
     
-    public Box2D(Vertex2 min, Vertex2 max)
+    public Box2(Vertex2 min, Vertex2 max)
     {
         Min = min;
         Max = max;
     }
     
-    public Box2D(double minX, double minY, double maxX, double maxY)
+    public Box2(double minX, double minY, double maxX, double maxY)
     {
         Min = new Vertex2(minX, minY);
         Max = new Vertex2(maxX, maxY);
