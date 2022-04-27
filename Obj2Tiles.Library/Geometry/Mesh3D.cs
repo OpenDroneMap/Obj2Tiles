@@ -7,9 +7,9 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class Mesh3D
 {
-    public IReadOnlyList<Vertex3D> Vertices;
-    public IReadOnlyList<Vertex2D> TextureVertices;
-    public IReadOnlyList<Face<Vertex3D>> Faces;
+    public IReadOnlyList<Vertex3> Vertices;
+    public IReadOnlyList<Vertex2> TextureVertices;
+    public IReadOnlyList<Face<Vertex3>> Faces;
     public IReadOnlyList<Material> Materials;
 
     public const string DefaultName = "Mesh";
@@ -43,7 +43,7 @@ public class Mesh3D
         }
     }
 
-    public Vertex3D GetBaricenter()
+    public Vertex3 GetBaricenter()
     {
         var x = 0.0;
         var y = 0.0;
@@ -60,7 +60,7 @@ public class Mesh3D
         y /= Vertices.Count;
         z /= Vertices.Count;
 
-        return new Vertex3D(x, y, z);
+        return new Vertex3(x, y, z);
     }
 
     public Mesh3D(string file)
@@ -68,8 +68,8 @@ public class Mesh3D
         InternalLoad(file);
     }
 
-    public Mesh3D(IReadOnlyList<Vertex3D> vertices, IReadOnlyList<Vertex2D> textureVertices,
-        IReadOnlyList<Face<Vertex3D>> faces, IReadOnlyList<Material> materials)
+    public Mesh3D(IReadOnlyList<Vertex3> vertices, IReadOnlyList<Vertex2> textureVertices,
+        IReadOnlyList<Face<Vertex3>> faces, IReadOnlyList<Material> materials)
     {
         Vertices = vertices;
         TextureVertices = textureVertices;
@@ -77,26 +77,27 @@ public class Mesh3D
         Materials = materials;
     }
 
-    private int SplitWithTexture(IVertexUtils utils, double q, out Mesh3D left, out Mesh3D right)
+    private int SplitWithTexture(IVertexUtils utils3, double q, out Mesh3D left,
+        out Mesh3D right)
     {
-        var leftVertices = new Dictionary<Vertex3D, int>(Vertices.Count);
-        var rightVertices = new Dictionary<Vertex3D, int>(Vertices.Count);
+        var leftVertices = new Dictionary<Vertex3, int>(Vertices.Count);
+        var rightVertices = new Dictionary<Vertex3, int>(Vertices.Count);
 
-        var leftFaces = new List<Face<Vertex3D>>(Faces.Count);
-        var rightFaces = new List<Face<Vertex3D>>(Faces.Count);
+        var leftFaces = new List<Face<Vertex3>>(Faces.Count);
+        var rightFaces = new List<Face<Vertex3>>(Faces.Count);
 
-        var leftTextureVertices = new Dictionary<Vertex2D, int>(TextureVertices.Count);
-        var rightTextureVertices = new Dictionary<Vertex2D, int>(TextureVertices.Count);
+        var leftTextureVertices = new Dictionary<Vertex2, int>(TextureVertices.Count);
+        var rightTextureVertices = new Dictionary<Vertex2, int>(TextureVertices.Count);
 
         var count = 0;
 
         for (var index = 0; index < Faces.Count; index++)
         {
             var face = Faces[index];
-            
-            var aSide = utils.GetDimension(face.A) < q;
-            var bSide = utils.GetDimension(face.B) < q;
-            var cSide = utils.GetDimension(face.C) < q;
+
+            var aSide = utils3.GetDimension(face.A) < q;
+            var bSide = utils3.GetDimension(face.B) < q;
+            var cSide = utils3.GetDimension(face.C) < q;
 
             if (aSide)
             {
@@ -114,13 +115,14 @@ public class Mesh3D
                         var indexBTextureLeft = leftTextureVertices!.AddIndex(face.TB);
                         var indexCTextureLeft = leftTextureVertices!.AddIndex(face.TC);
 
-                        leftFaces.Add(new Face<Vertex3D>(indexALeft, indexBLeft, indexCLeft, face.A, face.B, face.C,
+                        leftFaces.Add(new Face<Vertex3>(indexALeft, indexBLeft, indexCLeft, face.A, face.B, face.C,
                             indexATextureLeft, indexBTextureLeft, indexCTextureLeft,
                             face.MaterialIndex!.Value, face.TA!, face.TB!, face.TC!));
                     }
                     else
                     {
-                        IntersectRight2DWithTexture(utils, q, face.IndexC, face.IndexA, face.IndexB, leftVertices,
+                        IntersectRight2DWithTexture(utils3, q, face.IndexC, face.IndexA, face.IndexB,
+                            leftVertices,
                             rightVertices,
                             face.TextureIndexC!.Value, face.TextureIndexA!.Value, face.TextureIndexB!.Value,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex!.Value, leftFaces, rightFaces
@@ -132,7 +134,8 @@ public class Mesh3D
                 {
                     if (cSide)
                     {
-                        IntersectRight2DWithTexture(utils, q, face.IndexB, face.IndexC, face.IndexA, leftVertices,
+                        IntersectRight2DWithTexture(utils3, q, face.IndexB, face.IndexC, face.IndexA,
+                            leftVertices,
                             rightVertices,
                             face.TextureIndexB!.Value, face.TextureIndexC!.Value, face.TextureIndexA!.Value,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex!.Value, leftFaces,
@@ -141,7 +144,8 @@ public class Mesh3D
                     }
                     else
                     {
-                        IntersectLeft2DWithTexture(utils, q, face.IndexA, face.IndexB, face.IndexC, leftVertices,
+                        IntersectLeft2DWithTexture(utils3, q, face.IndexA, face.IndexB, face.IndexC,
+                            leftVertices,
                             rightVertices,
                             face.TextureIndexA!.Value, face.TextureIndexB!.Value, face.TextureIndexC!.Value,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex!.Value, leftFaces,
@@ -156,7 +160,8 @@ public class Mesh3D
                 {
                     if (cSide)
                     {
-                        IntersectRight2DWithTexture(utils, q, face.IndexA, face.IndexB, face.IndexC, leftVertices,
+                        IntersectRight2DWithTexture(utils3, q, face.IndexA, face.IndexB, face.IndexC,
+                            leftVertices,
                             rightVertices,
                             face.TextureIndexA!.Value, face.TextureIndexB!.Value, face.TextureIndexC!.Value,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex!.Value, leftFaces,
@@ -165,7 +170,8 @@ public class Mesh3D
                     }
                     else
                     {
-                        IntersectLeft2DWithTexture(utils, q, face.IndexB, face.IndexC, face.IndexA, leftVertices,
+                        IntersectLeft2DWithTexture(utils3, q, face.IndexB, face.IndexC, face.IndexA,
+                            leftVertices,
                             rightVertices,
                             face.TextureIndexB!.Value, face.TextureIndexC!.Value, face.TextureIndexA!.Value,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex!.Value, leftFaces,
@@ -177,7 +183,8 @@ public class Mesh3D
                 {
                     if (cSide)
                     {
-                        IntersectLeft2DWithTexture(utils, q, face.IndexC, face.IndexA, face.IndexB, leftVertices,
+                        IntersectLeft2DWithTexture(utils3, q, face.IndexC, face.IndexA, face.IndexB,
+                            leftVertices,
                             rightVertices,
                             face.TextureIndexC!.Value, face.TextureIndexA!.Value, face.TextureIndexB!.Value,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex!.Value, leftFaces,
@@ -196,7 +203,7 @@ public class Mesh3D
                         var indexBTextureRight = rightTextureVertices!.AddIndex(face.TB);
                         var indexCTextureRight = rightTextureVertices!.AddIndex(face.TC);
 
-                        rightFaces.Add(new Face<Vertex3D>(indexARight, indexBRight, indexCRight, face.A, face.B, face.C,
+                        rightFaces.Add(new Face<Vertex3>(indexARight, indexBRight, indexCRight, face.A, face.B, face.C,
                             indexATextureRight, indexBTextureRight, indexCTextureRight,
                             face.MaterialIndex!.Value, face.TA!, face.TB!, face.TC!));
                     }
@@ -210,7 +217,6 @@ public class Mesh3D
         var orderedLeftTextureVertices = leftTextureVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
         var orderedRightTextureVertices = rightTextureVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
 
-        // Aggiungere split texture
         left = new Mesh3D(orderedLeftVertices, orderedLeftTextureVertices, leftFaces, Materials);
         right = new Mesh3D(orderedRightVertices, orderedRightTextureVertices, rightFaces, Materials);
 
@@ -225,11 +231,12 @@ public class Mesh3D
             : SplitWithoutTexture(utils, q, out left, out right);
     }
 
-    private void IntersectLeft2DWithTexture(IVertexUtils utils, double q, int indexVL, int indexVR1, int indexVR2,
-        IDictionary<Vertex3D, int> leftVertices, IDictionary<Vertex3D, int> rightVertices,
+    private void IntersectLeft2DWithTexture(IVertexUtils utils, double q, int indexVL,
+        int indexVR1, int indexVR2,
+        IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
         int indexTextureVL, int indexTextureVR1, int indexTextureVR2,
-        IDictionary<Vertex2D, int> leftTextureVertices, IDictionary<Vertex2D, int> rightTextureVertices,
-        int materialIndex, ICollection<Face<Vertex3D>> leftFaces, ICollection<Face<Vertex3D>> rightFaces)
+        IDictionary<Vertex2, int> leftTextureVertices, IDictionary<Vertex2, int> rightTextureVertices,
+        int materialIndex, ICollection<Face<Vertex3>> leftFaces, ICollection<Face<Vertex3>> rightFaces)
     {
         var vL = Vertices[indexVL];
         var vR1 = Vertices[indexVR1];
@@ -253,7 +260,7 @@ public class Mesh3D
             var indexTextureVR1Left = leftTextureVertices.AddIndex(tVR1);
             var indexTextureVR2Left = leftTextureVertices.AddIndex(tVR2);
 
-            leftFaces.Add(new Face<Vertex3D>(indexVLLeft, indexVR1Left, indexVR2Left, vL, vR1, vR2,
+            leftFaces.Add(new Face<Vertex3>(indexVLLeft, indexVR1Left, indexVR2Left, vL, vR1, vR2,
                 indexTextureVLLeft, indexTextureVR1Left, indexTextureVR2Left, materialIndex,
                 tVL, tVR1, tVR2));
 
@@ -282,39 +289,40 @@ public class Mesh3D
         var perc1 = GetIntersectionPerc(vL, vR1, t1);
 
         // Prima intersezione texture
-        var t1t = utils.CutEdgePerc(tVL, tVR1, perc1);
+        var t1t = tVL.CutEdgePerc(tVR1, perc1);
         var indexTextureT1Left = leftTextureVertices.AddIndex(t1t);
         var indexTextureT1Right = rightTextureVertices.AddIndex(t1t);
 
         var perc2 = GetIntersectionPerc(vL, vR2, t2);
 
         // Seconda intersezione texture
-        var t2t = utils.CutEdgePerc(tVL, tVR2, perc2);
+        var t2t = tVL.CutEdgePerc(tVR2, perc2);
         var indexTextureT2Left = leftTextureVertices.AddIndex(t2t);
         var indexTextureT2Right = rightTextureVertices.AddIndex(t2t);
 
-        var lface = new Face<Vertex3D>(indexVLLeft, indexT1Left, indexT2Left, vL, t1, t2,
+        var lface = new Face<Vertex3>(indexVLLeft, indexT1Left, indexT2Left, vL, t1, t2,
             indexTextureVLLeft, indexTextureT1Left, indexTextureT2Left, materialIndex,
             tVL, t1t, t2t);
         leftFaces.Add(lface);
 
-        var rface1 = new Face<Vertex3D>(indexT1Right, indexVR1Right, indexVR2Right, t1, vR1, vR2,
+        var rface1 = new Face<Vertex3>(indexT1Right, indexVR1Right, indexVR2Right, t1, vR1, vR2,
             indexTextureT1Right, indexTextureVR1Right, indexTextureVR2Right, materialIndex,
             t1t, tVR1, tVR2);
         rightFaces.Add(rface1);
 
-        var rface2 = new Face<Vertex3D>(indexT1Right, indexVR2Right, indexT2Right, t1, vR2, t2,
+        var rface2 = new Face<Vertex3>(indexT1Right, indexVR2Right, indexT2Right, t1, vR2, t2,
             indexTextureT1Right, indexTextureVR2Right, indexTextureT2Right, materialIndex,
             t1t, tVR2, t2t);
         rightFaces.Add(rface2);
     }
 
 
-    private void IntersectRight2DWithTexture(IVertexUtils utils, double q, int indexVR, int indexVL1, int indexVL2,
-        IDictionary<Vertex3D, int> leftVertices, IDictionary<Vertex3D, int> rightVertices,
+    private void IntersectRight2DWithTexture(IVertexUtils utils, double q, int indexVR,
+        int indexVL1, int indexVL2,
+        IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
         int indexTextureVR, int indexTextureVL1, int indexTextureVL2,
-        IDictionary<Vertex2D, int> leftTextureVertices, IDictionary<Vertex2D, int> rightTextureVertices,
-        int materialIndex, ICollection<Face<Vertex3D>> leftFaces, ICollection<Face<Vertex3D>> rightFaces)
+        IDictionary<Vertex2, int> leftTextureVertices, IDictionary<Vertex2, int> rightTextureVertices,
+        int materialIndex, ICollection<Face<Vertex3>> leftFaces, ICollection<Face<Vertex3>> rightFaces)
     {
         var vR = Vertices[indexVR];
         var vL1 = Vertices[indexVL1];
@@ -338,7 +346,7 @@ public class Mesh3D
             var indexTextureVL1Right = rightTextureVertices.AddIndex(tVL1);
             var indexTextureVL2Right = rightTextureVertices.AddIndex(tVL2);
 
-            rightFaces.Add(new Face<Vertex3D>(indexVRRight, indexVL1Right, indexVL2Right, vR, vL1, vL2,
+            rightFaces.Add(new Face<Vertex3>(indexVRRight, indexVL1Right, indexVL2Right, vR, vL1, vL2,
                 indexTextureVRRight, indexTextureVL1Right, indexTextureVL2Right, materialIndex,
                 tVR, tVL1, tVL2));
 
@@ -367,32 +375,31 @@ public class Mesh3D
         var perc1 = GetIntersectionPerc(vR, vL1, t1);
 
         // Prima intersezione texture
-        var t1t = utils.CutEdgePerc(tVR, tVL1, perc1);
+        var t1t = tVR.CutEdgePerc(tVL1, perc1);
         var indexTextureT1Left = leftTextureVertices.AddIndex(t1t);
         var indexTextureT1Right = rightTextureVertices.AddIndex(t1t);
 
         var perc2 = GetIntersectionPerc(vR, vL2, t2);
 
         // Seconda intersezione texture
-        var t2t = utils.CutEdgePerc(tVR, tVL2, perc2);
+        var t2t = tVR.CutEdgePerc(tVL2, perc2);
         var indexTextureT2Left = leftTextureVertices.AddIndex(t2t);
         var indexTextureT2Right = rightTextureVertices.AddIndex(t2t);
 
-        var rface = new Face<Vertex3D>(indexVRRight, indexT1Right, indexT2Right, vR, t1, t2,
+        var rface = new Face<Vertex3>(indexVRRight, indexT1Right, indexT2Right, vR, t1, t2,
             indexTextureVRRight, indexTextureT1Right, indexTextureT2Right, materialIndex,
             tVR, t1t, t2t);
         rightFaces.Add(rface);
 
-        var lface1 = new Face<Vertex3D>(indexT2Left, indexVL1Left, indexVL2Left, t2, vL1, vL2,
+        var lface1 = new Face<Vertex3>(indexT2Left, indexVL1Left, indexVL2Left, t2, vL1, vL2,
             indexTextureT2Left, indexTextureVL1Left, indexTextureVL2Left, materialIndex,
             t2t, tVL1, tVL2);
         leftFaces.Add(lface1);
 
-        var lface2 = new Face<Vertex3D>(indexT2Left, indexT1Left, indexVL1Left, t2, t1, vL1,
+        var lface2 = new Face<Vertex3>(indexT2Left, indexT1Left, indexVL1Left, t2, t1, vL1,
             indexTextureT2Left, indexTextureT1Left, indexTextureVL1Left, materialIndex,
             t2t, t1t, tVL1);
         leftFaces.Add(lface2);
-        
     }
 
     public void TrimTextures()
@@ -410,11 +417,11 @@ public class Mesh3D
         foreach (var g in facesMapper)
         {
             var material = Materials[g.MaterialIndex];
-            var clusters = new List<Face<Vertex3D>[]>();
+            var clusters = new List<Face<Vertex3>[]>();
 
             var materialFaces = g.Faces;
 
-            var currentCluster = new List<Face<Vertex3D>> { materialFaces.First() };
+            var currentCluster = new List<Face<Vertex3>> { materialFaces.First() };
             materialFaces.RemoveAt(0);
 
             while (materialFaces.Count > 0)
@@ -445,7 +452,7 @@ public class Mesh3D
                     clusters.Add(currentCluster.ToArray());
 
                     // Andiamo avanti con il prossimo cluster
-                    currentCluster = new List<Face<Vertex3D>> { materialFaces.First() };
+                    currentCluster = new List<Face<Vertex3>> { materialFaces.First() };
                     materialFaces.RemoveAt(0);
                 }
             }
@@ -489,13 +496,14 @@ public class Mesh3D
 
     #region No texture
 
-    public int SplitWithoutTexture(IVertexUtils utils, double q, out Mesh3D left, out Mesh3D right)
+    public int SplitWithoutTexture(IVertexUtils utils, double q, out Mesh3D left,
+        out Mesh3D right)
     {
-        var leftVertices = new Dictionary<Vertex3D, int>(Vertices.Count);
-        var rightVertices = new Dictionary<Vertex3D, int>(Vertices.Count);
+        var leftVertices = new Dictionary<Vertex3, int>(Vertices.Count);
+        var rightVertices = new Dictionary<Vertex3, int>(Vertices.Count);
 
-        var leftFaces = new List<Face<Vertex3D>>(Faces.Count);
-        var rightFaces = new List<Face<Vertex3D>>(Faces.Count);
+        var leftFaces = new List<Face<Vertex3>>(Faces.Count);
+        var rightFaces = new List<Face<Vertex3>>(Faces.Count);
 
         var count = 0;
 
@@ -518,7 +526,7 @@ public class Mesh3D
                         var indexBLeft = leftVertices.AddIndex(face.B);
                         var indexCLeft = leftVertices.AddIndex(face.C);
 
-                        leftFaces.Add(new Face<Vertex3D>(indexALeft, indexBLeft, indexCLeft, face.A, face.B, face.C));
+                        leftFaces.Add(new Face<Vertex3>(indexALeft, indexBLeft, indexCLeft, face.A, face.B, face.C));
                     }
                     else
                     {
@@ -576,7 +584,7 @@ public class Mesh3D
                         var indexBRight = rightVertices.AddIndex(face.B);
                         var indexCRight = rightVertices.AddIndex(face.C);
                         rightFaces.Add(
-                            new Face<Vertex3D>(indexARight, indexBRight, indexCRight, face.A, face.B, face.C));
+                            new Face<Vertex3>(indexARight, indexBRight, indexCRight, face.A, face.B, face.C));
                     }
                 }
             }
@@ -593,9 +601,9 @@ public class Mesh3D
     }
 
     private void IntersectLeft2D(IVertexUtils utils, double q, int indexVL, int indexVR1, int indexVR2,
-        IDictionary<Vertex3D, int> leftVertices,
-        IDictionary<Vertex3D, int> rightVertices, ICollection<Face<Vertex3D>> leftFaces,
-        ICollection<Face<Vertex3D>> rightFaces)
+        IDictionary<Vertex3, int> leftVertices,
+        IDictionary<Vertex3, int> rightVertices, ICollection<Face<Vertex3>> leftFaces,
+        ICollection<Face<Vertex3>> rightFaces)
     {
         var vL = Vertices[indexVL];
         var vR1 = Vertices[indexVR1];
@@ -611,7 +619,7 @@ public class Mesh3D
             var indexVR1Left = leftVertices.AddIndex(vR1);
             var indexVR2Left = leftVertices.AddIndex(vR2);
 
-            leftFaces.Add(new Face<Vertex3D>(indexVLLeft, indexVR1Left, indexVR2Left, vL, vR1, vR2));
+            leftFaces.Add(new Face<Vertex3>(indexVLLeft, indexVR1Left, indexVR2Left, vL, vR1, vR2));
             return;
         }
 
@@ -630,20 +638,19 @@ public class Mesh3D
         var indexT2Left = leftVertices.AddIndex(t2);
         var indexT2Right = rightVertices.AddIndex(t2);
 
-        var lface = new Face<Vertex3D>(indexVLLeft, indexT1Left, indexT2Left, vL, t1, t2);
+        var lface = new Face<Vertex3>(indexVLLeft, indexT1Left, indexT2Left, vL, t1, t2);
         leftFaces.Add(lface);
 
-        var rface1 = new Face<Vertex3D>(indexT1Right, indexVR1Right, indexVR2Right, t1, vR1, vR2);
+        var rface1 = new Face<Vertex3>(indexT1Right, indexVR1Right, indexVR2Right, t1, vR1, vR2);
         rightFaces.Add(rface1);
 
-        var rface2 = new Face<Vertex3D>(indexT1Right, indexVR2Right, indexT2Right, t1, vR2, t2);
+        var rface2 = new Face<Vertex3>(indexT1Right, indexVR2Right, indexT2Right, t1, vR2, t2);
         rightFaces.Add(rface2);
-        
     }
 
-    private void IntersectRight2D(IVertexUtils utils, double q, int indexVR, int indexVL1, int indexVL2,
-        IDictionary<Vertex3D, int> leftVertices, IDictionary<Vertex3D, int> rightVertices,
-        ICollection<Face<Vertex3D>> leftFaces, ICollection<Face<Vertex3D>> rightFaces)
+    private void IntersectRight2D(IVertexUtils utils3, double q, int indexVR, int indexVL1, int indexVL2,
+        IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
+        ICollection<Face<Vertex3>> leftFaces, ICollection<Face<Vertex3>> rightFaces)
     {
         var vR = Vertices[indexVR];
         var vL1 = Vertices[indexVL1];
@@ -651,14 +658,14 @@ public class Mesh3D
 
         var indexVRRight = rightVertices.AddIndex(vR);
 
-        if (Math.Abs(utils.GetDimension(vL1) - q) < Common.Epsilon &&
-            Math.Abs(utils.GetDimension(vL2) - q) < Common.Epsilon)
+        if (Math.Abs(utils3.GetDimension(vL1) - q) < Common.Epsilon &&
+            Math.Abs(utils3.GetDimension(vL2) - q) < Common.Epsilon)
         {
             // Left Vertices are on the line
             var indexVL1Right = rightVertices.AddIndex(vL1);
             var indexVL2Right = rightVertices.AddIndex(vL2);
 
-            rightFaces.Add(new Face<Vertex3D>(indexVRRight, indexVL1Right, indexVL2Right, vR, vL1, vL2));
+            rightFaces.Add(new Face<Vertex3>(indexVRRight, indexVL1Right, indexVL2Right, vR, vL1, vL2));
 
             return;
         }
@@ -669,24 +676,23 @@ public class Mesh3D
         // a on the right, b and c on the left
 
         // Prima intersezione
-        var t1 = utils.CutEdge(vR, vL1, q);
+        var t1 = utils3.CutEdge(vR, vL1, q);
         var indexT1Left = leftVertices.AddIndex(t1);
         var indexT1Right = rightVertices.AddIndex(t1);
 
         // Seconda intersezione
-        var t2 = utils.CutEdge(vR, vL2, q);
+        var t2 = utils3.CutEdge(vR, vL2, q);
         var indexT2Left = leftVertices.AddIndex(t2);
         var indexT2Right = rightVertices.AddIndex(t2);
 
-        var rface = new Face<Vertex3D>(indexVRRight, indexT1Right, indexT2Right, vR, t1, t2);
+        var rface = new Face<Vertex3>(indexVRRight, indexT1Right, indexT2Right, vR, t1, t2);
         rightFaces.Add(rface);
 
-        var lface1 = new Face<Vertex3D>(indexT2Left, indexVL1Left, indexVL2Left, t2, vL1, vL2);
+        var lface1 = new Face<Vertex3>(indexT2Left, indexVL1Left, indexVL2Left, t2, vL1, vL2);
         leftFaces.Add(lface1);
 
-        var lface2 = new Face<Vertex3D>(indexT2Left, indexT1Left, indexVL1Left, t2, t1, vL1);
+        var lface2 = new Face<Vertex3>(indexT2Left, indexT1Left, indexVL1Left, t2, t1, vL1);
         leftFaces.Add(lface2);
-
     }
 
     #endregion
@@ -700,7 +706,7 @@ public class Mesh3D
     /// <param name="b">Edge end</param>
     /// <param name="p">Point on the segment</param>
     /// <returns></returns>
-    private static double GetIntersectionPerc(Vertex3D a, Vertex3D b, Vertex3D p)
+    private static double GetIntersectionPerc(Vertex3 a, Vertex3 b, Vertex3 p)
     {
         var edge1Length = a.Distance(b);
         var subEdge1Length = a.Distance(p);
@@ -777,9 +783,9 @@ public class Mesh3D
     {
         using var reader = new StreamReader(file);
 
-        var vertices = new List<Vertex3D>();
-        var textureVertices = new List<Vertex2D>();
-        var faces = new List<Face<Vertex3D>>();
+        var vertices = new List<Vertex3>();
+        var textureVertices = new List<Vertex2>();
+        var faces = new List<Face<Vertex3>>();
         var materials = new List<Material>();
         var materialsDict = new Dictionary<string, int>();
         string currentMaterial = null;
@@ -798,13 +804,13 @@ public class Mesh3D
             switch (segs[0])
             {
                 case "v" when segs.Length >= 4:
-                    vertices.Add(new Vertex3D(
+                    vertices.Add(new Vertex3(
                         double.Parse(segs[1], en),
                         double.Parse(segs[2], en),
                         double.Parse(segs[3], en)));
                     break;
                 case "vt" when segs.Length >= 3:
-                    textureVertices.Add(new Vertex2D(
+                    textureVertices.Add(new Vertex2(
                         double.Parse(segs[1], en),
                         double.Parse(segs[2], en)));
                     break;
@@ -825,10 +831,10 @@ public class Mesh3D
                     var second = segs[2].Split('/');
                     var third = segs[3].Split('/');
 
-                    Face<Vertex3D> face = null;
-                  
+                    Face<Vertex3> face = null;
+
                     var hasTexture = first[1].Length > 0 && second[1].Length > 0 && third[1].Length > 0;
-                    
+
                     // We ignore this
                     // var hasNormals = vertexIndices[0][2] != null && vertexIndices[1][2] != null && vertexIndices[2][2] != null;
 
@@ -838,12 +844,11 @@ public class Mesh3D
 
                     if (hasTexture)
                     {
-                        
                         var vt1 = int.Parse(first[1]);
                         var vt2 = int.Parse(second[1]);
                         var vt3 = int.Parse(third[1]);
-                        
-                        face = new Face<Vertex3D>(
+
+                        face = new Face<Vertex3>(
                             v1 - 1,
                             v2 - 1,
                             v3 - 1,
@@ -859,7 +864,7 @@ public class Mesh3D
                             textureVertices[vt3 - 1]);
                     }
                     else
-                        face = new Face<Vertex3D>(
+                        face = new Face<Vertex3>(
                             v1 - 1,
                             v2 - 1,
                             v3 - 1,
@@ -885,8 +890,9 @@ public class Mesh3D
 
                     break;
                 }
-                case "l" or "cstype" or "deg" or "bmat" or "step" or "curv" or "curv2" or "surf" or "parm" or "trim" or "end" or "hole" or "scrv" or "sp" or "con":
-                    
+                case "l" or "cstype" or "deg" or "bmat" or "step" or "curv" or "curv2" or "surf" or "parm" or "trim"
+                    or "end" or "hole" or "scrv" or "sp" or "con":
+
                     throw new NotSupportedException("Element not supported: '" + line + "'");
             }
         }
@@ -901,17 +907,17 @@ public class Mesh3D
 
     #region Splitters
 
-    private static readonly IVertexUtils yutils = new VertexUtilsY();
-    private static readonly IVertexUtils xutils = new VertexUtilsX();
-    private static readonly IVertexUtils zutils = new VertexUtilsZ();
-
+    private static readonly IVertexUtils yutils3 = new VertexUtilsY();
+    private static readonly IVertexUtils xutils3 = new VertexUtilsX();
+    private static readonly IVertexUtils zutils3 = new VertexUtilsZ();
+    
     public static async Task<int> RecurseSplitXY(Mesh3D mesh, int depth, ConcurrentBag<Mesh3D> meshes)
     {
         var center = mesh.GetBaricenter();
 
-        var count = mesh.Split(xutils, center.x, out var left, out var right);
-        count += left.Split(yutils, center.y, out var topleft, out var bottomleft);
-        count += right.Split(yutils, center.y, out var topright, out var bottomright);
+        var count = mesh.Split(xutils3, center.x, out var left, out var right);
+        count += left.Split(yutils3, center.y, out var topleft, out var bottomleft);
+        count += right.Split(yutils3, center.y, out var topright, out var bottomright);
 
         var nextDepth = depth - 1;
 
@@ -939,18 +945,17 @@ public class Mesh3D
 
     public static async Task<int> RecurseSplitXYZ(Mesh3D mesh, int depth, ConcurrentBag<Mesh3D> meshes)
     {
-
         var center = mesh.GetBaricenter();
 
-        var count = mesh.Split(xutils, center.x, out var left, out var right);
-        count += left.Split(yutils, center.y, out var topleft, out var bottomleft);
-        count += right.Split(yutils, center.y, out var topright, out var bottomright);
+        var count = mesh.Split(xutils3, center.x, out var left, out var right);
+        count += left.Split(yutils3, center.y, out var topleft, out var bottomleft);
+        count += right.Split(yutils3, center.y, out var topright, out var bottomright);
 
-        count += topleft.Split(zutils, center.z, out var topleftnear, out var topleftfar);
-        count += bottomleft.Split(zutils, center.z, out var bottomleftnear, out var bottomleftfar);
+        count += topleft.Split(zutils3, center.z, out var topleftnear, out var topleftfar);
+        count += bottomleft.Split(zutils3, center.z, out var bottomleftnear, out var bottomleftfar);
 
-        count += topright.Split(zutils, center.z, out var toprightnear, out var toprightfar);
-        count += bottomright.Split(zutils, center.z, out var bottomrightnear, out var bottomrightfar);
+        count += topright.Split(zutils3, center.z, out var toprightnear, out var toprightfar);
+        count += bottomright.Split(zutils3, center.z, out var bottomrightnear, out var bottomrightfar);
 
         var nextDepth = depth - 1;
 

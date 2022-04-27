@@ -10,32 +10,10 @@ using Obj2Tiles.Library.Geometry;
 
 namespace Obj2Tiles
 {
+    
     internal class Program
     {
-        public class Options
-        {
-            [Option('i', "input", Required = true, HelpText = "Input OBJ file.")]
-            public string Input { get; set; }
 
-            [Option('o', "output", Required = true, HelpText = "Output folder.")]
-            public string Output { get; set; }
-
-            [Option('s', "stage", Required = false, HelpText = "Stage to stop at.", Default = Stage.Tiles)]
-            public Stage StopAt { get; set; }
-
-            [Option('d', "divisions", Required = false, HelpText = "How many tiles divisions", Default = 2)]
-            public int Divisions { get; set; }
-
-            [Option('z', "zsplit", Required = false, HelpText = "Adds split along z axis", Default = false)]
-            public bool ZSplit { get; set; }
-        }
-
-        public enum Stage
-        {
-            Splitting,
-            Decimation,
-            Tiles
-        }
 
         private static async Task Main(string[] args)
         {
@@ -68,6 +46,8 @@ namespace Obj2Tiles
 
             var meshes = new ConcurrentBag<Mesh3D>();
 
+            //Common.Epsilon = 0.00001f;
+            
             sw.Restart();
 
             var count = opts.ZSplit

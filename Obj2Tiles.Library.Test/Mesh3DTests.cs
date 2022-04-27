@@ -15,7 +15,6 @@ public class Mesh3DTests
     private static readonly IVertexUtils xutils = new VertexUtilsX();
     private static readonly IVertexUtils zutils = new VertexUtilsZ();
 
-    
     [Test]
     public void Cube_TrimTextures()
     {

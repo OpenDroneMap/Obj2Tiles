@@ -6,9 +6,9 @@ public class Face<T> where T : class
     public T B;
     public T C;
 
-    public Vertex2D? TA;
-    public Vertex2D? TB;
-    public Vertex2D? TC;
+    public Vertex2? TA;
+    public Vertex2? TB;
+    public Vertex2? TC;
 
     public int IndexA;
     public int IndexB;
@@ -26,7 +26,7 @@ public class Face<T> where T : class
     }
 
     public Face(int indexA, int indexB, int indexC, T A, T B, T C, int textureIndexA, int textureIndexB,
-        int textureIndexC, int materialIndex, Vertex2D TA, Vertex2D TB, Vertex2D TC)
+        int textureIndexC, int materialIndex, Vertex2 TA, Vertex2 TB, Vertex2 TC)
     {
         IndexA = indexA;
         IndexB = indexB;
