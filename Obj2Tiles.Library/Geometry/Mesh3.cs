@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using Obj2Tiles.Library.Materials;
+using SixLabors.ImageSharp;
 
 namespace Obj2Tiles.Library.Geometry;
 
@@ -18,6 +19,11 @@ public class Mesh3
 
     public Mesh3(string file)
     {
+        Vertices = Array.Empty<Vertex3>();
+        TextureVertices = Array.Empty<Vertex2>();
+        Faces = Array.Empty<Face<Vertex3>>();
+        Materials = Array.Empty<Material>();
+        
         InternalLoad(file);
     }
 
@@ -363,6 +369,8 @@ public class Mesh3
 
     public void TrimTextures()
     {
+        Debug.WriteLine("Trimming textures of " + Name);
+
         var facesMapper = from face in Faces
             where face.MaterialIndex != null
             group face by face.MaterialIndex.Value
@@ -373,10 +381,20 @@ public class Mesh3
                 Faces = grp.ToList()
             };
 
+        var imgSizeMapper = new Dictionary<string, Vertex2>();
+        
         foreach (var g in facesMapper)
         {
             var material = Materials[g.MaterialIndex];
-            var clusters = new List<Face<Vertex3>[]>();
+            
+            using (var img = Image.Load(material.Texture))
+            {
+                imgSizeMapper.Add(material.Name, new Vertex2(img.Width, img.Height));
+            }
+
+            Debug.WriteLine("\nWorking on material " + material.Name);
+
+            var clusters = new List<Tuple<Material, Face<Vertex3>[]>>();
 
             var materialFaces = g.Faces;
 
@@ -408,7 +426,7 @@ public class Mesh3
                 if (cnt == currentCluster.Count)
                 {
                     // Aggiungo il cluster
-                    clusters.Add(currentCluster.ToArray());
+                    clusters.Add(new Tuple<Material, Face<Vertex3>[]>(material, currentCluster.ToArray()));
 
                     // Andiamo avanti con il prossimo cluster
                     currentCluster = new List<Face<Vertex3>> { materialFaces.First() };
@@ -416,7 +434,7 @@ public class Mesh3
                 }
             }
 
-            clusters.Add(currentCluster.ToArray());
+            clusters.Add(new Tuple<Material, Face<Vertex3>[]>(material, currentCluster.ToArray()));
 
             Debug.WriteLine($"Material {g.MaterialIndex} has {clusters.Count} clusters");
 
@@ -428,9 +446,9 @@ public class Mesh3
                 double maxX = double.MinValue, maxY = double.MinValue;
                 double minX = double.MaxValue, minY = double.MaxValue;
 
-                var boxes = new List<Box2>();
+                //var boxes = new List<Box2>();
 
-                foreach (var face in cluster)
+                foreach (var face in cluster.Item2)
                 {
                     maxX = Math.Max(Math.Max(Math.Max(maxX, face.TC!.x), face.TB!.x), face.TA!.x);
                     maxY = Math.Max(Math.Max(Math.Max(maxY, face.TC!.y), face.TB!.y), face.TA!.y);
@@ -438,10 +456,20 @@ public class Mesh3
                     minX = Math.Min(Math.Min(Math.Min(minX, face.TC!.x), face.TB!.x), face.TA!.x);
                     minY = Math.Min(Math.Min(Math.Min(minY, face.TC!.y), face.TB!.y), face.TA!.y);
 
-                    boxes.Add(new Box2(minX, minY, maxX, maxY));
+                    //Debug.WriteLine("Face:" + face.TA + " " + face.TB + " " + face.TC);
                 }
 
-                var size = Math.Sqrt(boxes.Sum(b => b.Area));
+                var relativeBox = new Box2(minX, minY, maxX, maxY);
+                
+                Debug.WriteLine("Relative Box: (" + minX + " " + minY + ") - (" + maxX + " " + maxY + ")");
+
+                var imgSize = imgSizeMapper[cluster.Item1.Name];
+
+                var box = new Box2(minX * imgSize.x, minY * imgSize.y, maxX * imgSize.x, maxY * imgSize.y);
+                
+                Debug.WriteLine("Box: (" + box.Min.x + " " + box.Min.y + ") - (" + box.Max.x + " " + box.Max.y + ")");
+
+                //var size = Math.Sqrt(boxes.Sum(b => b.Area));
             }
 
             //throw new NotImplementedException();
@@ -784,7 +812,8 @@ public class Mesh3
             {
                 if (material.Texture != null)
                 {
-                    var newTexturePath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileName(material.Texture));
+                    var folder = Path.GetDirectoryName(path);
+                    var newTexturePath = folder != null ? Path.Combine(folder, Path.GetFileName(material.Texture)) : Path.GetFileName(material.Texture);
                     if (!File.Exists(newTexturePath))
                         File.Copy(material.Texture, newTexturePath, true);
                     material.Texture = Path.GetFileName(material.Texture);
@@ -804,7 +833,7 @@ public class Mesh3
         var faces = new List<Face<Vertex3>>();
         var materials = new List<Material>();
         var materialsDict = new Dictionary<string, int>();
-        string currentMaterial = null;
+        var currentMaterial = string.Empty;
 
         while (true)
         {
@@ -847,7 +876,7 @@ public class Mesh3
                     var second = segs[2].Split('/');
                     var third = segs[3].Split('/');
 
-                    Face<Vertex3> face = null;
+                    Face<Vertex3> face;
 
                     var hasTexture = first[1].Length > 0 && second[1].Length > 0 && third[1].Length > 0;
 
