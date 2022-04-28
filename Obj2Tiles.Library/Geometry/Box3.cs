@@ -17,11 +17,11 @@
             Max = new Vertex3(maxX, maxY, maxZ);
         }
     
-        public double Width => Max.x - Min.x;
-        public double Height => Max.y - Min.y;
-        public double Depth => Max.z - Min.z;
+        public double Width => Max.X - Min.X;
+        public double Height => Max.Y - Min.Y;
+        public double Depth => Max.Z - Min.Z;
     
-        public Vertex3 Center => new((Min.x + Max.x) / 2, (Min.y + Max.y) / 2, (Min.z + Max.z) / 2);
+        public Vertex3 Center => new((Min.X + Max.X) / 2, (Min.Y + Max.Y) / 2, (Min.Z + Max.Z) / 2);
     
     }
 }

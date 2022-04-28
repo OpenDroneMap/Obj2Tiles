@@ -21,19 +21,19 @@ public class VertexUtilsX : IVertexUtils
 {
     public Vertex3 CutEdge(Vertex3 a, Vertex3 b, double q)
     {
-        var dx = a.x - b.x;
-        var my = (a.y - b.y) / dx;
-        var mz = (a.z - b.z) / dx;
+        var dx = a.X - b.X;
+        var my = (a.Y - b.Y) / dx;
+        var mz = (a.Z - b.Z) / dx;
         
         Debug.Assert(double.IsFinite(my));
         Debug.Assert(double.IsFinite(mz));
         
-        return new Vertex3(q, my * (q - a.x) + a.y, mz * (q - a.x) + a.z);
+        return new Vertex3(q, my * (q - a.X) + a.Y, mz * (q - a.X) + a.Z);
     }
     
     public double GetDimension(Vertex3 v)
     {
-        return v.x;
+        return v.X;
     }
 
     public Axis Axis => Axis.X;
@@ -44,19 +44,19 @@ public class VertexUtilsY : IVertexUtils
 
     public Vertex3 CutEdge(Vertex3 a, Vertex3 b, double q)
     {
-        var dy = a.y - b.y;
-        var mx = (a.x - b.x) / dy;
-        var mz = (a.z - b.z) / dy;
+        var dy = a.Y - b.Y;
+        var mx = (a.X - b.X) / dy;
+        var mz = (a.Z - b.Z) / dy;
         
         Debug.Assert(double.IsFinite(mx));
         Debug.Assert(double.IsFinite(mz));
 
-        return new Vertex3(mx * (q - a.y) + a.x, q, mz * (q - a.y) + a.z);
+        return new Vertex3(mx * (q - a.Y) + a.X, q, mz * (q - a.Y) + a.Z);
     }
 
     public double GetDimension(Vertex3 v)
     {
-        return v.y;
+        return v.Y;
     }
 
     public Axis Axis => Axis.Y;
@@ -67,19 +67,19 @@ public class VertexUtilsZ : IVertexUtils
 {
     public Vertex3 CutEdge(Vertex3 a, Vertex3 b, double q)
     {
-        var dz = a.z - b.z;
-        var mx = (a.x - b.x) / dz;
-        var my = (a.y - b.y) / dz;
+        var dz = a.Z - b.Z;
+        var mx = (a.X - b.X) / dz;
+        var my = (a.Y - b.Y) / dz;
 
         Debug.Assert(double.IsFinite(mx));
         Debug.Assert(double.IsFinite(my));
 
-        return new Vertex3(mx * (q - a.z) + a.x, my * (q - a.z) + a.y, q);
+        return new Vertex3(mx * (q - a.Z) + a.X, my * (q - a.Z) + a.Y, q);
     }
 
     public double GetDimension(Vertex3 v)
     {
-        return v.z;
+        return v.Z;
     }
 
     public Axis Axis => Axis.Z;

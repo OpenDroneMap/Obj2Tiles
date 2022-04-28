@@ -450,11 +450,11 @@ public class Mesh3
 
                 foreach (var face in cluster.Item2)
                 {
-                    maxX = Math.Max(Math.Max(Math.Max(maxX, face.TC!.x), face.TB!.x), face.TA!.x);
-                    maxY = Math.Max(Math.Max(Math.Max(maxY, face.TC!.y), face.TB!.y), face.TA!.y);
+                    maxX = Math.Max(Math.Max(Math.Max(maxX, face.TC!.X), face.TB!.X), face.TA!.X);
+                    maxY = Math.Max(Math.Max(Math.Max(maxY, face.TC!.Y), face.TB!.Y), face.TA!.Y);
 
-                    minX = Math.Min(Math.Min(Math.Min(minX, face.TC!.x), face.TB!.x), face.TA!.x);
-                    minY = Math.Min(Math.Min(Math.Min(minY, face.TC!.y), face.TB!.y), face.TA!.y);
+                    minX = Math.Min(Math.Min(Math.Min(minX, face.TC!.X), face.TB!.X), face.TA!.X);
+                    minY = Math.Min(Math.Min(Math.Min(minY, face.TC!.Y), face.TB!.Y), face.TA!.Y);
                 }
 
                 var relativeBox = new Box2(minX, minY, maxX, maxY);
@@ -463,9 +463,9 @@ public class Mesh3
 
                 var imgSize = imgSizeMapper[cluster.Item1.Name];
 
-                var box = new Box2(minX * imgSize.x, minY * imgSize.y, maxX * imgSize.x, maxY * imgSize.y);
+                var box = new Box2(minX * imgSize.X, minY * imgSize.Y, maxX * imgSize.X, maxY * imgSize.Y);
                 
-                Debug.WriteLine("Box: (" + box.Min.x + " " + box.Min.y + ") - (" + box.Max.x + " " + box.Max.y + ")");
+                Debug.WriteLine("Box: (" + box.Min.X + " " + box.Min.Y + ") - (" + box.Max.X + " " + box.Max.Y + ")");
 
                 //var size = Math.Sqrt(boxes.Sum(b => b.Area));
             }
@@ -705,13 +705,13 @@ public class Mesh3
 
             foreach (var v in Vertices)
             {
-                minX = minX < v.x ? minX : v.x;
-                minY = minY < v.y ? minY : v.y;
-                minZ = minZ < v.z ? minZ : v.z;
+                minX = minX < v.X ? minX : v.X;
+                minY = minY < v.Y ? minY : v.Y;
+                minZ = minZ < v.Z ? minZ : v.Z;
 
-                maxX = v.x > maxX ? maxX : v.x;
-                maxY = v.y > maxY ? maxY : v.y;
-                maxZ = v.z > maxZ ? maxZ : v.z;
+                maxX = v.X > maxX ? maxX : v.X;
+                maxY = v.Y > maxY ? maxY : v.Y;
+                maxZ = v.Z > maxZ ? maxZ : v.Z;
             }
 
             return new Box3(minX, minY, minZ, maxX, maxY, maxZ);
@@ -727,9 +727,9 @@ public class Mesh3
         for (var index = 0; index < Vertices.Count; index++)
         {
             var v = Vertices[index];
-            x += v.x;
-            y += v.y;
-            z += v.z;
+            x += v.X;
+            y += v.Y;
+            z += v.Z;
         }
 
         x /= Vertices.Count;
@@ -772,19 +772,19 @@ public class Mesh3
             foreach (var vertex in Vertices)
             {
                 writer.Write("v ");
-                writer.Write(vertex.x);
+                writer.Write(vertex.X);
                 writer.Write(" ");
-                writer.Write(vertex.y);
+                writer.Write(vertex.Y);
                 writer.Write(" ");
-                writer.WriteLine(vertex.z);
+                writer.WriteLine(vertex.Z);
             }
 
             foreach (var textureVertex in TextureVertices)
             {
                 writer.Write("vt ");
-                writer.Write(textureVertex.x);
+                writer.Write(textureVertex.X);
                 writer.Write(" ");
-                writer.WriteLine(textureVertex.y);
+                writer.WriteLine(textureVertex.Y);
             }
 
             var materialFaces = from face in Faces
@@ -958,9 +958,9 @@ public class Mesh3
     {
         var center = mesh.GetVertexBaricenter();
 
-        var count = mesh.Split(xutils3, center.x, out var left, out var right);
-        count += left.Split(yutils3, center.y, out var topleft, out var bottomleft);
-        count += right.Split(yutils3, center.y, out var topright, out var bottomright);
+        var count = mesh.Split(xutils3, center.X, out var left, out var right);
+        count += left.Split(yutils3, center.Y, out var topleft, out var bottomleft);
+        count += right.Split(yutils3, center.Y, out var topright, out var bottomright);
 
         var nextDepth = depth - 1;
 
@@ -994,15 +994,15 @@ public class Mesh3
     {
         var center = mesh.GetVertexBaricenter();
 
-        var count = mesh.Split(xutils3, center.x, out var left, out var right);
-        count += left.Split(yutils3, center.y, out var topleft, out var bottomleft);
-        count += right.Split(yutils3, center.y, out var topright, out var bottomright);
+        var count = mesh.Split(xutils3, center.X, out var left, out var right);
+        count += left.Split(yutils3, center.Y, out var topleft, out var bottomleft);
+        count += right.Split(yutils3, center.Y, out var topright, out var bottomright);
 
-        count += topleft.Split(zutils3, center.z, out var topleftnear, out var topleftfar);
-        count += bottomleft.Split(zutils3, center.z, out var bottomleftnear, out var bottomleftfar);
+        count += topleft.Split(zutils3, center.Z, out var topleftnear, out var topleftfar);
+        count += bottomleft.Split(zutils3, center.Z, out var bottomleftnear, out var bottomleftfar);
 
-        count += topright.Split(zutils3, center.z, out var toprightnear, out var toprightfar);
-        count += bottomright.Split(zutils3, center.z, out var bottomrightnear, out var bottomrightfar);
+        count += topright.Split(zutils3, center.Z, out var toprightnear, out var toprightfar);
+        count += bottomright.Split(zutils3, center.Z, out var bottomrightnear, out var bottomrightfar);
 
         var nextDepth = depth - 1;
 

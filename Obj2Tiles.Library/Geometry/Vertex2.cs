@@ -6,7 +6,7 @@ public class Vertex2
 {
     protected bool Equals(Vertex2 other)
     {
-        return x.Equals(other.x) && y.Equals(other.y);
+        return X.Equals(other.X) && Y.Equals(other.Y);
     }
 
     public override bool Equals(object? obj)
@@ -17,42 +17,42 @@ public class Vertex2
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(x, y);
+        return HashCode.Combine(X, Y);
     }
 
     public Vertex2(double x, double y)
     {
-        this.x = x;
-        this.y = y;
+        this.X = x;
+        this.Y = y;
     }
 
-    public readonly double x;
-    public readonly double y;
+    public readonly double X;
+    public readonly double Y;
 
     public override string ToString()
     {
-        return $"({x}; {y})";
+        return $"({X}; {Y})";
     }
 
     private static readonly CultureInfo culture = new("en-US");
 
     public static bool operator ==(Vertex2 a, Vertex2 b)
     {
-        return Math.Abs(a.x - b.x) < double.Epsilon && Math.Abs(a.y - b.y) < double.Epsilon;
+        return Math.Abs(a.X - b.X) < double.Epsilon && Math.Abs(a.Y - b.Y) < double.Epsilon;
     }
 
     public static bool operator !=(Vertex2 a, Vertex2 b)
     {
-        return Math.Abs(a.x - b.x) > double.Epsilon || Math.Abs(a.y - b.y) > double.Epsilon;
+        return Math.Abs(a.X - b.X) > double.Epsilon || Math.Abs(a.Y - b.Y) > double.Epsilon;
     }
 
     public double Distance(Vertex2 other)
     {
-        return Math.Sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
+        return Math.Sqrt((X - other.X) * (X - other.X) + (Y - other.Y) * (Y - other.Y));
     }
     
     public Vertex2 CutEdgePerc(Vertex2 b, double perc)
     {
-        return new Vertex2((b.x - x) * perc + x, (b.y - y) * perc + y);
+        return new Vertex2((b.X - X) * perc + X, (b.Y - Y) * perc + Y);
     }
 }
