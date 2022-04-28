@@ -772,9 +772,9 @@ public class Mesh3
 
                 if (material.Texture != null)
                 {
-                    var newTexturePath =
-                        Path.Combine(Path.GetDirectoryName(path), Path.GetFileName(material.Texture));
-                    File.Copy(material.Texture, newTexturePath, true);
+                    var newTexturePath = Path.GetFileName(material.Texture);
+                    if (!File.Exists(newTexturePath)) 
+                        File.Copy(material.Texture, newTexturePath, true);
                     material.Texture = newTexturePath;
                 }
 
