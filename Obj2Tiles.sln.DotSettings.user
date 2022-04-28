@@ -1,6 +1,6 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=f09d9ffa_002D18b6_002D482f_002Db78d_002D1095011c4191/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Cube_TrimTextures" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=77202287_002Dcce3_002D48d4_002Da71b_002D77c5e4351700/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Cube_TrimTextures" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
-    &lt;TestId&gt;NUnit3x::54DA9B0D-75B8-43B5-A704-5870B8FDA465::net6.0::Obj2Tiles.Library.Test.Mesh3DTests.Cube_TrimTextures&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::54DA9B0D-75B8-43B5-A704-5870B8FDA465::net6.0::Obj2Tiles.Library.Test.Mesh3Tests.Cube_TrimTextures&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

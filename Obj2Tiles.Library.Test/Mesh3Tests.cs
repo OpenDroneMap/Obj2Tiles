@@ -1,10 +1,11 @@
+using System.Diagnostics;
 using System.IO;
 using NUnit.Framework;
 using Obj2Tiles.Library.Geometry;
 
 namespace Obj2Tiles.Library.Test;
 
-public class Mesh3DTests
+public class Mesh3Tests
 {
     [SetUp]
     public void Setup()
