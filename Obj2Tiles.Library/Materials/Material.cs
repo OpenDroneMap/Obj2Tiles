@@ -6,8 +6,8 @@ namespace Obj2Tiles.Library.Materials;
 
 public class Material
 {
-    public readonly string Name;
-    public readonly string? Texture;
+    public string Name;
+    public string? Texture;
 
     /// <summary>
     /// Ka - Ambient
@@ -112,7 +112,7 @@ public class Material
                     break;
                 default:
                     Debug.WriteLine($"Unknown line: '{line}'");
-                    throw new ArgumentOutOfRangeException();
+                    break;
             }
         }
         

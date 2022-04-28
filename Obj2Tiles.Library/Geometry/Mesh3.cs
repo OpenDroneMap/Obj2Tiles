@@ -679,14 +679,15 @@ public class Mesh3
         }
     }
 
-    public Vertex3 GetBaricenter()
+    public Vertex3 GetVertexBaricenter()
     {
         var x = 0.0;
         var y = 0.0;
         var z = 0.0;
 
-        foreach (var v in Vertices)
+        for (var index = 0; index < Vertices.Count; index++)
         {
+            var v = Vertices[index];
             x += v.x;
             y += v.y;
             z += v.z;
@@ -710,8 +711,7 @@ public class Mesh3
     {
         var edge1Length = a.Distance(b);
         var subEdge1Length = a.Distance(p);
-        var perc1 = subEdge1Length / edge1Length;
-        return perc1;
+        return subEdge1Length / edge1Length;
     }
 
     private static readonly CultureInfo en = CultureInfo.GetCultureInfo("en-US");
@@ -722,7 +722,9 @@ public class Mesh3
 
         using (var writer = new StreamWriter(path))
         {
-            writer.WriteLine("mtllib {0}", Path.GetFileName(materialsPath));
+            if (TextureVertices.Any())
+                writer.WriteLine("mtllib {0}", Path.GetFileName(materialsPath));
+            
             writer.Write("o ");
             writer.WriteLine(string.IsNullOrWhiteSpace(Name) ? DefaultName : Name);
 
@@ -762,19 +764,22 @@ public class Mesh3
             }
         }
 
-        using (var writer = new StreamWriter(Path.ChangeExtension(path, "mtl")))
+        if (Materials.Any())
         {
+            using var writer = new StreamWriter(Path.ChangeExtension(path, "mtl"));
             foreach (var material in Materials)
             {
+
+                if (material.Texture != null)
+                {
+                    var newTexturePath =
+                        Path.Combine(Path.GetDirectoryName(path), Path.GetFileName(material.Texture));
+                    File.Copy(material.Texture, newTexturePath, true);
+                    material.Texture = newTexturePath;
+                }
+
                 writer.WriteLine(material.ToMtl());
 
-                /*
-                if (!string.IsNullOrWhiteSpace(material.Texture))
-                {
-                    var texturePath = Path.Combine(Path.GetDirectoryName(path) ?? string.Empty, material.Texture);
-
-                    File.Copy(texturePath, Path.ChangeExtension(path, Path.GetExtension(texturePath)), true);
-                }*/
             }
         }
     }
@@ -913,7 +918,7 @@ public class Mesh3
     
     public static async Task<int> RecurseSplitXY(Mesh3 mesh, int depth, ConcurrentBag<Mesh3> meshes)
     {
-        var center = mesh.GetBaricenter();
+        var center = mesh.GetVertexBaricenter();
 
         var count = mesh.Split(xutils3, center.x, out var left, out var right);
         count += left.Split(yutils3, center.y, out var topleft, out var bottomleft);
@@ -945,7 +950,7 @@ public class Mesh3
 
     public static async Task<int> RecurseSplitXYZ(Mesh3 mesh, int depth, ConcurrentBag<Mesh3> meshes)
     {
-        var center = mesh.GetBaricenter();
+        var center = mesh.GetVertexBaricenter();
 
         var count = mesh.Split(xutils3, center.x, out var left, out var right);
         count += left.Split(yutils3, center.y, out var topleft, out var bottomleft);
