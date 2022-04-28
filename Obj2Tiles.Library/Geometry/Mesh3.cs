@@ -369,7 +369,7 @@ public class Mesh3
 
     public void TrimTextures()
     {
-        Debug.WriteLine("Trimming textures of " + Name);
+        Debug.WriteLine("\nTrimming textures of " + Name);
 
         var facesMapper = from face in Faces
             where face.MaterialIndex != null
@@ -392,7 +392,7 @@ public class Mesh3
                 imgSizeMapper.Add(material.Name, new Vertex2(img.Width, img.Height));
             }
 
-            Debug.WriteLine("\nWorking on material " + material.Name);
+            Debug.WriteLine("Working on material " + material.Name);
 
             var clusters = new List<Tuple<Material, Face<Vertex3>[]>>();
 
@@ -455,8 +455,6 @@ public class Mesh3
 
                     minX = Math.Min(Math.Min(Math.Min(minX, face.TC!.x), face.TB!.x), face.TA!.x);
                     minY = Math.Min(Math.Min(Math.Min(minY, face.TC!.y), face.TB!.y), face.TA!.y);
-
-                    //Debug.WriteLine("Face:" + face.TA + " " + face.TB + " " + face.TC);
                 }
 
                 var relativeBox = new Box2(minX, minY, maxX, maxY);
