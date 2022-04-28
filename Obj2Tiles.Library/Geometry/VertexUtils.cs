@@ -2,10 +2,19 @@
 
 namespace Obj2Tiles.Library.Geometry;
 
+public enum Axis
+{
+    X,
+    Y,
+    Z
+}
+
 public interface IVertexUtils
 {
     Vertex3 CutEdge(Vertex3 a, Vertex3 b, double q);
     double GetDimension(Vertex3 v);
+    
+    Axis Axis { get; }   
 }
 
 public class VertexUtilsX : IVertexUtils
@@ -27,6 +36,7 @@ public class VertexUtilsX : IVertexUtils
         return v.x;
     }
 
+    public Axis Axis => Axis.X;
 }
 
 public class VertexUtilsY : IVertexUtils
@@ -49,6 +59,8 @@ public class VertexUtilsY : IVertexUtils
         return v.y;
     }
 
+    public Axis Axis => Axis.Y;
+
 }
 
 public class VertexUtilsZ : IVertexUtils
@@ -69,5 +81,7 @@ public class VertexUtilsZ : IVertexUtils
     {
         return v.z;
     }
+
+    public Axis Axis => Axis.Z;
 
 }

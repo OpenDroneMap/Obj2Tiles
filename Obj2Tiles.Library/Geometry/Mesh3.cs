@@ -30,7 +30,7 @@ public class Mesh3
         Materials = materials;
     }
 
-    private int SplitWithTexture(IVertexUtils utils3, double q, out Mesh3 left,
+    private int SplitWithTexture(IVertexUtils utils, double q, out Mesh3 left,
         out Mesh3 right)
     {
         var leftVertices = new Dictionary<Vertex3, int>(Vertices.Count);
@@ -48,9 +48,9 @@ public class Mesh3
         {
             var face = Faces[index];
 
-            var aSide = utils3.GetDimension(face.A) < q;
-            var bSide = utils3.GetDimension(face.B) < q;
-            var cSide = utils3.GetDimension(face.C) < q;
+            var aSide = utils.GetDimension(face.A) < q;
+            var bSide = utils.GetDimension(face.B) < q;
+            var cSide = utils.GetDimension(face.C) < q;
 
             if (aSide)
             {
@@ -74,7 +74,7 @@ public class Mesh3
                     }
                     else
                     {
-                        IntersectRight2DWithTexture(utils3, q, face.IndexC, face.IndexA, face.IndexB,
+                        IntersectRight2DWithTexture(utils, q, face.IndexC, face.IndexA, face.IndexB,
                             leftVertices,
                             rightVertices,
                             face.TextureIndexC!.Value, face.TextureIndexA!.Value, face.TextureIndexB!.Value,
@@ -87,7 +87,7 @@ public class Mesh3
                 {
                     if (cSide)
                     {
-                        IntersectRight2DWithTexture(utils3, q, face.IndexB, face.IndexC, face.IndexA,
+                        IntersectRight2DWithTexture(utils, q, face.IndexB, face.IndexC, face.IndexA,
                             leftVertices,
                             rightVertices,
                             face.TextureIndexB!.Value, face.TextureIndexC!.Value, face.TextureIndexA!.Value,
@@ -97,7 +97,7 @@ public class Mesh3
                     }
                     else
                     {
-                        IntersectLeft2DWithTexture(utils3, q, face.IndexA, face.IndexB, face.IndexC,
+                        IntersectLeft2DWithTexture(utils, q, face.IndexA, face.IndexB, face.IndexC,
                             leftVertices,
                             rightVertices,
                             face.TextureIndexA!.Value, face.TextureIndexB!.Value, face.TextureIndexC!.Value,
@@ -113,7 +113,7 @@ public class Mesh3
                 {
                     if (cSide)
                     {
-                        IntersectRight2DWithTexture(utils3, q, face.IndexA, face.IndexB, face.IndexC,
+                        IntersectRight2DWithTexture(utils, q, face.IndexA, face.IndexB, face.IndexC,
                             leftVertices,
                             rightVertices,
                             face.TextureIndexA!.Value, face.TextureIndexB!.Value, face.TextureIndexC!.Value,
@@ -123,7 +123,7 @@ public class Mesh3
                     }
                     else
                     {
-                        IntersectLeft2DWithTexture(utils3, q, face.IndexB, face.IndexC, face.IndexA,
+                        IntersectLeft2DWithTexture(utils, q, face.IndexB, face.IndexC, face.IndexA,
                             leftVertices,
                             rightVertices,
                             face.TextureIndexB!.Value, face.TextureIndexC!.Value, face.TextureIndexA!.Value,
@@ -136,7 +136,7 @@ public class Mesh3
                 {
                     if (cSide)
                     {
-                        IntersectLeft2DWithTexture(utils3, q, face.IndexC, face.IndexA, face.IndexB,
+                        IntersectLeft2DWithTexture(utils, q, face.IndexC, face.IndexA, face.IndexB,
                             leftVertices,
                             rightVertices,
                             face.TextureIndexC!.Value, face.TextureIndexA!.Value, face.TextureIndexB!.Value,
@@ -170,8 +170,14 @@ public class Mesh3
         var orderedLeftTextureVertices = leftTextureVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
         var orderedRightTextureVertices = rightTextureVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
 
-        left = new Mesh3(orderedLeftVertices, orderedLeftTextureVertices, leftFaces, Materials);
-        right = new Mesh3(orderedRightVertices, orderedRightTextureVertices, rightFaces, Materials);
+        left = new Mesh3(orderedLeftVertices, orderedLeftTextureVertices, leftFaces, Materials)
+        {
+            Name = $"{Name}-{utils.Axis}L"
+        };
+        right = new Mesh3(orderedRightVertices, orderedRightTextureVertices, rightFaces, Materials)
+        {
+            Name = $"{Name}-{utils.Axis}R"
+        };
 
         return count;
     }
@@ -547,8 +553,15 @@ public class Mesh3
         var orderedRightVertices = rightVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
 
         // Aggiungere split texture
-        left = new Mesh3(orderedLeftVertices, TextureVertices, leftFaces, Materials);
-        right = new Mesh3(orderedRightVertices, TextureVertices, rightFaces, Materials);
+        left = new Mesh3(orderedLeftVertices, TextureVertices, leftFaces, Materials)
+        {
+            Name = $"{Name}-{utils.Axis}L"
+        };
+
+        right = new Mesh3(orderedRightVertices, TextureVertices, rightFaces, Materials)
+        {
+            Name = $"{Name}-{utils.Axis}R"
+        };
 
         return count;
     }
@@ -699,7 +712,7 @@ public class Mesh3
 
         return new Vertex3(x, y, z);
     }
-    
+
     /// <summary>
     /// Gets the distance of P from A (in percent) relative to segment AB
     /// </summary>
@@ -724,7 +737,7 @@ public class Mesh3
         {
             if (TextureVertices.Any())
                 writer.WriteLine("mtllib {0}", Path.GetFileName(materialsPath));
-            
+
             writer.Write("o ");
             writer.WriteLine(string.IsNullOrWhiteSpace(Name) ? DefaultName : Name);
 
@@ -769,17 +782,15 @@ public class Mesh3
             using var writer = new StreamWriter(Path.ChangeExtension(path, "mtl"));
             foreach (var material in Materials)
             {
-
                 if (material.Texture != null)
                 {
-                    var newTexturePath = Path.GetFileName(material.Texture);
-                    if (!File.Exists(newTexturePath)) 
+                    var newTexturePath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileName(material.Texture));
+                    if (!File.Exists(newTexturePath))
                         File.Copy(material.Texture, newTexturePath, true);
-                    material.Texture = newTexturePath;
+                    material.Texture = Path.GetFileName(material.Texture);
                 }
 
                 writer.WriteLine(material.ToMtl());
-
             }
         }
     }
@@ -915,7 +926,7 @@ public class Mesh3
     private static readonly IVertexUtils yutils3 = new VertexUtilsY();
     private static readonly IVertexUtils xutils3 = new VertexUtilsX();
     private static readonly IVertexUtils zutils3 = new VertexUtilsZ();
-    
+
     public static async Task<int> RecurseSplitXY(Mesh3 mesh, int depth, ConcurrentBag<Mesh3> meshes)
     {
         var center = mesh.GetVertexBaricenter();
@@ -928,7 +939,11 @@ public class Mesh3
 
         if (nextDepth == 0)
         {
-            if (topleft.Faces.Any()) meshes.Add(topleft);
+            if (topleft.Faces.Any())
+            {
+                meshes.Add(topleft);
+            }
+
             if (bottomleft.Faces.Any()) meshes.Add(bottomleft);
             if (topright.Faces.Any()) meshes.Add(topright);
             if (bottomright.Faces.Any()) meshes.Add(bottomright);

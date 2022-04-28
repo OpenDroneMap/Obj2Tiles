@@ -69,7 +69,7 @@ namespace Obj2Tiles
             for (var index = 0; index < ms.Length; index++)
             {
                 var m = ms[index];
-                m.WriteObj(Path.Combine(opts.Output, $"{index}-{m.Name}.obj"));
+                m.WriteObj(Path.Combine(opts.Output, $"{m.Name}.obj"));
             }
 
             Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
