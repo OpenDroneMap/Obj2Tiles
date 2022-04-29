@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Obj2Tiles.Library.Materials;
 
-public class Material
+public class Material : ICloneable
 {
     public string Name;
     public string? Texture;
@@ -55,12 +55,12 @@ public class Material
         var lines = File.ReadAllLines(path);
         var materials = new List<Material>();
 
-        string texture = null;
-        string name = null;
-        RGB ambientColor = null, diffuseColor = null, specularColor = null;
+        var texture = string.Empty;
+        var name = string.Empty;
+        RGB? ambientColor = null, diffuseColor = null, specularColor = null;
         double? specularExponent = null, dissolve = null;
         IlluminationModel? illuminationModel = null;
-        
+
         foreach (var line in lines)
         {
             if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line))
@@ -70,32 +70,35 @@ public class Material
             switch (parts[0])
             {
                 case "newmtl":
-                    
-                    if (name != null)
-                        materials.Add(new Material(name, texture, ambientColor, diffuseColor, specularColor, specularExponent, dissolve, illuminationModel));
+
+                    if (name.Length > 0)
+                        materials.Add(new Material(name, texture, ambientColor, diffuseColor, specularColor,
+                            specularExponent, dissolve, illuminationModel));
 
                     name = parts[1];
-                    
+
                     break;
                 case "map_Kd":
-                    texture = Path.IsPathRooted(parts[1]) ? parts[1] : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path), parts[1]));
+                    texture = Path.IsPathRooted(parts[1])
+                        ? parts[1]
+                        : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path), parts[1]));
                     break;
                 case "Ka":
                     ambientColor = new RGB(
-                        double.Parse(parts[1], en), 
-                        double.Parse(parts[2], en), 
+                        double.Parse(parts[1], en),
+                        double.Parse(parts[2], en),
                         double.Parse(parts[3], en));
                     break;
                 case "Kd":
                     diffuseColor = new RGB(
-                        double.Parse(parts[1], en), 
-                        double.Parse(parts[2], en), 
+                        double.Parse(parts[1], en),
+                        double.Parse(parts[2], en),
                         double.Parse(parts[3], en));
                     break;
                 case "Ks":
                     specularColor = new RGB(
-                        double.Parse(parts[1], en), 
-                        double.Parse(parts[2], en), 
+                        double.Parse(parts[1], en),
+                        double.Parse(parts[2], en),
                         double.Parse(parts[3], en));
                     break;
                 case "Ns":
@@ -108,19 +111,20 @@ public class Material
                     dissolve = 1 - double.Parse(parts[1], CultureInfo.InvariantCulture);
                     break;
                 case "illum":
-                    illuminationModel = (IlluminationModel) int.Parse(parts[1]);
+                    illuminationModel = (IlluminationModel)int.Parse(parts[1]);
                     break;
                 default:
                     Debug.WriteLine($"Unknown line: '{line}'");
                     break;
             }
         }
-        
-        materials.Add(new Material(name, texture, ambientColor, diffuseColor, specularColor, specularExponent, dissolve, illuminationModel));
+
+        materials.Add(new Material(name, texture, ambientColor, diffuseColor, specularColor, specularExponent, dissolve,
+            illuminationModel));
 
         return materials.ToArray();
     }
-    
+
     private static readonly CultureInfo en = CultureInfo.GetCultureInfo("en-US");
 
     public string ToMtl()
@@ -133,7 +137,7 @@ public class Material
         if (Texture != null)
         {
             builder.Append("map_Kd ");
-            builder.AppendLine(Texture.Replace('\\','/'));
+            builder.AppendLine(Texture.Replace('\\', '/'));
         }
 
         if (AmbientColor != null)
@@ -173,5 +177,18 @@ public class Material
         }
 
         return builder.ToString();
+    }
+
+    public object Clone()
+    {
+        return new Material(
+            Name,
+            Texture,
+            AmbientColor,
+            DiffuseColor,
+            SpecularColor,
+            SpecularExponent,
+            Dissolve,
+            IlluminationModel);
     }
 }

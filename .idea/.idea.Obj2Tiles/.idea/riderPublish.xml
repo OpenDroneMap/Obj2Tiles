@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="LocationsWithSilentDeleteHolder">
+    <option name="locations">
+      <list>
+        <option value="$PROJECT_DIR$/Obj2Tiles/bin/Release/net6.0/win-x64/publish" />
+        <option value="$PROJECT_DIR$/Obj2Tiles/bin/Release/net6.0/linux-x64/publish" />
+      </list>
+    </option>
+  </component>
+</project>

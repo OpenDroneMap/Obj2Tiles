@@ -36,23 +36,23 @@ namespace Obj2Tiles
             Console.WriteLine($" -> Loading OBJ file \"{opts.Input}\"");
 
             sw.Start();
-            var mesh = new Mesh3(opts.Input);
+            var mesh = MeshUtils.LoadMesh(opts.Input);
 
-            Console.WriteLine(" ?> Loaded {0} vertices, {1} faces in {2}ms", mesh.Vertices.Count, mesh.Faces.Count,
+            Console.WriteLine(" ?> Loaded {0} vertices, {1} faces in {2}ms", mesh.VertexCount, mesh.FacesCount,
                 sw.ElapsedMilliseconds);
 
             Console.WriteLine(
                 $" -> Splitting with a depth of {opts.Divisions}" + (opts.ZSplit ? " with z-split" : ""));
 
-            var meshes = new ConcurrentBag<Mesh3>();
+            var meshes = new ConcurrentBag<IMesh>();
 
             //Common.Epsilon = 0.00001f;
             
             sw.Restart();
 
             var count = opts.ZSplit
-                ? await Mesh3.RecurseSplitXYZ(mesh, opts.Divisions, meshes)
-                : await Mesh3.RecurseSplitXY(mesh, opts.Divisions, meshes);
+                ? await MeshUtils.RecurseSplitXYZ(mesh, opts.Divisions, meshes)
+                : await MeshUtils.RecurseSplitXY(mesh, opts.Divisions, meshes);
 
             sw.Stop();
 
