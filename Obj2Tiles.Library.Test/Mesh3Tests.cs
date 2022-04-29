@@ -82,52 +82,30 @@ public class Mesh3Tests
         var imagePath = "TestData/cube/pic5.jpg";
 
         using var image = Image.Load<Rgba32>(imagePath);
-        /*
-         *Relative Box: (0 0) - (0,5 0,5)
-Box: (0 0) - (512 512)
-         * 
-         */
-
-        var relativeBox = new Box2(0, 0, 0.5, 0.5);
-        var box = relativeBox.Scale(image.Width, image.Height);
-
-        //IPath polygon = new RectangularPolygon((float)box.Min.X, (float)box.Min.Y, (float)box.Max.X, (float)box.Max.Y);
-/*        IPath triangle = new Polygon(
-            new LinearLineSegment(new PointF(0, (float)image.Height), new PointF((float)image.Width / 2, 0)),
-            new LinearLineSegment(new PointF((float)image.Width / 2, 0), new PointF((float)image.Width, image.Height)),
-            new LinearLineSegment(new PointF(0, (float)image.Height), new PointF((float)image.Width, image.Height))
-        );*/
+        using var newImage = new Image<Rgba32>(image.Width, image.Height);
         
-        using var seg = new Image<Rgba32>(image.Width, image.Height);
-
         var a = new Vertex2(0.1, 0.1);
         var b = new Vertex2(0.2, 0.15);
         var c = new Vertex2(0.15, 0.2);
+        var pos = new Vertex2(0, 0);
         
-        var aR = new PointF((float)a.X * image.Width, (float)a.Y * image.Height);
-        var bR = new PointF((float)b.X * image.Width, (float)b.Y * image.Height);
-        var cR = new PointF((float)c.X * image.Width, (float)c.Y * image.Height);
+        CopyTriangle(image, newImage, a, b, c, pos);
         
-        IPath path = new Polygon(
-            new LinearLineSegment(aR, bR),
-            new LinearLineSegment(bR, cR),
-            new LinearLineSegment(cR, aR)
-        );
-        
-        using var newImage = new Image<Rgba32>(image.Width, image.Height);
+        a = new Vertex2(0.5, 0.5);
+        b = new Vertex2(0.6, 0.75);
+        c = new Vertex2(0.85, 0.5);
+        pos = new Vertex2(200, 0);
 
-        /*
-        using var img = new Image<Rgba32>((int)path.Bounds.Width, (int)path.Bounds.Height);
-        img.Mutate(x => x.Clip(scaled, ctx => ctx.DrawImage(image, new Point(0, 0), 1f)));
-        img.Save("seg.jpg");*/
+        CopyTriangle(image, newImage, a, b, c, pos);
         
-        seg.Mutate(x =>
-        {
-            x.Clip(path, context => context.DrawImage(image, new Point(0,0), 1f));
-            x.Crop(new Rectangle((int)path.Bounds.Left, (int)path.Bounds.Top, (int)path.Bounds.Width, (int)path.Bounds.Height));
-        });
-        
-        newImage.Mutate(x => x.DrawImage(seg, new Point(0,0), 1f));
+        a = new Vertex2(0.3, 0.8);
+        b = new Vertex2(0.5, 0.45);
+        c = new Vertex2(0.65, 0.4);
+        pos = new Vertex2(200, 200);
+
+        CopyTriangle(image, newImage, a, b, c, pos);
+
+        //seg.Save("pic2-mod2.jpg");
         
         //newImage.Mutate(o => o.DrawImage(image, new Point(0,0), 1f));
         
@@ -138,7 +116,30 @@ Box: (0 0) - (512 512)
         //image.Mutate(x => x.Clip(polygon, context => context.));
 
         image.Save("pic2-mod1.jpg");
-        seg.Save("pic2-mod2.jpg");
         newImage.Save("newimage.jpg");
+    }
+
+    private static void CopyTriangle(Image<Rgba32> image, Image<Rgba32> newImage, Vertex2 a, Vertex2 b, Vertex2 c, Vertex2 pos)
+    {
+        var aR = new PointF((float)a.X * image.Width, (float)a.Y * image.Height);
+        var bR = new PointF((float)b.X * image.Width, (float)b.Y * image.Height);
+        var cR = new PointF((float)c.X * image.Width, (float)c.Y * image.Height);
+
+        var path = new Polygon(
+            new LinearLineSegment(aR, bR),
+            new LinearLineSegment(bR, cR),
+            new LinearLineSegment(cR, aR)
+        );
+
+        using var seg = new Image<Rgba32>(image.Width, image.Height);
+
+        seg.Mutate(x =>
+        {
+            x.Clip(path, context => context.DrawImage(image, new Point(0,0), 1f));
+            x.Crop(new Rectangle((int)path.Bounds.Left, (int)path.Bounds.Top, (int)path.Bounds.Width,
+                (int)path.Bounds.Height));
+        });
+
+        newImage.Mutate(x => x.DrawImage(seg, new Point((int)pos.X, (int)pos.Y), 1f));
     }
 }

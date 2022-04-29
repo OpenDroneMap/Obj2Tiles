@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Obj2Tiles.Library.Materials;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Obj2Tiles.Library.Geometry;
 
@@ -356,26 +357,35 @@ public class MeshT : IMesh
         Debug.WriteLine("\nTrimming textures of " + Name);
 
         var facesMapper = from face in Faces
-            group face by face.MaterialIndex
-            into grp
+            group face by face.MaterialIndex into grp
             select new
             {
                 MaterialIndex = grp.Key,
-                Faces = grp.OrderBy(f => f.TextureArea()).ToList()
+                Faces = grp.OrderBy(f => f.TextureArea()).ToList(),
             };
 
         var imgSizeMapper = new Dictionary<string, Vertex2>();
 
-        foreach (var g in facesMapper)
+        using (var outImage = new Image<Rgba32>(8192, 8192))
         {
-            var material = Materials[g.MaterialIndex];
 
-            using (var img = Image.Load(material.Texture))
+            int outImageArea = 0;
+            
+            foreach (var g in facesMapper)
             {
-                imgSizeMapper.Add(material.Name, new Vertex2(img.Width, img.Height));
+                var material = Materials[g.MaterialIndex];
+                Debug.WriteLine("Working on material " + material.Name);
+
+                using (var texture = Image.Load<Rgba32>(material.Texture))
+                {
+
+                    //outImageArea += area;
+                    
+
+                }
+
             }
 
-            Debug.WriteLine("Working on material " + material.Name);
         }
     }
 
