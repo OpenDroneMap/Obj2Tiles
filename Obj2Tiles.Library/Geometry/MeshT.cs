@@ -354,6 +354,7 @@ public class MeshT : IMesh
 
     public void TrimTextures()
     {
+        /*
         Debug.WriteLine("\nTrimming textures of " + Name);
 
         var facesMapper = from face in Faces
@@ -387,6 +388,116 @@ public class MeshT : IMesh
             }
 
         }
+        */
+        
+        var facesMapper = from face in Faces
+            group face by face.MaterialIndex
+            into grp
+            select new
+            {
+                MaterialIndex = grp.Key,
+                Faces = grp.ToList()
+            };
+
+        /*
+        var imgSizeMapper = new Dictionary<string, Vertex2>();
+        
+        foreach (var g in facesMapper)
+        {
+            var material = Materials[g.MaterialIndex];
+            
+            using (var img = Image.Load(material.Texture))
+            {
+                imgSizeMapper.Add(material.Name, new Vertex2(img.Width, img.Height));
+            }
+
+            Debug.WriteLine("Working on material " + material.Name);
+
+            var clusters = new List<Tuple<Material, FaceT<Vertex3>[]>>();
+
+            var materialFaces = g.Faces;
+
+            var currentCluster = new List<FaceT<Vertex3>> { materialFaces.First() };
+            materialFaces.RemoveAt(0);
+
+            while (materialFaces.Count > 0)
+            {
+                var cnt = currentCluster.Count;
+
+                // Scorriamo tutte le facce del cluster
+                for (var index = 0; index < currentCluster.Count; index++)
+                {
+                    var face = currentCluster[index];
+
+                    // Scorriamo tutte le facce rimanenti
+                    for (var n = 0; n < materialFaces.Count; n++)
+                    {
+                        var f = materialFaces[n];
+                        if (face.IsTextureAdjacent(f))
+                        {
+                            currentCluster.Add(f);
+                            materialFaces.RemoveAt(n);
+                        }
+                    }
+                }
+
+                // Non ho aggiunto nessuna faccia
+                if (cnt == currentCluster.Count)
+                {
+                    // Aggiungo il cluster
+                    clusters.Add(new Tuple<Material, FaceT<Vertex3>[]>(material, currentCluster.ToArray()));
+
+                    Debug.WriteLine("Added cluster with " + currentCluster.Count + " faces");
+                    
+                    // Andiamo avanti con il prossimo cluster
+                    currentCluster = new List<FaceT<Vertex3>> { materialFaces.First() };
+                    materialFaces.RemoveAt(0);
+                }
+            }
+
+            clusters.Add(new Tuple<Material, FaceT<Vertex3>[]>(material, currentCluster.ToArray()));
+
+            Debug.WriteLine($"Material {g.MaterialIndex} has {clusters.Count} clusters");
+
+            for (var index = 0; index < clusters.Count; index++)
+            {
+                var cluster = clusters[index];
+                Debug.WriteLine("Working on cluster " + index);
+
+                double maxX = double.MinValue, maxY = double.MinValue;
+                double minX = double.MaxValue, minY = double.MaxValue;
+
+                //var boxes = new List<Box2>();
+
+                foreach (var face in cluster.Item2)
+                {
+                    maxX = Math.Max(Math.Max(Math.Max(maxX, face.TC.X), face.TB.X), face.TA.X);
+                    maxY = Math.Max(Math.Max(Math.Max(maxY, face.TC.Y), face.TB.Y), face.TA.Y);
+
+                    minX = Math.Min(Math.Min(Math.Min(minX, face.TC.X), face.TB.X), face.TA.X);
+                    minY = Math.Min(Math.Min(Math.Min(minY, face.TC.Y), face.TB.Y), face.TA.Y);
+                }
+
+                var relativeBox = new Box2(minX, minY, maxX, maxY);
+                
+                Debug.WriteLine("Relative Box: (" + minX + " " + minY + ") - (" + maxX + " " + maxY + ")");
+
+                var imgSize = imgSizeMapper[cluster.Item1.Name];
+
+                var box = new Box2(minX * imgSize.X, minY * imgSize.Y, maxX * imgSize.X, maxY * imgSize.Y);
+                
+                Debug.WriteLine("Box: (" + box.Min.X + " " + box.Min.Y + ") - (" + box.Max.X + " " + box.Max.Y + ")");
+
+                //var size = Math.Sqrt(boxes.Sum(b => b.Area));
+            }
+
+            //throw new NotImplementedException();
+            // Aggiungere alla lista dei cluster il materiale corrispondente
+            // Unificare i materiali
+            // Incasellare i cluster in rettangoli
+            // Aggiungere i rettangoli dal più grande al più piccolo al nuovo file di texture
+            // Aggiornare tutte le coordinate delle texture
+        }*/
     }
 
     #region Utils

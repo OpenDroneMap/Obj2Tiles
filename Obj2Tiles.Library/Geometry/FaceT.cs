@@ -55,11 +55,11 @@ public class FaceT<T> where T : class
     public readonly int IndexB;
     public readonly int IndexC;
 
-    public int TextureIndexA;
-    public int TextureIndexB;
-    public int TextureIndexC;
+    public readonly int TextureIndexA;
+    public readonly int TextureIndexB;
+    public readonly int TextureIndexC;
 
-    public int MaterialIndex;
+    public readonly int MaterialIndex;
 
     public override string ToString()
     {
@@ -102,14 +102,25 @@ public class FaceT<T> where T : class
         return va + vb + vc >= 2;
     }
 
-    public bool IsTextureAdjacent(FaceT<T> faceT)
+    public bool IsTextureAdjacent(FaceT<T> f)
     {
         
-        var va = (TA == faceT.TA || TA == faceT.TB || TA == faceT.TC) ? 1 : 0;
-        var vb = (TB == faceT.TA || TB == faceT.TB || TB == faceT.TC) ? 1 : 0;
-        var vc = (TC == faceT.TA || TC == faceT.TB || TC == faceT.TC) ? 1 : 0;
+        if (TextureIndexA != f.TextureIndexA && TextureIndexA != f.TextureIndexB && TextureIndexA != f.TextureIndexC)
+        {
+            if (TextureIndexB != f.TextureIndexA && TextureIndexB != f.TextureIndexB && TextureIndexB != f.TextureIndexC)
+            {
+                return false;
+            }
+            
+            if (TextureIndexC != f.TextureIndexA && TextureIndexC != f.TextureIndexB && TextureIndexC != f.TextureIndexC)
+            {
+                return false;
+            }
+        }
+        
+        
 
-        return va + vb + vc >= 2;
+        return true;
     }
 }
 
