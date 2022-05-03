@@ -25,12 +25,13 @@ public class Mesh3Tests
     [Test]
     public void Cube_TrimTextures()
     {
-        //var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube/cube.obj");
-        var mesh = (MeshT)MeshUtils.LoadMesh(
-            @"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
+        var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube/cube.obj");
+        //var mesh = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
         Directory.CreateDirectory("out");
 
         mesh.TrimTextures();
+        
+        mesh.WriteObj("out/mesh-trim.obj");
         /*
         var center = mesh.GetVertexBaricenter();
         
