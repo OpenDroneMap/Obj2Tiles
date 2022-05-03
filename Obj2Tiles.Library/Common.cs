@@ -28,6 +28,31 @@ public static class Common
             (a.X - b.X) * (c.Y - a.Y)
         ) / 2;
     }
+
+    public static int NextPowerOfTwo(int x)
+    {
+        x--;
+        x |= (x >> 1);
+        x |= (x >> 2);
+        x |= (x >> 4);
+        x |= (x >> 8);
+        x |= (x >> 16);
+        return (x + 1);
+    }
+
+    /// <summary>
+    /// Gets the distance of P from A (in percent) relative to segment AB
+    /// </summary>
+    /// <param name="a">Edge start</param>
+    /// <param name="b">Edge end</param>
+    /// <param name="p">Point on the segment</param>
+    /// <returns></returns>
+    public static double GetIntersectionPerc(Vertex3 a, Vertex3 b, Vertex3 p)
+    {
+        var edge1Length = a.Distance(b);
+        var subEdge1Length = a.Distance(p);
+        return subEdge1Length / edge1Length;
+    }
 }
 
 public class FormattingStreamWriter : StreamWriter

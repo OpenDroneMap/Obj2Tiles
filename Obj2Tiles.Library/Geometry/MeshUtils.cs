@@ -15,8 +15,8 @@ public class MeshUtils
 
         var vertices = new List<Vertex3>();
         var textureVertices = new List<Vertex2>();
-        var facesT = new List<FaceT<Vertex3>>();
-        var faces = new List<Face<Vertex3>>();
+        var facesT = new List<FaceT>();
+        var faces = new List<Face>();
         var materials = new List<Material>();
         var materialsDict = new Dictionary<string, int>();
         var currentMaterial = string.Empty;
@@ -77,7 +77,7 @@ public class MeshUtils
                         var vt2 = int.Parse(second[1]);
                         var vt3 = int.Parse(third[1]);
 
-                        var faceT = new FaceT<Vertex3>(
+                        var faceT = new FaceT(
                             v1 - 1,
                             v2 - 1,
                             v3 - 1,
@@ -90,7 +90,7 @@ public class MeshUtils
                     }
                     else
                     {
-                        var face = new Face<Vertex3>(
+                        var face = new Face(
                             v1 - 1,
                             v2 - 1,
                             v3 - 1);

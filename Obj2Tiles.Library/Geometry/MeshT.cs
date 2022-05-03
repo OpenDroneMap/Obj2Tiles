@@ -10,49 +10,55 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class MeshT : IMesh
 {
-    public readonly IReadOnlyList<Vertex3> Vertices;
-    public readonly IReadOnlyList<Vertex2> TextureVertices;
-    public readonly IReadOnlyList<FaceT<Vertex3>> Faces;
-    public readonly IReadOnlyList<Material> Materials;
+    
+    private List<Vertex3> _vertices;
+    private List<Vertex2> _textureVertices;
+    private List<FaceT> _faces;
+    private List<Material> _materials;
+
+    public IReadOnlyList<Vertex3> Vertices => _vertices;
+    public IReadOnlyList<Vertex2> TextureVertices => _textureVertices;
+    public IReadOnlyList<FaceT> Faces => _faces;
+    public IReadOnlyList<Material> Materials => _materials;
 
     public const string DefaultName = "Mesh";
 
     public string Name { get; set; } = DefaultName;
 
-    public MeshT(IReadOnlyList<Vertex3> vertices, IReadOnlyList<Vertex2> textureVertices,
-        IReadOnlyList<FaceT<Vertex3>> faces, IReadOnlyList<Material> materials)
+    public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
+        IEnumerable<FaceT> faces, IEnumerable<Material> materials)
     {
-        Vertices = vertices;
-        TextureVertices = textureVertices;
-        Faces = faces;
-        Materials = materials;
+        _vertices = new List<Vertex3>(vertices);
+        _textureVertices = new List<Vertex2>(textureVertices);
+        _faces = new List<FaceT>(faces);
+        _materials = new List<Material>(materials);
     }
 
     public int Split(IVertexUtils utils, double q, out IMesh left,
         out IMesh right)
     {
-        var leftVertices = new Dictionary<Vertex3, int>(Vertices.Count);
-        var rightVertices = new Dictionary<Vertex3, int>(Vertices.Count);
+        var leftVertices = new Dictionary<Vertex3, int>(_vertices.Count);
+        var rightVertices = new Dictionary<Vertex3, int>(_vertices.Count);
 
-        var leftFaces = new List<FaceT<Vertex3>>(Faces.Count);
-        var rightFaces = new List<FaceT<Vertex3>>(Faces.Count);
+        var leftFaces = new List<FaceT>(_faces.Count);
+        var rightFaces = new List<FaceT>(_faces.Count);
 
-        var leftTextureVertices = new Dictionary<Vertex2, int>(TextureVertices.Count);
-        var rightTextureVertices = new Dictionary<Vertex2, int>(TextureVertices.Count);
+        var leftTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
+        var rightTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
 
         var count = 0;
 
-        for (var index = 0; index < Faces.Count; index++)
+        for (var index = 0; index < _faces.Count; index++)
         {
-            var face = Faces[index];
+            var face = _faces[index];
 
-            var vA = Vertices[face.IndexA];
-            var vB = Vertices[face.IndexB];
-            var vC = Vertices[face.IndexC];
+            var vA = _vertices[face.IndexA];
+            var vB = _vertices[face.IndexB];
+            var vC = _vertices[face.IndexC];
             
-            var vtA = TextureVertices[face.TextureIndexA];
-            var vtB = TextureVertices[face.TextureIndexB];
-            var vtC = TextureVertices[face.TextureIndexC];
+            var vtA = _textureVertices[face.TextureIndexA];
+            var vtB = _textureVertices[face.TextureIndexB];
+            var vtC = _textureVertices[face.TextureIndexC];
             
             var aSide = utils.GetDimension(vA) < q;
             var bSide = utils.GetDimension(vB) < q;
@@ -74,7 +80,7 @@ public class MeshT : IMesh
                         var indexBTextureLeft = leftTextureVertices!.AddIndex(vtB);
                         var indexCTextureLeft = leftTextureVertices!.AddIndex(vtC);
 
-                        leftFaces.Add(new FaceT<Vertex3>(indexALeft, indexBLeft, indexCLeft, 
+                        leftFaces.Add(new FaceT(indexALeft, indexBLeft, indexCLeft, 
                             indexATextureLeft, indexBTextureLeft, indexCTextureLeft,
                             face.MaterialIndex));
                     }
@@ -162,7 +168,7 @@ public class MeshT : IMesh
                         var indexBTextureRight = rightTextureVertices!.AddIndex(vtB);
                         var indexCTextureRight = rightTextureVertices!.AddIndex(vtC);
 
-                        rightFaces.Add(new FaceT<Vertex3>(indexARight, indexBRight, indexCRight, 
+                        rightFaces.Add(new FaceT(indexARight, indexBRight, indexCRight, 
                             indexATextureRight, indexBTextureRight, indexCTextureRight,
                             face.MaterialIndex));
                     }
@@ -170,13 +176,13 @@ public class MeshT : IMesh
             }
         }
 
-        var orderedLeftVertices = leftVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
-        var orderedRightVertices = rightVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
-        var rightMaterials = Materials.Select(mat => (Material)mat.Clone()).ToList();
+        var orderedLeftVertices = leftVertices.OrderBy(x => x.Value).Select(x => x.Key);
+        var orderedRightVertices = rightVertices.OrderBy(x => x.Value).Select(x => x.Key);
+        var rightMaterials = _materials.Select(mat => (Material)mat.Clone());
 
-        var orderedLeftTextureVertices = leftTextureVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
-        var orderedRightTextureVertices = rightTextureVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
-        var leftMaterials = Materials.Select(mat => (Material)mat.Clone()).ToList();
+        var orderedLeftTextureVertices = leftTextureVertices.OrderBy(x => x.Value).Select(x => x.Key);
+        var orderedRightTextureVertices = rightTextureVertices.OrderBy(x => x.Value).Select(x => x.Key);
+        var leftMaterials = _materials.Select(mat => (Material)mat.Clone());
 
         left = new MeshT(orderedLeftVertices, orderedLeftTextureVertices, leftFaces, leftMaterials)
         {
@@ -195,15 +201,15 @@ public class MeshT : IMesh
         IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
         int indexTextureVL, int indexTextureVR1, int indexTextureVR2,
         IDictionary<Vertex2, int> leftTextureVertices, IDictionary<Vertex2, int> rightTextureVertices,
-        int materialIndex, ICollection<FaceT<Vertex3>> leftFaces, ICollection<FaceT<Vertex3>> rightFaces)
+        int materialIndex, ICollection<FaceT> leftFaces, ICollection<FaceT> rightFaces)
     {
-        var vL = Vertices[indexVL];
-        var vR1 = Vertices[indexVR1];
-        var vR2 = Vertices[indexVR2];
+        var vL = _vertices[indexVL];
+        var vR1 = _vertices[indexVR1];
+        var vR2 = _vertices[indexVR2];
 
-        var tVL = TextureVertices[indexTextureVL];
-        var tVR1 = TextureVertices[indexTextureVR1];
-        var tVR2 = TextureVertices[indexTextureVR2];
+        var tVL = _textureVertices[indexTextureVL];
+        var tVR1 = _textureVertices[indexTextureVR1];
+        var tVR2 = _textureVertices[indexTextureVR2];
 
         var indexVLLeft = leftVertices.AddIndex(vL);
         var indexTextureVLLeft = leftTextureVertices.AddIndex(tVL);
@@ -219,7 +225,7 @@ public class MeshT : IMesh
             var indexTextureVR1Left = leftTextureVertices.AddIndex(tVR1);
             var indexTextureVR2Left = leftTextureVertices.AddIndex(tVR2);
 
-            leftFaces.Add(new FaceT<Vertex3>(indexVLLeft, indexVR1Left, indexVR2Left, 
+            leftFaces.Add(new FaceT(indexVLLeft, indexVR1Left, indexVR2Left, 
                 indexTextureVLLeft, indexTextureVR1Left, indexTextureVR2Left, materialIndex));
 
             return;
@@ -244,29 +250,29 @@ public class MeshT : IMesh
         var indexTextureVR1Right = rightTextureVertices.AddIndex(tVR1);
         var indexTextureVR2Right = rightTextureVertices.AddIndex(tVR2);
 
-        var perc1 = GetIntersectionPerc(vL, vR1, t1);
+        var perc1 = Common.GetIntersectionPerc(vL, vR1, t1);
 
         // Prima intersezione texture
         var t1t = tVL.CutEdgePerc(tVR1, perc1);
         var indexTextureT1Left = leftTextureVertices.AddIndex(t1t);
         var indexTextureT1Right = rightTextureVertices.AddIndex(t1t);
 
-        var perc2 = GetIntersectionPerc(vL, vR2, t2);
+        var perc2 = Common.GetIntersectionPerc(vL, vR2, t2);
 
         // Seconda intersezione texture
         var t2t = tVL.CutEdgePerc(tVR2, perc2);
         var indexTextureT2Left = leftTextureVertices.AddIndex(t2t);
         var indexTextureT2Right = rightTextureVertices.AddIndex(t2t);
 
-        var lface = new FaceT<Vertex3>(indexVLLeft, indexT1Left, indexT2Left, 
+        var lface = new FaceT(indexVLLeft, indexT1Left, indexT2Left, 
             indexTextureVLLeft, indexTextureT1Left, indexTextureT2Left, materialIndex);
         leftFaces.Add(lface);
 
-        var rface1 = new FaceT<Vertex3>(indexT1Right, indexVR1Right, indexVR2Right, 
+        var rface1 = new FaceT(indexT1Right, indexVR1Right, indexVR2Right, 
             indexTextureT1Right, indexTextureVR1Right, indexTextureVR2Right, materialIndex);
         rightFaces.Add(rface1);
 
-        var rface2 = new FaceT<Vertex3>(indexT1Right, indexVR2Right, indexT2Right, 
+        var rface2 = new FaceT(indexT1Right, indexVR2Right, indexT2Right, 
             indexTextureT1Right, indexTextureVR2Right, indexTextureT2Right, materialIndex);
         rightFaces.Add(rface2);
     }
@@ -277,15 +283,15 @@ public class MeshT : IMesh
         IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
         int indexTextureVR, int indexTextureVL1, int indexTextureVL2,
         IDictionary<Vertex2, int> leftTextureVertices, IDictionary<Vertex2, int> rightTextureVertices,
-        int materialIndex, ICollection<FaceT<Vertex3>> leftFaces, ICollection<FaceT<Vertex3>> rightFaces)
+        int materialIndex, ICollection<FaceT> leftFaces, ICollection<FaceT> rightFaces)
     {
-        var vR = Vertices[indexVR];
-        var vL1 = Vertices[indexVL1];
-        var vL2 = Vertices[indexVL2];
+        var vR = _vertices[indexVR];
+        var vL1 = _vertices[indexVL1];
+        var vL2 = _vertices[indexVL2];
 
-        var tVR = TextureVertices[indexTextureVR];
-        var tVL1 = TextureVertices[indexTextureVL1];
-        var tVL2 = TextureVertices[indexTextureVL2];
+        var tVR = _textureVertices[indexTextureVR];
+        var tVL1 = _textureVertices[indexTextureVL1];
+        var tVL2 = _textureVertices[indexTextureVL2];
 
         var indexVRRight = rightVertices.AddIndex(vR);
         var indexTextureVRRight = rightTextureVertices.AddIndex(tVR);
@@ -301,7 +307,7 @@ public class MeshT : IMesh
             var indexTextureVL1Right = rightTextureVertices.AddIndex(tVL1);
             var indexTextureVL2Right = rightTextureVertices.AddIndex(tVL2);
 
-            rightFaces.Add(new FaceT<Vertex3>(indexVRRight, indexVL1Right, indexVL2Right, 
+            rightFaces.Add(new FaceT(indexVRRight, indexVL1Right, indexVL2Right, 
                 indexTextureVRRight, indexTextureVL1Right, indexTextureVL2Right, materialIndex));
 
             return;
@@ -326,77 +332,34 @@ public class MeshT : IMesh
         var indexTextureVL1Left = leftTextureVertices.AddIndex(tVL1);
         var indexTextureVL2Left = leftTextureVertices.AddIndex(tVL2);
 
-        var perc1 = GetIntersectionPerc(vR, vL1, t1);
+        var perc1 = Common.GetIntersectionPerc(vR, vL1, t1);
 
         // Prima intersezione texture
         var t1t = tVR.CutEdgePerc(tVL1, perc1);
         var indexTextureT1Left = leftTextureVertices.AddIndex(t1t);
         var indexTextureT1Right = rightTextureVertices.AddIndex(t1t);
 
-        var perc2 = GetIntersectionPerc(vR, vL2, t2);
+        var perc2 = Common.GetIntersectionPerc(vR, vL2, t2);
 
         // Seconda intersezione texture
         var t2t = tVR.CutEdgePerc(tVL2, perc2);
         var indexTextureT2Left = leftTextureVertices.AddIndex(t2t);
         var indexTextureT2Right = rightTextureVertices.AddIndex(t2t);
 
-        var rface = new FaceT<Vertex3>(indexVRRight, indexT1Right, indexT2Right, 
+        var rface = new FaceT(indexVRRight, indexT1Right, indexT2Right, 
             indexTextureVRRight, indexTextureT1Right, indexTextureT2Right, materialIndex);
         rightFaces.Add(rface);
 
-        var lface1 = new FaceT<Vertex3>(indexT2Left, indexVL1Left, indexVL2Left, 
+        var lface1 = new FaceT(indexT2Left, indexVL1Left, indexVL2Left, 
             indexTextureT2Left, indexTextureVL1Left, indexTextureVL2Left, materialIndex);
         leftFaces.Add(lface1);
 
-        var lface2 = new FaceT<Vertex3>(indexT2Left, indexT1Left, indexVL1Left, 
+        var lface2 = new FaceT(indexT2Left, indexT1Left, indexVL1Left, 
             indexTextureT2Left, indexTextureT1Left, indexTextureVL1Left, materialIndex);
         leftFaces.Add(lface2);
     }
 
-    private class Edge : IEquatable<Edge>
-    {
-        public readonly int V1Index;
-
-        public readonly int V2Index;
-        //public readonly int FaceIndex;
-
-        public Edge(int v1Index, int v2Index)
-        {
-            // Manteniamo un ordine
-            if (v1Index > v2Index)
-            {
-                V1Index = v2Index;
-                V2Index = v1Index;
-            }
-            else
-            {
-                V1Index = v1Index;
-                V2Index = v2Index;
-            }
-
-            //FaceIndex = faceIndex;
-        }
-
-        public override bool Equals(object? obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((Edge)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(V1Index, V2Index);
-        }
-
-        public bool Equals(Edge? other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return V1Index == other.V1Index && V2Index == other.V2Index;
-        }
-    }
+    
 
     public void TrimTextures()
     {
@@ -406,7 +369,7 @@ public class MeshT : IMesh
 
         for (var m = 0; m < facesByMaterial.Count; m++)
         {
-            var material = Materials[m];
+            var material = _materials[m];
             var facesIndexes = facesByMaterial[m];
             Debug.WriteLine($"Working on material {m} -> {material.Name}");
 
@@ -445,7 +408,7 @@ public class MeshT : IMesh
                 var textureArea = GetTextureArea(facesIndexes) * area * 2;
                 Debug.WriteLine("Texture area: " + textureArea);
 
-                var edgeLength = NextPowerOfTwo((int)Math.Sqrt(textureArea));
+                var edgeLength = Common.NextPowerOfTwo((int)Math.Sqrt(textureArea));
                 Debug.WriteLine("Edge length: " + edgeLength);
 
                 // TODO: We could enable rotations but it would be a bit more complex
@@ -487,7 +450,9 @@ public class MeshT : IMesh
 
                         foreach (var faceIndex in cluster)
                         {
-                            var face = Faces[faceIndex];
+                            
+                            
+                            var face = _faces[faceIndex];
                             
                             //textureFaceA = new Vector2(rect.X / (float)textureWidth, rect.Y / (float)textureHeight);
                             
@@ -562,11 +527,11 @@ public class MeshT : IMesh
 
         for (var n = 0; n < cluster.Count; n++)
         {
-            var face = Faces[cluster[n]];
+            var face = _faces[cluster[n]];
 
-            var vtA = TextureVertices[face.TextureIndexA];
-            var vtB = TextureVertices[face.TextureIndexB];
-            var vtC = TextureVertices[face.TextureIndexC];
+            var vtA = _textureVertices[face.TextureIndexA];
+            var vtB = _textureVertices[face.TextureIndexB];
+            var vtC = _textureVertices[face.TextureIndexC];
             
             maxX = Math.Max(Math.Max(Math.Max(maxX, vtC.X), vtB.X), vtA.X);
             maxY = Math.Max(Math.Max(Math.Max(maxY, vtC.Y), vtB.Y), vtA.Y);
@@ -578,31 +543,22 @@ public class MeshT : IMesh
         return new RectangleF((float)minX, (float)minY, (float)(maxX - minX), (float)(maxY - minY));
     }
 
-    private double GetTextureArea(List<int> facesIndexes)
+    private double GetTextureArea(IReadOnlyList<int> facesIndexes)
     {
         double area = 0;
-        
-        foreach (var faceIndex in facesIndexes)
+
+        for (var index = 0; index < facesIndexes.Count; index++)
         {
-            var vtA = TextureVertices[Faces[faceIndex].TextureIndexA];
-            var vtB = TextureVertices[Faces[faceIndex].TextureIndexB];
-            var vtC = TextureVertices[Faces[faceIndex].TextureIndexC];
-                
+            var faceIndex = facesIndexes[index];
+            
+            var vtA = _textureVertices[_faces[faceIndex].TextureIndexA];
+            var vtB = _textureVertices[_faces[faceIndex].TextureIndexB];
+            var vtC = _textureVertices[_faces[faceIndex].TextureIndexC];
+    
             area += Common.Area(vtA, vtB, vtC);
         }
 
         return area;
-    }
-
-    public static int NextPowerOfTwo(int x)
-    {
-        x--;
-        x |= (x >> 1);
-        x |= (x >> 2);
-        x |= (x >> 4);
-        x |= (x >> 8);
-        x |= (x >> 16);
-        return (x + 1);
     }
 
     private static List<List<int>> GetFacesClusters(IEnumerable<int> facesIndexes,
@@ -666,8 +622,9 @@ public class MeshT : IMesh
                 if (!facesMapper.ContainsKey(faceIndex))
                     facesMapper.Add(faceIndex, new List<int>());
 
-                foreach (var f in edge.Value)
+                for (var index = 0; index < edge.Value.Count; index++)
                 {
+                    var f = edge.Value[index];
                     if (f != faceIndex)
                         facesMapper[faceIndex].Add(f);
                 }
@@ -677,7 +634,7 @@ public class MeshT : IMesh
         return facesMapper;
     }
 
-    private Dictionary<Edge, List<int>> GetEdgesMapper(List<int> facesIndexes)
+    private Dictionary<Edge, List<int>> GetEdgesMapper(IReadOnlyList<int> facesIndexes)
     {
         var edgesMapper = new Dictionary<Edge, List<int>>();
         edgesMapper.EnsureCapacity(facesIndexes.Count * 3);
@@ -685,26 +642,21 @@ public class MeshT : IMesh
         for (var idx = 0; idx < facesIndexes.Count; idx++)
         {
             var faceIndex = facesIndexes[idx];
-            var f = Faces[faceIndex];
+            var f = _faces[faceIndex];
+            
             var e1 = new Edge(f.TextureIndexA, f.TextureIndexB);
             var e2 = new Edge(f.TextureIndexB, f.TextureIndexC);
             var e3 = new Edge(f.TextureIndexA, f.TextureIndexC);
 
             if (!edgesMapper.ContainsKey(e1))
-            {
                 edgesMapper.Add(e1, new List<int>());
-            }
-
+            
             if (!edgesMapper.ContainsKey(e2))
-            {
                 edgesMapper.Add(e2, new List<int>());
-            }
-
+            
             if (!edgesMapper.ContainsKey(e3))
-            {
                 edgesMapper.Add(e3, new List<int>());
-            }
-
+            
             edgesMapper[e1].Add(faceIndex);
             edgesMapper[e2].Add(faceIndex);
             edgesMapper[e3].Add(faceIndex);
@@ -715,11 +667,11 @@ public class MeshT : IMesh
 
     private List<List<int>> GetFacesByMaterial()
     {
-        var res = Materials.Select(m => new List<int>()).ToList();
+        var res = _materials.Select(_ => new List<int>()).ToList();
 
-        for (var i = 0; i < Faces.Count; i++)
+        for (var i = 0; i < _faces.Count; i++)
         {
-            var f = Faces[i];
+            var f = _faces[i];
 
             res[f.MaterialIndex].Add(i);
         }
@@ -741,9 +693,9 @@ public class MeshT : IMesh
             var maxY = double.MinValue;
             var maxZ = double.MinValue;
 
-            for (var index = 0; index < Vertices.Count; index++)
+            for (var index = 0; index < _vertices.Count; index++)
             {
-                var v = Vertices[index];
+                var v = _vertices[index];
                 minX = minX < v.X ? minX : v.X;
                 minY = minY < v.Y ? minY : v.Y;
                 minZ = minZ < v.Z ? minZ : v.Z;
@@ -763,33 +715,19 @@ public class MeshT : IMesh
         var y = 0.0;
         var z = 0.0;
 
-        for (var index = 0; index < Vertices.Count; index++)
+        for (var index = 0; index < _vertices.Count; index++)
         {
-            var v = Vertices[index];
+            var v = _vertices[index];
             x += v.X;
             y += v.Y;
             z += v.Z;
         }
 
-        x /= Vertices.Count;
-        y /= Vertices.Count;
-        z /= Vertices.Count;
+        x /= _vertices.Count;
+        y /= _vertices.Count;
+        z /= _vertices.Count;
 
         return new Vertex3(x, y, z);
-    }
-
-    /// <summary>
-    /// Gets the distance of P from A (in percent) relative to segment AB
-    /// </summary>
-    /// <param name="a">Edge start</param>
-    /// <param name="b">Edge end</param>
-    /// <param name="p">Point on the segment</param>
-    /// <returns></returns>
-    private static double GetIntersectionPerc(Vertex3 a, Vertex3 b, Vertex3 p)
-    {
-        var edge1Length = a.Distance(b);
-        var subEdge1Length = a.Distance(p);
-        return subEdge1Length / edge1Length;
     }
 
     private static readonly CultureInfo en = CultureInfo.GetCultureInfo("en-US");
@@ -800,7 +738,7 @@ public class MeshT : IMesh
 
         using (var writer = new StreamWriter(path))
         {
-            if (TextureVertices.Any())
+            if (_textureVertices.Any())
                 writer.WriteLine("mtllib {0}", Path.GetFileName(materialsPath));
 
             writer.Write("o ");
@@ -808,7 +746,7 @@ public class MeshT : IMesh
 
             CultureInfo.CurrentCulture = en;
 
-            foreach (var vertex in Vertices)
+            foreach (var vertex in _vertices)
             {
                 writer.Write("v ");
                 writer.Write(vertex.X);
@@ -818,7 +756,7 @@ public class MeshT : IMesh
                 writer.WriteLine(vertex.Z);
             }
 
-            foreach (var textureVertex in TextureVertices)
+            foreach (var textureVertex in _textureVertices)
             {
                 writer.Write("vt ");
                 writer.Write(textureVertex.X);
@@ -826,7 +764,7 @@ public class MeshT : IMesh
                 writer.WriteLine(textureVertex.Y);
             }
 
-            var materialFaces = from face in Faces
+            var materialFaces = from face in _faces
                 group face by face.MaterialIndex
                 into g
                 select g;
@@ -834,21 +772,21 @@ public class MeshT : IMesh
             // NOTE: Se ci sono gruppi di facce senza materiali vanno messe all'inizio
             foreach (var grp in materialFaces.OrderBy(item => item.Key))
             {
-                writer.WriteLine($"usemtl {Materials[grp.Key].Name}");
+                writer.WriteLine($"usemtl {_materials[grp.Key].Name}");
 
                 foreach (var face in grp)
                     writer.WriteLine(face.ToObj());
             }
         }
 
-        if (Materials.Any())
+        if (_materials.Any())
         {
             var mtlFilePath = Path.ChangeExtension(path, "mtl");
 
             using var writer = new StreamWriter(mtlFilePath);
-            for (var index = 0; index < Materials.Count; index++)
+            for (var index = 0; index < _materials.Count; index++)
             {
-                var material = Materials[index];
+                var material = _materials[index];
                 if (material.Texture != null)
                 {
                     var folder = Path.GetDirectoryName(path);
@@ -870,8 +808,8 @@ public class MeshT : IMesh
         }
     }
 
-    public int FacesCount => Faces.Count;
-    public int VertexCount => Vertices.Count;
+    public int FacesCount => _faces.Count;
+    public int VertexCount => _vertices.Count;
 
     #endregion
 }

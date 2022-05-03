@@ -8,37 +8,40 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class Mesh : IMesh
 {
-    public readonly IReadOnlyList<Vertex3> Vertices;
-    public readonly IReadOnlyList<Face<Vertex3>> Faces;
+    private List<Vertex3> _vertices;
+    private List<Face> _faces;
+
+    public IReadOnlyList<Vertex3> Vertices => _vertices;
+    public IReadOnlyList<Face> Faces => _faces;
 
     public const string DefaultName = "Mesh";
 
     public string Name { get; set; } = DefaultName;
 
-    public Mesh(IReadOnlyList<Vertex3> vertices, IReadOnlyList<Face<Vertex3>> faces)
+    public Mesh(IEnumerable<Vertex3> vertices, IEnumerable<Face> faces)
     {
-        Vertices = vertices;
-        Faces = faces;
+        _vertices = new List<Vertex3>(vertices);
+        _faces = new List<Face>(faces);
     }
     
     public int Split(IVertexUtils utils, double q, out IMesh left,
         out IMesh right)
     {
-        var leftVertices = new Dictionary<Vertex3, int>(Vertices.Count);
-        var rightVertices = new Dictionary<Vertex3, int>(Vertices.Count);
+        var leftVertices = new Dictionary<Vertex3, int>(_vertices.Count);
+        var rightVertices = new Dictionary<Vertex3, int>(_vertices.Count);
 
-        var leftFaces = new List<Face<Vertex3>>(Faces.Count);
-        var rightFaces = new List<Face<Vertex3>>(Faces.Count);
+        var leftFaces = new List<Face>(_faces.Count);
+        var rightFaces = new List<Face>(_faces.Count);
 
         var count = 0;
 
-        for (var index = 0; index < Faces.Count; index++)
+        for (var index = 0; index < _faces.Count; index++)
         {
-            var face = Faces[index];
+            var face = _faces[index];
 
-            var vA = Vertices[face.IndexA];
-            var vB = Vertices[face.IndexB];
-            var vC = Vertices[face.IndexC];
+            var vA = _vertices[face.IndexA];
+            var vB = _vertices[face.IndexB];
+            var vC = _vertices[face.IndexC];
             
             var aSide = utils.GetDimension(vA) < q;
             var bSide = utils.GetDimension(vB) < q;
@@ -56,7 +59,7 @@ public class Mesh : IMesh
                         var indexBLeft = leftVertices.AddIndex(vB);
                         var indexCLeft = leftVertices.AddIndex(vC);
 
-                        leftFaces.Add(new Face<Vertex3>(indexALeft, indexBLeft, indexCLeft));
+                        leftFaces.Add(new Face(indexALeft, indexBLeft, indexCLeft));
                     }
                     else
                     {
@@ -113,15 +116,14 @@ public class Mesh : IMesh
                         var indexARight = rightVertices.AddIndex(vA);
                         var indexBRight = rightVertices.AddIndex(vB);
                         var indexCRight = rightVertices.AddIndex(vC);
-                        rightFaces.Add(
-                            new Face<Vertex3>(indexARight, indexBRight, indexCRight));
+                        rightFaces.Add(new Face(indexARight, indexBRight, indexCRight));
                     }
                 }
             }
         }
 
-        var orderedLeftVertices = leftVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
-        var orderedRightVertices = rightVertices.OrderBy(x => x.Value).Select(x => x.Key).ToList();
+        var orderedLeftVertices = leftVertices.OrderBy(x => x.Value).Select(x => x.Key);
+        var orderedRightVertices = rightVertices.OrderBy(x => x.Value).Select(x => x.Key);
 
         left = new Mesh(orderedLeftVertices, leftFaces)
         {
@@ -138,12 +140,12 @@ public class Mesh : IMesh
 
     private void IntersectLeft2D(IVertexUtils utils, double q, int indexVL, int indexVR1, int indexVR2,
         IDictionary<Vertex3, int> leftVertices,
-        IDictionary<Vertex3, int> rightVertices, ICollection<Face<Vertex3>> leftFaces,
-        ICollection<Face<Vertex3>> rightFaces)
+        IDictionary<Vertex3, int> rightVertices, ICollection<Face> leftFaces,
+        ICollection<Face> rightFaces)
     {
-        var vL = Vertices[indexVL];
-        var vR1 = Vertices[indexVR1];
-        var vR2 = Vertices[indexVR2];
+        var vL = _vertices[indexVL];
+        var vR1 = _vertices[indexVR1];
+        var vR2 = _vertices[indexVR2];
 
         var indexVLLeft = leftVertices.AddIndex(vL);
 
@@ -155,7 +157,7 @@ public class Mesh : IMesh
             var indexVR1Left = leftVertices.AddIndex(vR1);
             var indexVR2Left = leftVertices.AddIndex(vR2);
 
-            leftFaces.Add(new Face<Vertex3>(indexVLLeft, indexVR1Left, indexVR2Left));
+            leftFaces.Add(new Face(indexVLLeft, indexVR1Left, indexVR2Left));
             return;
         }
 
@@ -174,23 +176,23 @@ public class Mesh : IMesh
         var indexT2Left = leftVertices.AddIndex(t2);
         var indexT2Right = rightVertices.AddIndex(t2);
 
-        var lface = new Face<Vertex3>(indexVLLeft, indexT1Left, indexT2Left);
+        var lface = new Face(indexVLLeft, indexT1Left, indexT2Left);
         leftFaces.Add(lface);
 
-        var rface1 = new Face<Vertex3>(indexT1Right, indexVR1Right, indexVR2Right);
+        var rface1 = new Face(indexT1Right, indexVR1Right, indexVR2Right);
         rightFaces.Add(rface1);
 
-        var rface2 = new Face<Vertex3>(indexT1Right, indexVR2Right, indexT2Right);
+        var rface2 = new Face(indexT1Right, indexVR2Right, indexT2Right);
         rightFaces.Add(rface2);
     }
 
     private void IntersectRight2D(IVertexUtils utils, double q, int indexVR, int indexVL1, int indexVL2,
         IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
-        ICollection<Face<Vertex3>> leftFaces, ICollection<Face<Vertex3>> rightFaces)
+        ICollection<Face> leftFaces, ICollection<Face> rightFaces)
     {
-        var vR = Vertices[indexVR];
-        var vL1 = Vertices[indexVL1];
-        var vL2 = Vertices[indexVL2];
+        var vR = _vertices[indexVR];
+        var vL1 = _vertices[indexVL1];
+        var vL2 = _vertices[indexVL2];
 
         var indexVRRight = rightVertices.AddIndex(vR);
 
@@ -201,7 +203,7 @@ public class Mesh : IMesh
             var indexVL1Right = rightVertices.AddIndex(vL1);
             var indexVL2Right = rightVertices.AddIndex(vL2);
 
-            rightFaces.Add(new Face<Vertex3>(indexVRRight, indexVL1Right, indexVL2Right));
+            rightFaces.Add(new Face(indexVRRight, indexVL1Right, indexVL2Right));
 
             return;
         }
@@ -221,13 +223,13 @@ public class Mesh : IMesh
         var indexT2Left = leftVertices.AddIndex(t2);
         var indexT2Right = rightVertices.AddIndex(t2);
 
-        var rface = new Face<Vertex3>(indexVRRight, indexT1Right, indexT2Right);
+        var rface = new Face(indexVRRight, indexT1Right, indexT2Right);
         rightFaces.Add(rface);
 
-        var lface1 = new Face<Vertex3>(indexT2Left, indexVL1Left, indexVL2Left);
+        var lface1 = new Face(indexT2Left, indexVL1Left, indexVL2Left);
         leftFaces.Add(lface1);
 
-        var lface2 = new Face<Vertex3>(indexT2Left, indexT1Left, indexVL1Left);
+        var lface2 = new Face(indexT2Left, indexT1Left, indexVL1Left);
         leftFaces.Add(lface2);
     }
 
@@ -245,8 +247,9 @@ public class Mesh : IMesh
             var maxY = double.MinValue;
             var maxZ = double.MinValue;
 
-            foreach (var v in Vertices)
+            for (var index = 0; index < _vertices.Count; index++)
             {
+                var v = _vertices[index];
                 minX = minX < v.X ? minX : v.X;
                 minY = minY < v.Y ? minY : v.Y;
                 minZ = minZ < v.Z ? minZ : v.Z;
@@ -266,17 +269,17 @@ public class Mesh : IMesh
         var y = 0.0;
         var z = 0.0;
 
-        for (var index = 0; index < Vertices.Count; index++)
+        for (var index = 0; index < _vertices.Count; index++)
         {
-            var v = Vertices[index];
+            var v = _vertices[index];
             x += v.X;
             y += v.Y;
             z += v.Z;
         }
 
-        x /= Vertices.Count;
-        y /= Vertices.Count;
-        z /= Vertices.Count;
+        x /= _vertices.Count;
+        y /= _vertices.Count;
+        z /= _vertices.Count;
 
         return new Vertex3(x, y, z);
     }
@@ -288,7 +291,7 @@ public class Mesh : IMesh
         writer.Write("o ");
         writer.WriteLine(string.IsNullOrWhiteSpace(Name) ? DefaultName : Name);
 
-        foreach (var vertex in Vertices)
+        foreach (var vertex in _vertices)
         {
             writer.Write("v ");
             writer.Write(vertex.X);
@@ -298,14 +301,14 @@ public class Mesh : IMesh
             writer.WriteLine(vertex.Z);
         }
 
-        foreach (var face in Faces)
+        foreach (var face in _faces)
         {
             writer.WriteLine(face.ToObj());
         }
     }
 
-    public int FacesCount => Faces.Count;
-    public int VertexCount => Vertices.Count;
+    public int FacesCount => _faces.Count;
+    public int VertexCount => _vertices.Count;
 
     #endregion
 
