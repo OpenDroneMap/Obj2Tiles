@@ -25,20 +25,23 @@ public class Mesh3Tests
     [Test]
     public void Cube_TrimTextures()
     {
-        //var cube = new Mesh3("TestData/cube/cube.obj");
-        var cube = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
+        //var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube/cube.obj");
+        var mesh = (MeshT)MeshUtils.LoadMesh(
+            @"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
         Directory.CreateDirectory("out");
 
-        var center = cube.GetVertexBaricenter();
+        mesh.TrimTextures();
+        /*
+        var center = mesh.GetVertexBaricenter();
         
-        cube.Split(xutils, center.X, out var left, out var right);
+        mesh.Split(xutils, center.X, out var left, out var right);
         
         ((MeshT)left).TrimTextures();
         ((MeshT)right).TrimTextures();
         
         left.WriteObj("out/left.obj");
         right.WriteObj("out/right.obj");
-
+   */
         /*
         left.Split(yutils, center.Y, out var leftbottom, out var lefttop);
         right.Split(yutils, center.Y, out var rightbottom, out var righttop);
@@ -73,31 +76,73 @@ public class Mesh3Tests
         
         */
     }
-    
-    
 
     [Test]
-    public void Image_TrimTextures()
+    public void Image_TestDrawImage()
+    {
+        var imagePath = "TestData/cube/pic5.jpg";
+        var imagePath2 = "TestData/cube/pic6.jpg";
+        var imagePath3 = "TestData/cube/pic3.jpg";
+        var imagePath4 = "TestData/cube/pic1.jpg";
+
+        using var image = Image.Load<Rgba32>(imagePath);
+        using var image2 = Image.Load<Rgba32>(imagePath2);
+        using var image3 = Image.Load<Rgba32>(imagePath3);
+        using var image4 = Image.Load<Rgba32>(imagePath4);
+
+        using var newImage = new Image<Rgba32>(image.Width * 2, image.Height * 2);
+
+        /*CopyImage(image, newImage,
+            new Rectangle(image.Width / 4, image.Height / 4, image.Width / 2, image.Height / 2),
+            new Point(0, 0));
+*/
+        Common.CopyImage(image, newImage, image.Width / 4, image.Height / 4, image.Width / 2, image.Height / 2, 0, 0);
+        Common.CopyImage(image2, newImage, image2.Width / 4, image2.Height / 4, image2.Width / 2, image2.Height / 2
+            , image.Width, 0);
+        Common.CopyImage(image3, newImage, image3.Width / 4, image3.Height / 4, image3.Width / 2, image3.Height / 2
+            , 0, image.Height);
+        Common.CopyImage(image4, newImage, image4.Width / 4, image4.Height / 4, image4.Width / 2, image4.Height / 2
+            , image.Width, image.Height);
+
+        /*
+               newImage.Mutate(x =>
+               {
+                  
+                   x.Clip(new RectangularPolygon(0, 0, image.Width * 2, image.Height), ctx =>
+                       ctx.DrawImage(image, new Point(image.Width, 0), 1f));
+                   
+                   x.Clip(new RectangularPolygon(0, 0, image2.Width, image2.Height), ctx =>
+                       ctx.DrawImage(image2, new Point(0, 0), 1f));
+       
+               });*/
+
+        image.Save("pic3-mod1.jpg");
+        newImage.Save("newimage2.jpg");
+    }
+
+
+    [Test]
+    public void Image_TextDrawTriangle()
     {
         var imagePath = "TestData/cube/pic5.jpg";
 
         using var image = Image.Load<Rgba32>(imagePath);
         using var newImage = new Image<Rgba32>(image.Width, image.Height);
-        
+
         var a = new Vertex2(0.1, 0.1);
         var b = new Vertex2(0.2, 0.15);
         var c = new Vertex2(0.15, 0.2);
         var pos = new Vertex2(0, 0);
-        
+
         CopyTriangle(image, newImage, a, b, c, pos);
-        
+
         a = new Vertex2(0.5, 0.5);
         b = new Vertex2(0.6, 0.75);
         c = new Vertex2(0.85, 0.5);
         pos = new Vertex2(200, 0);
 
         CopyTriangle(image, newImage, a, b, c, pos);
-        
+
         a = new Vertex2(0.3, 0.8);
         b = new Vertex2(0.5, 0.45);
         c = new Vertex2(0.65, 0.4);
@@ -106,12 +151,12 @@ public class Mesh3Tests
         CopyTriangle(image, newImage, a, b, c, pos);
 
         //seg.Save("pic2-mod2.jpg");
-        
+
         //newImage.Mutate(o => o.DrawImage(image, new Point(0,0), 1f));
-        
+
         // Crop triangle of image
         //image.Mutate(x => x.Crop(triangle));
-        
+
         //image.Mutate(x => x.Clip(triangle, context => context.Save));
         //image.Mutate(x => x.Clip(polygon, context => context.));
 
@@ -119,7 +164,8 @@ public class Mesh3Tests
         newImage.Save("newimage.jpg");
     }
 
-    private static void CopyTriangle(Image<Rgba32> image, Image<Rgba32> newImage, Vertex2 a, Vertex2 b, Vertex2 c, Vertex2 pos)
+    private static void CopyTriangle(Image<Rgba32> image, Image<Rgba32> newImage, Vertex2 a, Vertex2 b, Vertex2 c,
+        Vertex2 pos)
     {
         var aR = new PointF((float)a.X * image.Width, (float)a.Y * image.Height);
         var bR = new PointF((float)b.X * image.Width, (float)b.Y * image.Height);
@@ -135,7 +181,7 @@ public class Mesh3Tests
 
         seg.Mutate(x =>
         {
-            x.Clip(path, context => context.DrawImage(image, new Point(0,0), 1f));
+            x.Clip(path, context => context.DrawImage(image, new Point(0, 0), 1f));
             x.Crop(new Rectangle((int)path.Bounds.Left, (int)path.Bounds.Top, (int)path.Bounds.Width,
                 (int)path.Bounds.Height));
         });

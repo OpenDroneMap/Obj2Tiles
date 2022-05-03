@@ -35,9 +35,14 @@ public class Mesh : IMesh
         for (var index = 0; index < Faces.Count; index++)
         {
             var face = Faces[index];
-            var aSide = utils.GetDimension(face.A) < q;
-            var bSide = utils.GetDimension(face.B) < q;
-            var cSide = utils.GetDimension(face.C) < q;
+
+            var vA = Vertices[face.IndexA];
+            var vB = Vertices[face.IndexB];
+            var vC = Vertices[face.IndexC];
+            
+            var aSide = utils.GetDimension(vA) < q;
+            var bSide = utils.GetDimension(vB) < q;
+            var cSide = utils.GetDimension(vC) < q;
 
             if (aSide)
             {
@@ -47,11 +52,11 @@ public class Mesh : IMesh
                     {
                         // All on the left
 
-                        var indexALeft = leftVertices.AddIndex(face.A);
-                        var indexBLeft = leftVertices.AddIndex(face.B);
-                        var indexCLeft = leftVertices.AddIndex(face.C);
+                        var indexALeft = leftVertices.AddIndex(vA);
+                        var indexBLeft = leftVertices.AddIndex(vB);
+                        var indexCLeft = leftVertices.AddIndex(vC);
 
-                        leftFaces.Add(new Face<Vertex3>(indexALeft, indexBLeft, indexCLeft, face.A, face.B, face.C));
+                        leftFaces.Add(new Face<Vertex3>(indexALeft, indexBLeft, indexCLeft));
                     }
                     else
                     {
@@ -105,11 +110,11 @@ public class Mesh : IMesh
                     {
                         // All on the right
 
-                        var indexARight = rightVertices.AddIndex(face.A);
-                        var indexBRight = rightVertices.AddIndex(face.B);
-                        var indexCRight = rightVertices.AddIndex(face.C);
+                        var indexARight = rightVertices.AddIndex(vA);
+                        var indexBRight = rightVertices.AddIndex(vB);
+                        var indexCRight = rightVertices.AddIndex(vC);
                         rightFaces.Add(
-                            new Face<Vertex3>(indexARight, indexBRight, indexCRight, face.A, face.B, face.C));
+                            new Face<Vertex3>(indexARight, indexBRight, indexCRight));
                     }
                 }
             }
@@ -150,7 +155,7 @@ public class Mesh : IMesh
             var indexVR1Left = leftVertices.AddIndex(vR1);
             var indexVR2Left = leftVertices.AddIndex(vR2);
 
-            leftFaces.Add(new Face<Vertex3>(indexVLLeft, indexVR1Left, indexVR2Left, vL, vR1, vR2));
+            leftFaces.Add(new Face<Vertex3>(indexVLLeft, indexVR1Left, indexVR2Left));
             return;
         }
 
@@ -169,13 +174,13 @@ public class Mesh : IMesh
         var indexT2Left = leftVertices.AddIndex(t2);
         var indexT2Right = rightVertices.AddIndex(t2);
 
-        var lface = new Face<Vertex3>(indexVLLeft, indexT1Left, indexT2Left, vL, t1, t2);
+        var lface = new Face<Vertex3>(indexVLLeft, indexT1Left, indexT2Left);
         leftFaces.Add(lface);
 
-        var rface1 = new Face<Vertex3>(indexT1Right, indexVR1Right, indexVR2Right, t1, vR1, vR2);
+        var rface1 = new Face<Vertex3>(indexT1Right, indexVR1Right, indexVR2Right);
         rightFaces.Add(rface1);
 
-        var rface2 = new Face<Vertex3>(indexT1Right, indexVR2Right, indexT2Right, t1, vR2, t2);
+        var rface2 = new Face<Vertex3>(indexT1Right, indexVR2Right, indexT2Right);
         rightFaces.Add(rface2);
     }
 
@@ -196,7 +201,7 @@ public class Mesh : IMesh
             var indexVL1Right = rightVertices.AddIndex(vL1);
             var indexVL2Right = rightVertices.AddIndex(vL2);
 
-            rightFaces.Add(new Face<Vertex3>(indexVRRight, indexVL1Right, indexVL2Right, vR, vL1, vL2));
+            rightFaces.Add(new Face<Vertex3>(indexVRRight, indexVL1Right, indexVL2Right));
 
             return;
         }
@@ -216,13 +221,13 @@ public class Mesh : IMesh
         var indexT2Left = leftVertices.AddIndex(t2);
         var indexT2Right = rightVertices.AddIndex(t2);
 
-        var rface = new Face<Vertex3>(indexVRRight, indexT1Right, indexT2Right, vR, t1, t2);
+        var rface = new Face<Vertex3>(indexVRRight, indexT1Right, indexT2Right);
         rightFaces.Add(rface);
 
-        var lface1 = new Face<Vertex3>(indexT2Left, indexVL1Left, indexVL2Left, t2, vL1, vL2);
+        var lface1 = new Face<Vertex3>(indexT2Left, indexVL1Left, indexVL2Left);
         leftFaces.Add(lface1);
 
-        var lface2 = new Face<Vertex3>(indexT2Left, indexT1Left, indexVL1Left, t2, t1, vL1);
+        var lface2 = new Face<Vertex3>(indexT2Left, indexT1Left, indexVL1Left);
         leftFaces.Add(lface2);
     }
 

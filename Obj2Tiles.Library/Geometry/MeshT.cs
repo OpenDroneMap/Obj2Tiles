@@ -1,9 +1,10 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
+using Obj2Tiles.Library.Algos;
 using Obj2Tiles.Library.Materials;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using Path = System.IO.Path;
 
 namespace Obj2Tiles.Library.Geometry;
 
@@ -45,9 +46,17 @@ public class MeshT : IMesh
         {
             var face = Faces[index];
 
-            var aSide = utils.GetDimension(face.A) < q;
-            var bSide = utils.GetDimension(face.B) < q;
-            var cSide = utils.GetDimension(face.C) < q;
+            var vA = Vertices[face.IndexA];
+            var vB = Vertices[face.IndexB];
+            var vC = Vertices[face.IndexC];
+            
+            var vtA = TextureVertices[face.TextureIndexA];
+            var vtB = TextureVertices[face.TextureIndexB];
+            var vtC = TextureVertices[face.TextureIndexC];
+            
+            var aSide = utils.GetDimension(vA) < q;
+            var bSide = utils.GetDimension(vB) < q;
+            var cSide = utils.GetDimension(vC) < q;
 
             if (aSide)
             {
@@ -57,17 +66,17 @@ public class MeshT : IMesh
                     {
                         // All on the left
 
-                        var indexALeft = leftVertices.AddIndex(face.A);
-                        var indexBLeft = leftVertices.AddIndex(face.B);
-                        var indexCLeft = leftVertices.AddIndex(face.C);
+                        var indexALeft = leftVertices.AddIndex(vA);
+                        var indexBLeft = leftVertices.AddIndex(vB);
+                        var indexCLeft = leftVertices.AddIndex(vC);
 
-                        var indexATextureLeft = leftTextureVertices!.AddIndex(face.TA);
-                        var indexBTextureLeft = leftTextureVertices!.AddIndex(face.TB);
-                        var indexCTextureLeft = leftTextureVertices!.AddIndex(face.TC);
+                        var indexATextureLeft = leftTextureVertices!.AddIndex(vtA);
+                        var indexBTextureLeft = leftTextureVertices!.AddIndex(vtB);
+                        var indexCTextureLeft = leftTextureVertices!.AddIndex(vtC);
 
-                        leftFaces.Add(new FaceT<Vertex3>(indexALeft, indexBLeft, indexCLeft, face.A, face.B, face.C,
+                        leftFaces.Add(new FaceT<Vertex3>(indexALeft, indexBLeft, indexCLeft, 
                             indexATextureLeft, indexBTextureLeft, indexCTextureLeft,
-                            face.MaterialIndex, face.TA!, face.TB!, face.TC!));
+                            face.MaterialIndex));
                     }
                     else
                     {
@@ -145,17 +154,17 @@ public class MeshT : IMesh
                     {
                         // All on the right
 
-                        var indexARight = rightVertices.AddIndex(face.A);
-                        var indexBRight = rightVertices.AddIndex(face.B);
-                        var indexCRight = rightVertices.AddIndex(face.C);
+                        var indexARight = rightVertices.AddIndex(vA);
+                        var indexBRight = rightVertices.AddIndex(vB);
+                        var indexCRight = rightVertices.AddIndex(vC);
 
-                        var indexATextureRight = rightTextureVertices!.AddIndex(face.TA);
-                        var indexBTextureRight = rightTextureVertices!.AddIndex(face.TB);
-                        var indexCTextureRight = rightTextureVertices!.AddIndex(face.TC);
+                        var indexATextureRight = rightTextureVertices!.AddIndex(vtA);
+                        var indexBTextureRight = rightTextureVertices!.AddIndex(vtB);
+                        var indexCTextureRight = rightTextureVertices!.AddIndex(vtC);
 
-                        rightFaces.Add(new FaceT<Vertex3>(indexARight, indexBRight, indexCRight, face.A, face.B, face.C,
+                        rightFaces.Add(new FaceT<Vertex3>(indexARight, indexBRight, indexCRight, 
                             indexATextureRight, indexBTextureRight, indexCTextureRight,
-                            face.MaterialIndex, face.TA!, face.TB!, face.TC!));
+                            face.MaterialIndex));
                     }
                 }
             }
@@ -210,9 +219,8 @@ public class MeshT : IMesh
             var indexTextureVR1Left = leftTextureVertices.AddIndex(tVR1);
             var indexTextureVR2Left = leftTextureVertices.AddIndex(tVR2);
 
-            leftFaces.Add(new FaceT<Vertex3>(indexVLLeft, indexVR1Left, indexVR2Left, vL, vR1, vR2,
-                indexTextureVLLeft, indexTextureVR1Left, indexTextureVR2Left, materialIndex,
-                tVL, tVR1, tVR2));
+            leftFaces.Add(new FaceT<Vertex3>(indexVLLeft, indexVR1Left, indexVR2Left, 
+                indexTextureVLLeft, indexTextureVR1Left, indexTextureVR2Left, materialIndex));
 
             return;
         }
@@ -250,19 +258,16 @@ public class MeshT : IMesh
         var indexTextureT2Left = leftTextureVertices.AddIndex(t2t);
         var indexTextureT2Right = rightTextureVertices.AddIndex(t2t);
 
-        var lface = new FaceT<Vertex3>(indexVLLeft, indexT1Left, indexT2Left, vL, t1, t2,
-            indexTextureVLLeft, indexTextureT1Left, indexTextureT2Left, materialIndex,
-            tVL, t1t, t2t);
+        var lface = new FaceT<Vertex3>(indexVLLeft, indexT1Left, indexT2Left, 
+            indexTextureVLLeft, indexTextureT1Left, indexTextureT2Left, materialIndex);
         leftFaces.Add(lface);
 
-        var rface1 = new FaceT<Vertex3>(indexT1Right, indexVR1Right, indexVR2Right, t1, vR1, vR2,
-            indexTextureT1Right, indexTextureVR1Right, indexTextureVR2Right, materialIndex,
-            t1t, tVR1, tVR2);
+        var rface1 = new FaceT<Vertex3>(indexT1Right, indexVR1Right, indexVR2Right, 
+            indexTextureT1Right, indexTextureVR1Right, indexTextureVR2Right, materialIndex);
         rightFaces.Add(rface1);
 
-        var rface2 = new FaceT<Vertex3>(indexT1Right, indexVR2Right, indexT2Right, t1, vR2, t2,
-            indexTextureT1Right, indexTextureVR2Right, indexTextureT2Right, materialIndex,
-            t1t, tVR2, t2t);
+        var rface2 = new FaceT<Vertex3>(indexT1Right, indexVR2Right, indexT2Right, 
+            indexTextureT1Right, indexTextureVR2Right, indexTextureT2Right, materialIndex);
         rightFaces.Add(rface2);
     }
 
@@ -296,9 +301,8 @@ public class MeshT : IMesh
             var indexTextureVL1Right = rightTextureVertices.AddIndex(tVL1);
             var indexTextureVL2Right = rightTextureVertices.AddIndex(tVL2);
 
-            rightFaces.Add(new FaceT<Vertex3>(indexVRRight, indexVL1Right, indexVL2Right, vR, vL1, vL2,
-                indexTextureVRRight, indexTextureVL1Right, indexTextureVL2Right, materialIndex,
-                tVR, tVL1, tVL2));
+            rightFaces.Add(new FaceT<Vertex3>(indexVRRight, indexVL1Right, indexVL2Right, 
+                indexTextureVRRight, indexTextureVL1Right, indexTextureVL2Right, materialIndex));
 
             return;
         }
@@ -336,128 +340,186 @@ public class MeshT : IMesh
         var indexTextureT2Left = leftTextureVertices.AddIndex(t2t);
         var indexTextureT2Right = rightTextureVertices.AddIndex(t2t);
 
-        var rface = new FaceT<Vertex3>(indexVRRight, indexT1Right, indexT2Right, vR, t1, t2,
-            indexTextureVRRight, indexTextureT1Right, indexTextureT2Right, materialIndex,
-            tVR, t1t, t2t);
+        var rface = new FaceT<Vertex3>(indexVRRight, indexT1Right, indexT2Right, 
+            indexTextureVRRight, indexTextureT1Right, indexTextureT2Right, materialIndex);
         rightFaces.Add(rface);
 
-        var lface1 = new FaceT<Vertex3>(indexT2Left, indexVL1Left, indexVL2Left, t2, vL1, vL2,
-            indexTextureT2Left, indexTextureVL1Left, indexTextureVL2Left, materialIndex,
-            t2t, tVL1, tVL2);
+        var lface1 = new FaceT<Vertex3>(indexT2Left, indexVL1Left, indexVL2Left, 
+            indexTextureT2Left, indexTextureVL1Left, indexTextureVL2Left, materialIndex);
         leftFaces.Add(lface1);
 
-        var lface2 = new FaceT<Vertex3>(indexT2Left, indexT1Left, indexVL1Left, t2, t1, vL1,
-            indexTextureT2Left, indexTextureT1Left, indexTextureVL1Left, materialIndex,
-            t2t, t1t, tVL1);
+        var lface2 = new FaceT<Vertex3>(indexT2Left, indexT1Left, indexVL1Left, 
+            indexTextureT2Left, indexTextureT1Left, indexTextureVL1Left, materialIndex);
         leftFaces.Add(lface2);
+    }
+
+    private class Edge : IEquatable<Edge>
+    {
+        public readonly int V1Index;
+
+        public readonly int V2Index;
+        //public readonly int FaceIndex;
+
+        public Edge(int v1Index, int v2Index)
+        {
+            // Manteniamo un ordine
+            if (v1Index > v2Index)
+            {
+                V1Index = v2Index;
+                V2Index = v1Index;
+            }
+            else
+            {
+                V1Index = v1Index;
+                V2Index = v2Index;
+            }
+
+            //FaceIndex = faceIndex;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Edge)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(V1Index, V2Index);
+        }
+
+        public bool Equals(Edge? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return V1Index == other.V1Index && V2Index == other.V2Index;
+        }
     }
 
     public void TrimTextures()
     {
-        /*
         Debug.WriteLine("\nTrimming textures of " + Name);
 
-        var facesMapper = from face in Faces
-            group face by face.MaterialIndex into grp
-            select new
-            {
-                MaterialIndex = grp.Key,
-                Faces = grp.OrderBy(f => f.TextureArea()).ToList(),
-            };
+        var facesByMaterial = GetFacesByMaterial();
 
-        var imgSizeMapper = new Dictionary<string, Vertex2>();
-
-        using (var outImage = new Image<Rgba32>(8192, 8192))
+        for (var m = 0; m < facesByMaterial.Count; m++)
         {
+            var material = Materials[m];
+            var facesIndexes = facesByMaterial[m];
+            Debug.WriteLine($"Working on material {m} -> {material.Name}");
 
-            int outImageArea = 0;
-            
-            foreach (var g in facesMapper)
+            var sw = new Stopwatch();
+            sw.Start();
+
+            Debug.WriteLine("Creating edges mapper");
+            var edgesMapper = GetEdgesMapper(facesIndexes);
+            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
+            sw.Restart();
+
+            Debug.WriteLine("Creating faces mapper");
+            var facesMapper = GetFacesMapper(edgesMapper);
+            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
+            sw.Restart();
+
+            Debug.WriteLine("Assembling faces clusters");
+            var clusters = GetFacesClusters(facesIndexes, facesMapper);
+            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
+            sw.Restart();
+
+            Debug.WriteLine("Sorting clusters");
+            // Sort clusters by count
+            clusters.Sort((a, b) => b.Count.CompareTo(a.Count));
+            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
+            sw.Restart();
+
+            Debug.WriteLine($"Material {material.Name} has {clusters.Count} clusters");
+
+            using (var texture = Image.Load(material.Texture))
             {
-                var material = Materials[g.MaterialIndex];
-                Debug.WriteLine("Working on material " + material.Name);
+                var textureWidth = texture.Width;
+                var textureHeight = texture.Height;
+                var area = textureWidth * textureHeight;
+                
+                var textureArea = GetTextureArea(facesIndexes) * area * 2;
+                Debug.WriteLine("Texture area: " + textureArea);
 
-                using (var texture = Image.Load<Rgba32>(material.Texture))
+                var edgeLength = NextPowerOfTwo((int)Math.Sqrt(textureArea));
+                Debug.WriteLine("Edge length: " + edgeLength);
+
+                // TODO: We could enable rotations but it would be a bit more complex
+                var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
+                var rnd = new Random();
+
+                using (var newTexture = new Image<Rgb24>(edgeLength, edgeLength))
                 {
-
-                    //outImageArea += area;
-                    
-
-                }
-
-            }
-
-        }
-        */
-        
-        var facesMapper = from face in Faces
-            group face by face.MaterialIndex
-            into grp
-            select new
-            {
-                MaterialIndex = grp.Key,
-                Faces = grp.ToList()
-            };
-
-        /*
-        var imgSizeMapper = new Dictionary<string, Vertex2>();
-        
-        foreach (var g in facesMapper)
-        {
-            var material = Materials[g.MaterialIndex];
-            
-            using (var img = Image.Load(material.Texture))
-            {
-                imgSizeMapper.Add(material.Name, new Vertex2(img.Width, img.Height));
-            }
-
-            Debug.WriteLine("Working on material " + material.Name);
-
-            var clusters = new List<Tuple<Material, FaceT<Vertex3>[]>>();
-
-            var materialFaces = g.Faces;
-
-            var currentCluster = new List<FaceT<Vertex3>> { materialFaces.First() };
-            materialFaces.RemoveAt(0);
-
-            while (materialFaces.Count > 0)
-            {
-                var cnt = currentCluster.Count;
-
-                // Scorriamo tutte le facce del cluster
-                for (var index = 0; index < currentCluster.Count; index++)
-                {
-                    var face = currentCluster[index];
-
-                    // Scorriamo tutte le facce rimanenti
-                    for (var n = 0; n < materialFaces.Count; n++)
+                    foreach (var cluster in clusters)
                     {
-                        var f = materialFaces[n];
-                        if (face.IsTextureAdjacent(f))
+                        Debug.WriteLine("Processing cluster with " + cluster.Count + " faces");
+
+                        var clusterBoundary = GetClusterRect(cluster);
+
+                        Debug.WriteLine("Cluster boundary (percentage): " + clusterBoundary);
+
+                        var x = (int)Math.Ceiling(clusterBoundary.Left * textureWidth);
+                        var y = (int)Math.Ceiling(clusterBoundary.Top * textureHeight);
+                        var w = (int)Math.Max(Math.Ceiling(clusterBoundary.Width * textureWidth), 1);
+                        var h = (int)Math.Max(Math.Ceiling(clusterBoundary.Height * textureHeight), 1);
+
+                        Debug.WriteLine($"Cluster boundary (pixel): ({x},{y}) size {w}x{h}");
+
+                        var rect = binPack.Insert(w, h, FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
+
+                        if (rect.Width == 0)
+                            throw new NotImplementedException("Need to enlarge texture, not implemented yet");
+                        
+                        Debug.WriteLine("Found place for cluster: " + rect);
+                        
+                        //var color = Color.FromRgb((byte)rnd.Next(0, 255), (byte)rnd.Next(0, 255), (byte)rnd.Next(0, 255));
+/*
+                        newTexture.Mutate(x => x.FillPolygon(color, new(rect.X, rect.Y), 
+                            new(rect.X + rect.Width, rect.Y), 
+                            new(rect.X + rect.Width, rect.Y + rect.Height), 
+                            new(rect.X, rect.Y + rect.Height)));
+  */                      
+                        Common.CopyImage(texture, newTexture, x, y, w, h, rect.X, rect.Y);
+
+                        foreach (var faceIndex in cluster)
                         {
-                            currentCluster.Add(f);
-                            materialFaces.RemoveAt(n);
+                            var face = Faces[faceIndex];
+                            
+                            //textureFaceA = new Vector2(rect.X / (float)textureWidth, rect.Y / (float)textureHeight);
+                            
                         }
+                        
+                        /*
+                        newTexture.Mutate(a =>
+                        {
+                            a.Clip(new RectangularPolygon(new RectangleF(rect.X, rect.Y, rect.Width, rect.Height)),
+                                context =>
+                                {
+                                    context.DrawImage(texture, new Point(rect.X, rect.Y), 1f);
+                                });
+                        });*/
+                        
+                        //CopyRect(texture, newTexture, x, y, w, h, rect);
+                        
+                        /*
+                         * 1) Creo una maschera per la copia delle facce
+                         * 2) Copio il cluster in una nuova texture
+                         * 
+                         */
                     }
-                }
-
-                // Non ho aggiunto nessuna faccia
-                if (cnt == currentCluster.Count)
-                {
-                    // Aggiungo il cluster
-                    clusters.Add(new Tuple<Material, FaceT<Vertex3>[]>(material, currentCluster.ToArray()));
-
-                    Debug.WriteLine("Added cluster with " + currentCluster.Count + " faces");
                     
-                    // Andiamo avanti con il prossimo cluster
-                    currentCluster = new List<FaceT<Vertex3>> { materialFaces.First() };
-                    materialFaces.RemoveAt(0);
+                    newTexture.Save(material.Name + ".png");
                 }
             }
 
-            clusters.Add(new Tuple<Material, FaceT<Vertex3>[]>(material, currentCluster.ToArray()));
-
-            Debug.WriteLine($"Material {g.MaterialIndex} has {clusters.Count} clusters");
+/*            foreach (var cluster in clusters)
+            {
+                Debug.WriteLine($"{cluster.Count} faces in cluster");;
+            }
 
             for (var index = 0; index < clusters.Count; index++)
             {
@@ -471,11 +533,11 @@ public class MeshT : IMesh
 
                 foreach (var face in cluster.Item2)
                 {
-                    maxX = Math.Max(Math.Max(Math.Max(maxX, face.TC.X), face.TB.X), face.TA.X);
-                    maxY = Math.Max(Math.Max(Math.Max(maxY, face.TC.Y), face.TB.Y), face.TA.Y);
+                    maxX = Math.Max(Math.Max(Math.Max(maxX, textureFaceC.X), textureFaceB.X), textureFaceA.X);
+                    maxY = Math.Max(Math.Max(Math.Max(maxY, textureFaceC.Y), textureFaceB.Y), textureFaceA.Y);
 
-                    minX = Math.Min(Math.Min(Math.Min(minX, face.TC.X), face.TB.X), face.TA.X);
-                    minY = Math.Min(Math.Min(Math.Min(minY, face.TC.Y), face.TB.Y), face.TA.Y);
+                    minX = Math.Min(Math.Min(Math.Min(minX, textureFaceC.X), textureFaceB.X), textureFaceA.X);
+                    minY = Math.Min(Math.Min(Math.Min(minY, textureFaceC.Y), textureFaceB.Y), textureFaceA.Y);
                 }
 
                 var relativeBox = new Box2(minX, minY, maxX, maxY);
@@ -489,15 +551,180 @@ public class MeshT : IMesh
                 Debug.WriteLine("Box: (" + box.Min.X + " " + box.Min.Y + ") - (" + box.Max.X + " " + box.Max.Y + ")");
 
                 //var size = Math.Sqrt(boxes.Sum(b => b.Area));
+            }*/
+        }
+    }
+
+    private RectangleF GetClusterRect(IReadOnlyList<int> cluster)
+    {
+        double maxX = double.MinValue, maxY = double.MinValue;
+        double minX = double.MaxValue, minY = double.MaxValue;
+
+        for (var n = 0; n < cluster.Count; n++)
+        {
+            var face = Faces[cluster[n]];
+
+            var vtA = TextureVertices[face.TextureIndexA];
+            var vtB = TextureVertices[face.TextureIndexB];
+            var vtC = TextureVertices[face.TextureIndexC];
+            
+            maxX = Math.Max(Math.Max(Math.Max(maxX, vtC.X), vtB.X), vtA.X);
+            maxY = Math.Max(Math.Max(Math.Max(maxY, vtC.Y), vtB.Y), vtA.Y);
+
+            minX = Math.Min(Math.Min(Math.Min(minX, vtC.X), vtB.X), vtA.X);
+            minY = Math.Min(Math.Min(Math.Min(minY, vtC.Y), vtB.Y), vtA.Y);
+        }
+
+        return new RectangleF((float)minX, (float)minY, (float)(maxX - minX), (float)(maxY - minY));
+    }
+
+    private double GetTextureArea(List<int> facesIndexes)
+    {
+        double area = 0;
+        
+        foreach (var faceIndex in facesIndexes)
+        {
+            var vtA = TextureVertices[Faces[faceIndex].TextureIndexA];
+            var vtB = TextureVertices[Faces[faceIndex].TextureIndexB];
+            var vtC = TextureVertices[Faces[faceIndex].TextureIndexC];
+                
+            area += Common.Area(vtA, vtB, vtC);
+        }
+
+        return area;
+    }
+
+    public static int NextPowerOfTwo(int x)
+    {
+        x--;
+        x |= (x >> 1);
+        x |= (x >> 2);
+        x |= (x >> 4);
+        x |= (x >> 8);
+        x |= (x >> 16);
+        return (x + 1);
+    }
+
+    private static List<List<int>> GetFacesClusters(IEnumerable<int> facesIndexes,
+        IReadOnlyDictionary<int, List<int>> facesMapper)
+    {
+        var clusters = new List<List<int>>();
+        var remainingFacesIndexes = new List<int>(facesIndexes);
+
+        var currentCluster = new List<int> { remainingFacesIndexes.First() };
+        remainingFacesIndexes.RemoveAt(0);
+
+        while (remainingFacesIndexes.Count > 0)
+        {
+            var cnt = currentCluster.Count;
+
+            for (var index = 0; index < currentCluster.Count; index++)
+            {
+                var faceIndex = currentCluster[index];
+
+                if (!facesMapper.TryGetValue(faceIndex, out var connectedFaces))
+                    continue;
+
+                for (var i = 0; i < connectedFaces.Count; i++)
+                {
+                    var connectedFace = connectedFaces[i];
+                    if (currentCluster.Contains(connectedFace)) continue;
+
+                    currentCluster.Add(connectedFace);
+                    remainingFacesIndexes.Remove(connectedFace);
+                }
             }
 
-            //throw new NotImplementedException();
-            // Aggiungere alla lista dei cluster il materiale corrispondente
-            // Unificare i materiali
-            // Incasellare i cluster in rettangoli
-            // Aggiungere i rettangoli dal più grande al più piccolo al nuovo file di texture
-            // Aggiornare tutte le coordinate delle texture
-        }*/
+            // Non ho aggiunto nessuna faccia
+            if (cnt == currentCluster.Count)
+            {
+                // Aggiungo il cluster
+                clusters.Add(currentCluster);
+
+                // Se non ce ne sono più possiamo uscire
+                if (remainingFacesIndexes.Count == 0) break;
+
+                // Andiamo avanti con il prossimo cluster
+                currentCluster = new List<int> { remainingFacesIndexes.First() };
+                remainingFacesIndexes.RemoveAt(0);
+            }
+        }
+
+        // Aggiungo il cluster
+        clusters.Add(currentCluster);
+        return clusters;
+    }
+
+    private static Dictionary<int, List<int>> GetFacesMapper(Dictionary<Edge, List<int>> edgesMapper)
+    {
+        var facesMapper = new Dictionary<int, List<int>>();
+
+        foreach (var edge in edgesMapper)
+        {
+            foreach (var faceIndex in edge.Value)
+            {
+                if (!facesMapper.ContainsKey(faceIndex))
+                    facesMapper.Add(faceIndex, new List<int>());
+
+                foreach (var f in edge.Value)
+                {
+                    if (f != faceIndex)
+                        facesMapper[faceIndex].Add(f);
+                }
+            }
+        }
+
+        return facesMapper;
+    }
+
+    private Dictionary<Edge, List<int>> GetEdgesMapper(List<int> facesIndexes)
+    {
+        var edgesMapper = new Dictionary<Edge, List<int>>();
+        edgesMapper.EnsureCapacity(facesIndexes.Count * 3);
+
+        for (var idx = 0; idx < facesIndexes.Count; idx++)
+        {
+            var faceIndex = facesIndexes[idx];
+            var f = Faces[faceIndex];
+            var e1 = new Edge(f.TextureIndexA, f.TextureIndexB);
+            var e2 = new Edge(f.TextureIndexB, f.TextureIndexC);
+            var e3 = new Edge(f.TextureIndexA, f.TextureIndexC);
+
+            if (!edgesMapper.ContainsKey(e1))
+            {
+                edgesMapper.Add(e1, new List<int>());
+            }
+
+            if (!edgesMapper.ContainsKey(e2))
+            {
+                edgesMapper.Add(e2, new List<int>());
+            }
+
+            if (!edgesMapper.ContainsKey(e3))
+            {
+                edgesMapper.Add(e3, new List<int>());
+            }
+
+            edgesMapper[e1].Add(faceIndex);
+            edgesMapper[e2].Add(faceIndex);
+            edgesMapper[e3].Add(faceIndex);
+        }
+
+        return edgesMapper;
+    }
+
+    private List<List<int>> GetFacesByMaterial()
+    {
+        var res = Materials.Select(m => new List<int>()).ToList();
+
+        for (var i = 0; i < Faces.Count; i++)
+        {
+            var f = Faces[i];
+
+            res[f.MaterialIndex].Add(i);
+        }
+
+        return res;
     }
 
     #region Utils
@@ -514,8 +741,9 @@ public class MeshT : IMesh
             var maxY = double.MinValue;
             var maxZ = double.MinValue;
 
-            foreach (var v in Vertices)
+            for (var index = 0; index < Vertices.Count; index++)
             {
+                var v = Vertices[index];
                 minX = minX < v.X ? minX : v.X;
                 minY = minY < v.Y ? minY : v.Y;
                 minZ = minZ < v.Z ? minZ : v.Z;

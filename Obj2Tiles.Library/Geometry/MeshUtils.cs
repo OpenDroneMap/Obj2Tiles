@@ -81,16 +81,10 @@ public class MeshUtils
                             v1 - 1,
                             v2 - 1,
                             v3 - 1,
-                            vertices[v1 - 1],
-                            vertices[v2 - 1],
-                            vertices[v3 - 1],
                             vt1 - 1,
                             vt2 - 1,
                             vt3 - 1,
-                            materialsDict[currentMaterial],
-                            textureVertices[vt1 - 1],
-                            textureVertices[vt2 - 1],
-                            textureVertices[vt3 - 1]);
+                            materialsDict[currentMaterial]);
                         
                         facesT.Add(faceT);
                     }
@@ -99,10 +93,7 @@ public class MeshUtils
                         var face = new Face<Vertex3>(
                             v1 - 1,
                             v2 - 1,
-                            v3 - 1,
-                            vertices[v1 - 1],
-                            vertices[v2 - 1],
-                            vertices[v3 - 1]);
+                            v3 - 1);
                         
                         faces.Add(face);
                     }
@@ -131,15 +122,9 @@ public class MeshUtils
             }
         }
 
-        if (textureVertices.Any())
-        {
-            return new MeshT(vertices, textureVertices, facesT, materials);
-        }
-        else
-        {
-            return new Mesh(vertices, faces);
-        }
-
+        return textureVertices.Any()
+            ? new MeshT(vertices, textureVertices, facesT, materials)
+            : new Mesh(vertices, faces);
     }
     
     #region Splitters
