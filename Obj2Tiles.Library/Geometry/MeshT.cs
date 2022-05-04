@@ -413,7 +413,7 @@ public class MeshT : IMesh
             var textureHeight = texture.Height;
             var area = textureWidth * textureHeight;
 
-            var textureArea = GetTextureArea(facesIndexes) * area * 2;
+            var textureArea = GetTextureArea(facesIndexes) * area * 8;
             Debug.WriteLine("Texture area: " + textureArea);
 
             var edgeLength = Common.NextPowerOfTwo((int)Math.Sqrt(textureArea));
@@ -605,22 +605,22 @@ public class MeshT : IMesh
                 }
             }
 
-            // Non ho aggiunto nessuna faccia
+            // No new face was added
             if (cnt == currentCluster.Count)
             {
-                // Aggiungo il cluster
+                // Add the cluster
                 clusters.Add(currentCluster);
 
-                // Se non ce ne sono più possiamo uscire
+                // If no more faces, exit
                 if (remainingFacesIndexes.Count == 0) break;
 
-                // Andiamo avanti con il prossimo cluster
+                // Let's continue with the next cluster
                 currentCluster = new List<int> { remainingFacesIndexes.First() };
                 remainingFacesIndexes.RemoveAt(0);
             }
         }
 
-        // Aggiungo il cluster
+        // Add the cluster
         clusters.Add(currentCluster);
         return clusters;
     }
@@ -631,8 +631,9 @@ public class MeshT : IMesh
 
         foreach (var edge in edgesMapper)
         {
-            foreach (var faceIndex in edge.Value)
+            for (var i = 0; i < edge.Value.Count; i++)
             {
+                var faceIndex = edge.Value[i];
                 if (!facesMapper.ContainsKey(faceIndex))
                     facesMapper.Add(faceIndex, new List<int>());
 
