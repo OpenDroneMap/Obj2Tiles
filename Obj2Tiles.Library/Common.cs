@@ -8,15 +8,15 @@ namespace Obj2Tiles.Library;
 
 public static class Common
 {
-    public static double Epsilon = double.Epsilon;
+    public static double Epsilon = double.Epsilon * 10;
     
-    public static void CopyImage(Image source, Image dest, int sx, int sy, int sw, int sh, int dx, int dy)
+    public static void CopyImage(Image source, Image dest, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int destX, int destY)
     {
         dest.Mutate(x =>
         {
-            x.Clip(new RectangularPolygon(dx, dy, sw, sh),
+            x.Clip(new RectangularPolygon(destX, destY, sourceWidth, sourceHeight),
                 ctx =>
-                    ctx.DrawImage(source, new Point(dx - sx, dy - sy),
+                    ctx.DrawImage(source, new Point(destX - sourceX, destY - sourceY),
                         1f));
         });
     }

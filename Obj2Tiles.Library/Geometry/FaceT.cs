@@ -11,7 +11,7 @@ public class FaceT : Face
 
     public override string ToString()
     {
-        return $"{IndexA} {IndexB} {IndexC}";
+        return $"{IndexA} {IndexB} {IndexC} | {TextureIndexA} {TextureIndexB} {TextureIndexC} | {MaterialIndex}";
     }
 
     public FaceT(int indexA, int indexB, int indexC, int textureIndexA, int textureIndexB,
