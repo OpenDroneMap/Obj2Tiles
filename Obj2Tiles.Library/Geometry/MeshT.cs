@@ -360,9 +360,9 @@ public class MeshT : IMesh
         leftFaces.Add(lface2);
     }
 
-    private void _trimTextures(string targetFolder)
+    private void TrimTextures(string targetFolder)
     {
-        Debug.WriteLine("\nTrimming textures of " + Name);
+        Debug.WriteLine("Trimming textures of " + Name);
 
         var facesByMaterial = GetFacesByMaterial();
 
@@ -404,11 +404,24 @@ public class MeshT : IMesh
             clusters.Sort((a, b) => b.Count.CompareTo(a.Count));
             Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
             sw.Restart();
-
+            
             Debug.WriteLine($"Material {material.Name} has {clusters.Count} clusters");
+            
+            Debug.WriteLine("Bin packing clusters");
+            BinPackTextures(targetFolder, material, facesIndexes, clusters, newTextureVertices);
+            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
 
-            using var texture = Image.Load(material.Texture);
+        }
 
+        _textureVertices = newTextureVertices.OrderBy(item => item.Value).Select(item => item.Key).ToList();
+    }
+
+    private void BinPackTextures(string targetFolder, Material material, List<int> facesIndexes, List<List<int>> clusters,
+        Dictionary<Vertex2, int> newTextureVertices)
+    {
+
+        using (var texture = Image.Load(material.Texture))
+        {
             var textureWidth = texture.Width;
             var textureHeight = texture.Height;
             var area = textureWidth * textureHeight;
@@ -425,106 +438,94 @@ public class MeshT : IMesh
             // NOTE: We could enable rotations but it would be a bit more complex
             var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
 
-            using var newTexture = new Image<Rgb24>(edgeLength, edgeLength);
-
-            for (var i = 0; i < clusters.Count; i++)
+            using (var newTexture = new Image<Rgb24>(edgeLength, edgeLength))
             {
-                var cluster = clusters[i];
-                Debug.WriteLine("Processing cluster with " + cluster.Count + " faces");
-
-                var clusterBoundary = GetClusterRect(cluster);
-
-                Debug.WriteLine("Cluster boundary (percentage): " + clusterBoundary);
-
-                var clusterX = (int)Math.Ceiling(clusterBoundary.Left * textureWidth);
-                var clusterY = (int)Math.Ceiling(clusterBoundary.Top * textureHeight);
-                var clusterWidth = (int)Math.Max(Math.Ceiling(clusterBoundary.Width * textureWidth), 1);
-                var clusterHeight = (int)Math.Max(Math.Ceiling(clusterBoundary.Height * textureHeight), 1);
-
-                Debug.WriteLine(
-                    $"Cluster boundary (pixel): ({clusterX},{clusterY}) size {clusterWidth}x{clusterHeight}");
-
-                var newTextureClusterRect = binPack.Insert(clusterWidth, clusterHeight,
-                    FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
-
-                if (newTextureClusterRect.Width == 0)
-                    throw new NotImplementedException("Need to enlarge texture, not implemented yet");
-
-                Debug.WriteLine("Found place for cluster: " + newTextureClusterRect);
-
-                // Too long to explain this here, but it works
-                var adjustedSourceY = texture.Height - (clusterY + clusterHeight);
-                var adjustedDestY = edgeLength - (newTextureClusterRect.Y + clusterHeight);
-
-                Common.CopyImage(texture, newTexture, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
-                    newTextureClusterRect.X, adjustedDestY);
-
-                Debug.WriteLine("Texture copied, now updating texture vertex coordinates");
-
-                for (var index = 0; index < cluster.Count; index++)
+                for (var i = 0; i < clusters.Count; i++)
                 {
-                    var faceIndex = cluster[index];
-                    var face = _faces[faceIndex];
+                    var cluster = clusters[i];
+                    Debug.WriteLine("Processing cluster with " + cluster.Count + " faces");
 
-                    var vtA = _textureVertices[face.TextureIndexA];
-                    var vtB = _textureVertices[face.TextureIndexB];
-                    var vtC = _textureVertices[face.TextureIndexC];
+                    var clusterBoundary = GetClusterRect(cluster);
 
-                    // Traslation relative to the cluster
-                    var vtAdx = Math.Max(minPixelPerc, vtA.X - clusterBoundary.X);
-                    var vtAdy = Math.Max(minPixelPerc, vtA.Y - clusterBoundary.Y);
+                    Debug.WriteLine("Cluster boundary (percentage): " + clusterBoundary);
 
-                    var vtBdx = Math.Max(minPixelPerc, vtB.X - clusterBoundary.X);
-                    var vtBdy = Math.Max(minPixelPerc, vtB.Y - clusterBoundary.Y);
+                    var clusterX = (int)Math.Ceiling(clusterBoundary.Left * textureWidth);
+                    var clusterY = (int)Math.Ceiling(clusterBoundary.Top * textureHeight);
+                    var clusterWidth = (int)Math.Max(Math.Ceiling(clusterBoundary.Width * textureWidth), 1);
+                    var clusterHeight = (int)Math.Max(Math.Ceiling(clusterBoundary.Height * textureHeight), 1);
 
-                    var vtCdx = Math.Max(minPixelPerc, vtC.X - clusterBoundary.X);
-                    var vtCdy = Math.Max(minPixelPerc, vtC.Y - clusterBoundary.Y);
+                    Debug.WriteLine(
+                        $"Cluster boundary (pixel): ({clusterX},{clusterY}) size {clusterWidth}x{clusterHeight}");
 
-                    // Cluster relative positions (0.0 - 1.0)
-                    var relativeClusterX = newTextureClusterRect.X / (float)edgeLength;
-                    var relativeClusterY = newTextureClusterRect.Y / (float)edgeLength;
+                    var newTextureClusterRect = binPack.Insert(clusterWidth, clusterHeight,
+                        FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
 
-                    // New vertex coordinates
-                    var newVtA = new Vertex2(relativeClusterX + vtAdx, relativeClusterY + vtAdy);
-                    var newVtB = new Vertex2(relativeClusterX + vtBdx, relativeClusterY + vtBdy);
-                    var newVtC = new Vertex2(relativeClusterX + vtCdx, relativeClusterY + vtCdy);
+                    if (newTextureClusterRect.Width == 0)
+                        throw new NotImplementedException("Need to enlarge texture, not implemented yet");
 
-                    Debug.Assert(newVtA.X >= 0 && newVtA.X <= 1 && newVtA.Y >= 0 && newVtA.Y <= 1,
-                        "Texture vertex A out of bounds");
-                    Debug.Assert(newVtB.X >= 0 && newVtB.X <= 1 && newVtB.Y >= 0 && newVtB.Y <= 1,
-                        "Texture vertex B out of bounds");
-                    Debug.Assert(newVtC.X >= 0 && newVtC.X <= 1 && newVtC.Y >= 0 && newVtC.Y <= 1,
-                        "Texture vertex C out of bounds");
+                    Debug.WriteLine("Found place for cluster: " + newTextureClusterRect);
 
-                    var newIndexVtA = newTextureVertices.AddIndex(newVtA);
-                    var newIndexVtB = newTextureVertices.AddIndex(newVtB);
-                    var newIndexVtC = newTextureVertices.AddIndex(newVtC);
+                    // Too long to explain this here, but it works
+                    var adjustedSourceY = texture.Height - (clusterY + clusterHeight);
+                    var adjustedDestY = edgeLength - (newTextureClusterRect.Y + clusterHeight);
 
-                    face.TextureIndexA = newIndexVtA;
-                    face.TextureIndexB = newIndexVtB;
-                    face.TextureIndexC = newIndexVtC;
+                    Common.CopyImage(texture, newTexture, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
+                        newTextureClusterRect.X, adjustedDestY);
+
+                    Debug.WriteLine("Texture copied, now updating texture vertex coordinates");
+
+                    for (var index = 0; index < cluster.Count; index++)
+                    {
+                        var faceIndex = cluster[index];
+                        var face = _faces[faceIndex];
+
+                        var vtA = _textureVertices[face.TextureIndexA];
+                        var vtB = _textureVertices[face.TextureIndexB];
+                        var vtC = _textureVertices[face.TextureIndexC];
+
+                        // Traslation relative to the cluster
+                        var vtAdx = Math.Max(minPixelPerc, vtA.X - clusterBoundary.X);
+                        var vtAdy = Math.Max(minPixelPerc, vtA.Y - clusterBoundary.Y);
+
+                        var vtBdx = Math.Max(minPixelPerc, vtB.X - clusterBoundary.X);
+                        var vtBdy = Math.Max(minPixelPerc, vtB.Y - clusterBoundary.Y);
+
+                        var vtCdx = Math.Max(minPixelPerc, vtC.X - clusterBoundary.X);
+                        var vtCdy = Math.Max(minPixelPerc, vtC.Y - clusterBoundary.Y);
+
+                        // Cluster relative positions (0.0 - 1.0)
+                        var relativeClusterX = newTextureClusterRect.X / (float)edgeLength;
+                        var relativeClusterY = newTextureClusterRect.Y / (float)edgeLength;
+
+                        // New vertex coordinates
+                        var newVtA = new Vertex2(relativeClusterX + vtAdx, relativeClusterY + vtAdy);
+                        var newVtB = new Vertex2(relativeClusterX + vtBdx, relativeClusterY + vtBdy);
+                        var newVtC = new Vertex2(relativeClusterX + vtCdx, relativeClusterY + vtCdy);
+
+                        Debug.Assert(newVtA.X >= 0 && newVtA.X <= 1 && newVtA.Y >= 0 && newVtA.Y <= 1,
+                            "Texture vertex A out of bounds");
+                        Debug.Assert(newVtB.X >= 0 && newVtB.X <= 1 && newVtB.Y >= 0 && newVtB.Y <= 1,
+                            "Texture vertex B out of bounds");
+                        Debug.Assert(newVtC.X >= 0 && newVtC.X <= 1 && newVtC.Y >= 0 && newVtC.Y <= 1,
+                            "Texture vertex C out of bounds");
+
+                        var newIndexVtA = newTextureVertices.AddIndex(newVtA);
+                        var newIndexVtB = newTextureVertices.AddIndex(newVtB);
+                        var newIndexVtC = newTextureVertices.AddIndex(newVtC);
+
+                        face.TextureIndexA = newIndexVtA;
+                        face.TextureIndexB = newIndexVtB;
+                        face.TextureIndexC = newIndexVtC;
+                    }
                 }
+
+                var textureFileName = $"{Name}-texture-{material.Name}.jpg";
+                var newPath = Path.Combine(targetFolder, textureFileName);
+                newTexture.SaveAsJpeg(newPath);
+
+                material.Texture = textureFileName;
             }
-
-            var textureFileName = $"{Name}-texture-{material.Name}.jpg";
-            var newPath = Path.Combine(targetFolder, textureFileName);
-            newTexture.SaveAsJpeg(newPath);
-            
-            /*
-            var folder = Path.GetDirectoryName(material.Texture);
-            var newPath = folder != null
-                ? Path.Combine(folder, material.Name + "-trimmed.png")
-                : material.Name + "-trimmed.png";
-
-            if (File.Exists(newPath))
-                File.Delete(newPath);
-
-            newTexture.SaveAsPng(newPath);
-            */
-            material.Texture = textureFileName;
         }
-
-        _textureVertices = newTextureVertices.OrderBy(item => item.Value).Select(item => item.Key).ToList();
     }
 
     /// <summary>
@@ -760,7 +761,7 @@ public class MeshT : IMesh
         var materialsPath = Path.ChangeExtension(path, "mtl");
 
         if (!PreserveOriginalTextures)
-            _trimTextures(Path.GetDirectoryName(path));
+            TrimTextures(Path.GetDirectoryName(path));
 
         using (var writer = new FormattingStreamWriter(path, en))
         {
@@ -792,7 +793,7 @@ public class MeshT : IMesh
                 into g
                 select g;
 
-            // NOTE: Se ci sono gruppi di facce senza materiali vanno messe all'inizio
+            // NOTE: If there are groups of faces without materials, they must be placed at the beginning
             foreach (var grp in materialFaces.OrderBy(item => item.Key))
             {
                 writer.WriteLine($"usemtl {_materials[grp.Key].Name}");
