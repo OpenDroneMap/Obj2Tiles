@@ -46,7 +46,7 @@ public class Mesh3Tests
         Directory.CreateDirectory(folder);
         
         var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube2/cube.obj");
-        mesh.PreserveOriginalTextures = false;
+        mesh.PreserveOriginalTextures = true;
         
         mesh.WriteObj(folder + "/mesh.obj");
     }
@@ -75,7 +75,7 @@ public class Mesh3Tests
         Directory.CreateDirectory(folder);
         
         var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube/cube.obj");
-        mesh.PreserveOriginalTextures = false;
+        mesh.PreserveOriginalTextures = true;
         
         mesh.WriteObj(folder + "/mesh.obj");
     }
@@ -94,11 +94,32 @@ public class Mesh3Tests
         
         mesh.WriteObj(folder + "/mesh.obj");
     }
-    
+
     [Test]
-    public void WriteObj_Splitted_Cube_TrimTextures()
+    public void WriteObj_Splitted_Cube_PreserveOriginalTextures()
     {
-        const string folder = nameof(WriteObj_Splitted_Cube_TrimTextures);
+        const string folder = nameof(WriteObj_Splitted_Cube_PreserveOriginalTextures);
+        if (Directory.Exists(folder))
+            Directory.Delete(folder, true);
+        Directory.CreateDirectory(folder);
+
+        var mesh = MeshUtils.LoadMesh("TestData/cube/cube.obj");
+
+        var center = mesh.GetVertexBaricenter();
+
+        mesh.Split(xutils, center.X, out var left, out var right);
+
+        ((MeshT)left).PreserveOriginalTextures = true;
+        ((MeshT)right).PreserveOriginalTextures = true;
+
+        left.WriteObj(folder + "/left.obj");
+        right.WriteObj(folder + "/right.obj");
+    }
+
+    [Test]
+    public void WriteObj_Splitted_Cube_Repacking()
+    {
+        const string folder = nameof(WriteObj_Splitted_Cube_Repacking);
         if (Directory.Exists(folder))
             Directory.Delete(folder, true);
         Directory.CreateDirectory(folder);
@@ -114,40 +135,48 @@ public class Mesh3Tests
         
         left.WriteObj(folder + "/left.obj");
         right.WriteObj(folder + "/right.obj");
-   
-        /*
-        left.Split(yutils, center.Y, out var leftbottom, out var lefttop);
-        right.Split(yutils, center.Y, out var rightbottom, out var righttop);
+    }
+    
+    [Test]
+    public void WriteObj_Splitted_Cube2_PreserveOriginalTextures()
+    {
+        const string folder = nameof(WriteObj_Splitted_Cube2_PreserveOriginalTextures);
+        if (Directory.Exists(folder))
+            Directory.Delete(folder, true);
+        Directory.CreateDirectory(folder);
 
-        leftbottom.Split(zutils, center.Z, out var leftbottomnear, out var leftbottomfar);
-        lefttop.Split(zutils, center.Z, out var lefttopnear, out var lefttopfar);
+        var mesh = MeshUtils.LoadMesh("TestData/cube2/cube.obj");
 
-        rightbottom.Split(zutils, center.Z, out var rightbottomnear, out var rightbottomfar);
-        righttop.Split(zutils, center.Z, out var righttopnear, out var righttopfar);
+        var center = mesh.GetVertexBaricenter();
 
-        Directory.CreateDirectory("out");
+        mesh.Split(xutils, center.X, out var left, out var right);
 
-        leftbottomnear.TrimTextures();
-        leftbottomfar.TrimTextures();
-        lefttopnear.TrimTextures();
-        lefttopfar.TrimTextures();
+        ((MeshT)left).PreserveOriginalTextures = true;
+        ((MeshT)right).PreserveOriginalTextures = true;
 
-        rightbottomnear.TrimTextures();
-        rightbottomfar.TrimTextures();
-        righttopnear.TrimTextures();
-        righttopfar.TrimTextures();
+        left.WriteObj(folder + "/left.obj");
+        right.WriteObj(folder + "/right.obj");
+    }
 
-        leftbottomnear.WriteObj("out/leftbottomnear.obj");
-        leftbottomfar.WriteObj("out/leftbottomfar.obj");
-        lefttopnear.WriteObj("out/lefttopnear.obj");
-        lefttopfar.WriteObj("out/lefttopfar.obj");
-
-        rightbottomnear.WriteObj("out/rightbottomnear.obj");
-        rightbottomfar.WriteObj("out/rightbottomfar.obj");
-        righttopnear.WriteObj("out/righttopnear.obj");
-        righttopfar.WriteObj("out/righttopfar.obj");
+    [Test]
+    public void WriteObj_Splitted_Cube2_Repacking()
+    {
+        const string folder = nameof(WriteObj_Splitted_Cube2_Repacking);
+        if (Directory.Exists(folder))
+            Directory.Delete(folder, true);
+        Directory.CreateDirectory(folder);
         
-        */
+        var mesh = MeshUtils.LoadMesh("TestData/cube2/cube.obj");
+
+        var center = mesh.GetVertexBaricenter();
+        
+        mesh.Split(xutils, center.X, out var left, out var right);
+        
+        ((MeshT)left).PreserveOriginalTextures = false;
+        ((MeshT)right).PreserveOriginalTextures = false;
+        
+        left.WriteObj(folder + "/left.obj");
+        right.WriteObj(folder + "/right.obj");
     }
 
     [Test]
