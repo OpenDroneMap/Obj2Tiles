@@ -423,13 +423,13 @@ public class MeshT : IMesh
         IReadOnlyList<List<int>> clusters,
         IDictionary<Vertex2, int> newTextureVertices)
     {
-        using var texture = Image.Load(material.Texture);
+        using var texture = Image.Load<Rgba32>(material.Texture);
         
         var textureWidth = texture.Width;
         var textureHeight = texture.Height;
         var area = textureWidth * textureHeight;
 
-        var textureArea = GetTextureArea(facesIndexes) * area * 2;
+        var textureArea = GetTextureArea(facesIndexes) * area * 8;
         Debug.WriteLine("Texture area: " + textureArea);
 
         var edgeLength = Common.NextPowerOfTwo((int)Math.Sqrt(textureArea));
@@ -441,7 +441,7 @@ public class MeshT : IMesh
         // NOTE: We could enable rotations but it would be a bit more complex
         var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
 
-        using var newTexture = new Image<Rgb24>(edgeLength, edgeLength);
+        using var newTexture = new Image<Rgba32>(edgeLength, edgeLength);
         
         for (var i = 0; i < clusters.Count; i++)
         {

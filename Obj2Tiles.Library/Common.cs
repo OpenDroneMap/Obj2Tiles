@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace Obj2Tiles.Library;
@@ -10,6 +11,7 @@ public static class Common
 {
     public static double Epsilon = double.Epsilon * 10;
     
+    /*
     public static void CopyImage(Image source, Image dest, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int destX, int destY)
     {
         dest.Mutate(x =>
@@ -19,6 +21,31 @@ public static class Common
                     ctx.DrawImage(source, new Point(destX - sourceX, destY - sourceY),
                         1f));
         });
+    }*/
+    
+    // Extract a sub-region of sourceImage as a new image
+    public static void CopyImage(Image<Rgba32> sourceImage, Image<Rgba32> dest, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int destX, int destY)
+    {
+        //Image<Rgba32> targetImage = new(sourceWidth, sourceHeight);
+        var height = sourceHeight;
+        
+        sourceImage.ProcessPixelRows(dest, (sourceAccessor, targetAccessor) =>
+        {
+            for (var i = 0; i < height; i++)
+            {
+                var sourceRow = sourceAccessor.GetRowSpan(sourceY + i);
+                var targetRow = targetAccessor.GetRowSpan(i + destY);
+
+                for (var x = 0; x < sourceWidth; x++)
+                {
+                    targetRow[x + destX] = sourceRow[x + sourceX];
+                }
+                
+                //sourceRow.Slice(sourceX, sourceWidth).CopyTo(targetRow);
+            }
+        });
+
+        //return targetImage;
     }
     
     public static double Area(Vertex2 a, Vertex2 b, Vertex2 c)

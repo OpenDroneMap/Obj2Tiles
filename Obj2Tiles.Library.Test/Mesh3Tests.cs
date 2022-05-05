@@ -8,14 +8,28 @@ using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
+using Path = System.IO.Path;
 
 namespace Obj2Tiles.Library.Test;
 
 public class Mesh3Tests
 {
+    private const string TestDataPath = "TestData";
+    private const string TestOutputPath = "TestOutput";
+    
+    private string GetTestOutputPath(string testName)
+    {
+        var folder = Path.Combine(TestOutputPath, testName);
+        if (Directory.Exists(folder))
+            Directory.Delete(folder, true);
+        Directory.CreateDirectory(folder);
+        return folder;
+    }
+    
     [SetUp]
     public void Setup()
     {
+        Directory.CreateDirectory(TestOutputPath);
     }
 
     private static readonly IVertexUtils yutils = new VertexUtilsY();
@@ -25,85 +39,67 @@ public class Mesh3Tests
     [Test]
     public void WriteObj_Cube2_Repacking()
     {
-        const string folder = nameof(WriteObj_Cube2_Repacking);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
+        var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_Repacking));
         
-        var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube2/cube.obj");
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
 
         mesh.PreserveOriginalTextures = false;
         
-        mesh.WriteObj(folder + "/mesh.obj");
+        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
     
     [Test]
     public void WriteObj_Cube2_PreserveOriginalTextures()
     {
-        const string folder = nameof(WriteObj_Cube2_PreserveOriginalTextures);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
+        var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_PreserveOriginalTextures));
         
-        var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube2/cube.obj");
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
         mesh.PreserveOriginalTextures = true;
         
-        mesh.WriteObj(folder + "/mesh.obj");
+        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
     
     [Test]
     public void WriteObj_Cube_Repacking()
     {
-        const string folder = nameof(WriteObj_Cube_Repacking);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
+        var testPath = GetTestOutputPath(nameof(WriteObj_Cube_Repacking));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube/cube.obj");
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
 
         mesh.PreserveOriginalTextures = false;
         
-        mesh.WriteObj(folder + "/mesh.obj");
+        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
     
     [Test]
     public void WriteObj_Cube_PreserveOriginalTextures()
     {
-        const string folder = nameof(WriteObj_Cube_PreserveOriginalTextures);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
+        var testPath = GetTestOutputPath(nameof(WriteObj_Cube_PreserveOriginalTextures));
         
-        var mesh = (MeshT)MeshUtils.LoadMesh("TestData/cube/cube.obj");
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
         mesh.PreserveOriginalTextures = true;
         
-        mesh.WriteObj(folder + "/mesh.obj");
+        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
     
     [Test]
     public void WriteObj_Brighton_Repacking()
     {
-        const string folder = nameof(WriteObj_Brighton_Repacking);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
+        var testPath = GetTestOutputPath(nameof(WriteObj_Brighton_Repacking));
         
         var mesh = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
 
         mesh.PreserveOriginalTextures = false;
         
-        mesh.WriteObj(folder + "/mesh.obj");
+        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
 
     [Test]
     public void WriteObj_Splitted_Cube_PreserveOriginalTextures()
     {
-        const string folder = nameof(WriteObj_Splitted_Cube_PreserveOriginalTextures);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
+        var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube_PreserveOriginalTextures));
 
-        var mesh = MeshUtils.LoadMesh("TestData/cube/cube.obj");
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
 
         var center = mesh.GetVertexBaricenter();
 
@@ -112,19 +108,16 @@ public class Mesh3Tests
         ((MeshT)left).PreserveOriginalTextures = true;
         ((MeshT)right).PreserveOriginalTextures = true;
 
-        left.WriteObj(folder + "/left.obj");
-        right.WriteObj(folder + "/right.obj");
+        left.WriteObj(Path.Combine(testPath, "left.obj"));
+        right.WriteObj(Path.Combine(testPath, "right.obj"));
     }
 
     [Test]
-    public void WriteObj_Splitted_Cube_Repacking()
+    public void WriteObj_SplittedX_Cube_Repacking()
     {
-        const string folder = nameof(WriteObj_Splitted_Cube_Repacking);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
-        
-        var mesh = MeshUtils.LoadMesh("TestData/cube/cube.obj");
+        var testPath = GetTestOutputPath(nameof(WriteObj_SplittedX_Cube_Repacking));
+
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
 
         var center = mesh.GetVertexBaricenter();
         
@@ -133,19 +126,34 @@ public class Mesh3Tests
         ((MeshT)left).PreserveOriginalTextures = false;
         ((MeshT)right).PreserveOriginalTextures = false;
         
-        left.WriteObj(folder + "/left.obj");
-        right.WriteObj(folder + "/right.obj");
+        left.WriteObj(Path.Combine(testPath, "left.obj"));
+        right.WriteObj(Path.Combine(testPath, "right.obj"));
+    }
+    
+    [Test]
+    public void WriteObj_SplittedX_Cube_PreserveOriginalTextures()
+    {
+        var testPath = GetTestOutputPath(nameof(WriteObj_SplittedX_Cube_PreserveOriginalTextures));
+
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
+
+        var center = mesh.GetVertexBaricenter();
+        
+        mesh.Split(xutils, center.X, out var left, out var right);
+        
+        ((MeshT)left).PreserveOriginalTextures = true;
+        ((MeshT)right).PreserveOriginalTextures = true;
+        
+        left.WriteObj(Path.Combine(testPath, "left.obj"));
+        right.WriteObj(Path.Combine(testPath, "right.obj"));
     }
     
     [Test]
     public void WriteObj_Splitted_Cube2_PreserveOriginalTextures()
     {
-        const string folder = nameof(WriteObj_Splitted_Cube2_PreserveOriginalTextures);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
+        var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube2_PreserveOriginalTextures));
 
-        var mesh = MeshUtils.LoadMesh("TestData/cube2/cube.obj");
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
 
         var center = mesh.GetVertexBaricenter();
 
@@ -154,19 +162,16 @@ public class Mesh3Tests
         ((MeshT)left).PreserveOriginalTextures = true;
         ((MeshT)right).PreserveOriginalTextures = true;
 
-        left.WriteObj(folder + "/left.obj");
-        right.WriteObj(folder + "/right.obj");
+        left.WriteObj(Path.Combine(testPath, "left.obj"));
+        right.WriteObj(Path.Combine(testPath, "right.obj"));
     }
 
     [Test]
     public void WriteObj_Splitted_Cube2_Repacking()
     {
-        const string folder = nameof(WriteObj_Splitted_Cube2_Repacking);
-        if (Directory.Exists(folder))
-            Directory.Delete(folder, true);
-        Directory.CreateDirectory(folder);
+        var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube2_Repacking));
         
-        var mesh = MeshUtils.LoadMesh("TestData/cube2/cube.obj");
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
 
         var center = mesh.GetVertexBaricenter();
         
@@ -175,8 +180,8 @@ public class Mesh3Tests
         ((MeshT)left).PreserveOriginalTextures = false;
         ((MeshT)right).PreserveOriginalTextures = false;
         
-        left.WriteObj(folder + "/left.obj");
-        right.WriteObj(folder + "/right.obj");
+        left.WriteObj(Path.Combine(testPath, "left.obj"));
+        right.WriteObj(Path.Combine(testPath, "right.obj"));
     }
 
     [Test]
@@ -186,6 +191,8 @@ public class Mesh3Tests
         var imagePath2 = "TestData/cube/pic6.jpg";
         var imagePath3 = "TestData/cube/pic3.jpg";
         var imagePath4 = "TestData/cube/pic1.jpg";
+
+        var testPath = GetTestOutputPath(nameof(Image_TestDrawImage));
 
         using var image = Image.Load<Rgba32>(imagePath);
         using var image2 = Image.Load<Rgba32>(imagePath2);
@@ -199,7 +206,25 @@ public class Mesh3Tests
         Common.CopyImage(image3, newImage, 0, 0, image3.Width, image3.Height, 0, image.Height);
         Common.CopyImage(image4, newImage, 0, 0, image4.Width, image4.Height, image.Width, image.Height);
 
-        newImage.Save("collage.jpg");
+        newImage.Save(Path.Combine(testPath, "collage.jpg"));
+
+    }
+
+    [Test]
+    public void Image_TestHalfImage()
+    {
+        var testPath = GetTestOutputPath(nameof(Image_TestHalfImage));
+
+        var sourcePath = Path.Combine(TestDataPath, "cube/pic1.jpg");
+        using var image = Image.Load<Rgba32>(sourcePath);
+        
+        using var newImage = new Image<Rgba32>(image.Width, image.Height);
+        
+        Common.CopyImage(image, newImage, 0, 0, image.Width / 2, image.Height, 0, 0);
+        newImage.SaveAsJpeg(Path.Combine(testPath, "out.jpg"));
+
+        //img.SaveAsJpeg(Path.Combine(testPath, "out2.jpg"));
+
     }
 
 }
