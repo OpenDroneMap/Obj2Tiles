@@ -8,8 +8,8 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class Mesh : IMesh
 {
-    private List<Vertex3> _vertices;
-    private List<Face> _faces;
+    private readonly List<Vertex3> _vertices;
+    private readonly List<Face> _faces;
 
     public IReadOnlyList<Vertex3> Vertices => _vertices;
     public IReadOnlyList<Face> Faces => _faces;
@@ -291,8 +291,9 @@ public class Mesh : IMesh
         writer.Write("o ");
         writer.WriteLine(string.IsNullOrWhiteSpace(Name) ? DefaultName : Name);
 
-        foreach (var vertex in _vertices)
+        for (var index = 0; index < _vertices.Count; index++)
         {
+            var vertex = _vertices[index];
             writer.Write("v ");
             writer.Write(vertex.X);
             writer.Write(" ");
@@ -301,8 +302,9 @@ public class Mesh : IMesh
             writer.WriteLine(vertex.Z);
         }
 
-        foreach (var face in _faces)
+        for (var index = 0; index < _faces.Count; index++)
         {
+            var face = _faces[index];
             writer.WriteLine(face.ToObj());
         }
     }

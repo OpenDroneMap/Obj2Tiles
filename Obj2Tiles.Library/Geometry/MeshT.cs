@@ -25,7 +25,7 @@ public class MeshT : IMesh
 
     public string Name { get; set; } = DefaultName;
 
-    public bool PreserveOriginalTextures { get; set; } = false;
+    public bool PreserveOriginalTextures { get; set; }
 
     public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
         IEnumerable<FaceT> faces, IEnumerable<Material> materials)
