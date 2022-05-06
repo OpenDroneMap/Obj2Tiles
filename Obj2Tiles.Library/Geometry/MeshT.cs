@@ -407,9 +407,9 @@ public class MeshT : IMesh
             sw.Restart();
 
             Debug.WriteLine($"Material {material.Name} has {clusters.Count} clusters");
-            
+
             Debug.WriteLine("Bin packing clusters");
-            BinPackTextures(targetFolder, material, clusters, newTextureVertices);
+            BinPackTextures(targetFolder, m, clusters, newTextureVertices);
             Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
         }
 
@@ -419,33 +419,44 @@ public class MeshT : IMesh
         Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
     }
 
-    private void BinPackTextures(string targetFolder, Material material, IReadOnlyList<List<int>> clusters,
+    private void BinPackTextures(string targetFolder, int materialIndex, IReadOnlyList<List<int>> clusters,
         IDictionary<Vertex2, int> newTextureVertices)
     {
+        var material = _materials[materialIndex];
         using var texture = Image.Load<Rgba32>(material.Texture);
-        
+
         var textureWidth = texture.Width;
         var textureHeight = texture.Height;
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
-        var textureArea =
-            clustersRects.Sum(r => Math.Max(r.Width * textureWidth, 1) * Math.Max(r.Height * textureHeight, 1));
+        CalculateMaxMinAreaRect(clustersRects, textureWidth, textureHeight, out var maxWidth, out var maxHeight, out var textureArea);
+        
         Debug.WriteLine("Texture area: " + textureArea);
 
-        var edgeLength = Common.NextPowerOfTwo((int)Math.Sqrt(textureArea));
+        var edgeLength = Math.Max(Common.NextPowerOfTwo((int)Math.Sqrt(textureArea)), 32);
+        
+        if (edgeLength < maxWidth)
+            edgeLength = Common.NextPowerOfTwo((int)maxWidth);
+
+        if (edgeLength < maxHeight)
+            edgeLength = Common.NextPowerOfTwo((int)maxHeight);
+        
         Debug.WriteLine("Edge length: " + edgeLength);
 
         // NOTE: We could enable rotations but it would be a bit more complex
         var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
 
         var newTexture = new Image<Rgba32>(edgeLength, edgeLength);
-        
+
+        string? textureFileName, newPath;
+        var count = 0;
+
         for (var i = 0; i < clusters.Count; i++)
         {
             var cluster = clusters[i];
             Debug.WriteLine("Processing cluster with " + cluster.Count + " faces");
 
-            var clusterBoundary = GetClusterRect(cluster);
+            var clusterBoundary = clustersRects[i];
 
             Debug.WriteLine("Cluster boundary (percentage): " + clusterBoundary);
 
@@ -462,9 +473,34 @@ public class MeshT : IMesh
 
             if (newTextureClusterRect.Width == 0)
             {
-                // Need to enlarge texture
-                // Split texture in two and try again
-                throw new NotImplementedException("Texture enlargement not implemented");
+                Debug.WriteLine("Somehow we could not pack everything in the texture, splitting it in two");
+
+                textureFileName = $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}";
+                newPath = Path.Combine(targetFolder, textureFileName);
+                newTexture.Save(newPath);
+                newTexture.Dispose();
+
+                newTexture = new Image<Rgba32>(edgeLength, edgeLength);
+                binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
+                material.Texture = textureFileName;
+
+                // Avoid texture name collision
+                count++;
+
+                material = new Material(material.Name + "-" + count, textureFileName, material.AmbientColor,
+                    material.DiffuseColor,
+                    material.SpecularColor, material.SpecularExponent, material.Dissolve, material.IlluminationModel);
+
+                _materials.Add(material);
+                materialIndex = _materials.Count - 1;
+
+                // This is the second time we are here
+                newTextureClusterRect = binPack.Insert(clusterWidth, clusterHeight,
+                    FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
+                
+                if (newTextureClusterRect.Width == 0)
+                    throw new Exception("Find room for cluster in a newly created texture, this is not supposed to happen");
+               
             }
 
             Debug.WriteLine("Found place for cluster at " + newTextureClusterRect);
@@ -480,7 +516,7 @@ public class MeshT : IMesh
             var textureScaleY = (double)textureHeight / edgeLength;
 
             Debug.WriteLine("Texture copied, now updating texture vertex coordinates");
-            
+
             for (var index = 0; index < cluster.Count; index++)
             {
                 var faceIndex = cluster[index];
@@ -505,9 +541,12 @@ public class MeshT : IMesh
                 var relativeClusterY = newTextureClusterRect.Y / (double)edgeLength;
 
                 // New vertex coordinates
-                var newVtA = new Vertex2( Math.Clamp(relativeClusterX + vtAdx, 0, 1), Math.Clamp(relativeClusterY + vtAdy, 0, 1));
-                var newVtB = new Vertex2(Math.Clamp(relativeClusterX + vtBdx, 0, 1), Math.Clamp(relativeClusterY + vtBdy, 0, 1));
-                var newVtC = new Vertex2(Math.Clamp(relativeClusterX + vtCdx, 0, 1), Math.Clamp(relativeClusterY + vtCdy, 0, 1));
+                var newVtA = new Vertex2(Math.Clamp(relativeClusterX + vtAdx, 0, 1),
+                    Math.Clamp(relativeClusterY + vtAdy, 0, 1));
+                var newVtB = new Vertex2(Math.Clamp(relativeClusterX + vtBdx, 0, 1),
+                    Math.Clamp(relativeClusterY + vtBdy, 0, 1));
+                var newVtC = new Vertex2(Math.Clamp(relativeClusterX + vtCdx, 0, 1),
+                    Math.Clamp(relativeClusterY + vtCdy, 0, 1));
 
                 var newIndexVtA = newTextureVertices.AddIndex(newVtA);
                 var newIndexVtB = newTextureVertices.AddIndex(newVtB);
@@ -516,15 +555,52 @@ public class MeshT : IMesh
                 face.TextureIndexA = newIndexVtA;
                 face.TextureIndexB = newIndexVtB;
                 face.TextureIndexC = newIndexVtC;
+                face.MaterialIndex = materialIndex;
             }
         }
 
-        var textureFileName = $"{Name}-texture-{material.Name}.{Path.GetExtension(material.Texture)}";
-        var newPath = Path.Combine(targetFolder, textureFileName);
+        textureFileName = $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}";
+
+        newPath = Path.Combine(targetFolder, textureFileName);
         newTexture.Save(newPath);
         newTexture.Dispose();
 
         material.Texture = textureFileName;
+    }
+
+    private void CalculateMaxMinAreaRect(RectangleF[] clustersRects, int textureWidth, int textureHeight, out float maxWidth, out float maxHeight, out float textureArea)
+    {
+
+        // var textureArea = clustersRects.Sum(r => Math.Max(r.Width * textureWidth, 1) * Math.Max(r.Height * textureHeight, 1));
+
+        
+        /*        var maxWidth = clustersRects.Max(rect => rect.Width) * textureWidth;
+        var maxHeight = clustersRects.Max(rect => rect.Height) * textureHeight;
+*/
+        maxWidth = 0;
+        maxHeight = 0;
+        textureArea = 0;
+
+        for (var index = 0; index < clustersRects.Length; index++)
+        {
+            var rect = clustersRects[index];
+
+            textureArea += Math.Max(rect.Width * textureWidth, 1) * Math.Max(rect.Height * textureHeight, 1);
+            
+            if (rect.Width > maxWidth)
+            {
+                maxWidth = rect.Width;
+            }
+            
+            if (rect.Height > maxHeight)
+            {
+                maxHeight = rect.Height;
+            }
+        }
+        
+        maxWidth *= textureWidth;
+        maxHeight *= textureHeight;
+
     }
 
     /// <summary>
