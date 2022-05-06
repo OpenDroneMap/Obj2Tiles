@@ -44,7 +44,7 @@ public class Mesh3Tests
         
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
 
-        mesh.PreserveOriginalTextures = false;
+        mesh.KeepOriginalTextures = false;
         
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -56,7 +56,7 @@ public class Mesh3Tests
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_PreserveOriginalTextures));
         
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
-        mesh.PreserveOriginalTextures = true;
+        mesh.KeepOriginalTextures = true;
         
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -69,7 +69,7 @@ public class Mesh3Tests
 
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
 
-        mesh.PreserveOriginalTextures = false;
+        mesh.KeepOriginalTextures = false;
         
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -81,7 +81,7 @@ public class Mesh3Tests
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube_PreserveOriginalTextures));
         
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
-        mesh.PreserveOriginalTextures = true;
+        mesh.KeepOriginalTextures = true;
         
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -94,7 +94,7 @@ public class Mesh3Tests
         
         var mesh = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
 
-        mesh.PreserveOriginalTextures = false;
+        mesh.KeepOriginalTextures = false;
         
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -107,7 +107,7 @@ public class Mesh3Tests
         
         var mesh = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\canyon\odm_texturing\odm_textured_model_geo.obj");
 
-        mesh.PreserveOriginalTextures = false;
+        mesh.KeepOriginalTextures = false;
         
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -124,8 +124,8 @@ public class Mesh3Tests
 
         mesh.Split(xutils, center.X, out var left, out var right);
 
-        ((MeshT)left).PreserveOriginalTextures = true;
-        ((MeshT)right).PreserveOriginalTextures = true;
+        ((MeshT)left).KeepOriginalTextures = true;
+        ((MeshT)right).KeepOriginalTextures = true;
 
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
@@ -143,8 +143,8 @@ public class Mesh3Tests
         
         mesh.Split(xutils, center.X, out var left, out var right);
         
-        ((MeshT)left).PreserveOriginalTextures = false;
-        ((MeshT)right).PreserveOriginalTextures = false;
+        ((MeshT)left).KeepOriginalTextures = false;
+        ((MeshT)right).KeepOriginalTextures = false;
         
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
@@ -162,8 +162,8 @@ public class Mesh3Tests
         
         mesh.Split(xutils, center.X, out var left, out var right);
         
-        ((MeshT)left).PreserveOriginalTextures = true;
-        ((MeshT)right).PreserveOriginalTextures = true;
+        ((MeshT)left).KeepOriginalTextures = true;
+        ((MeshT)right).KeepOriginalTextures = true;
         
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
@@ -181,8 +181,8 @@ public class Mesh3Tests
 
         mesh.Split(xutils, center.X, out var left, out var right);
 
-        ((MeshT)left).PreserveOriginalTextures = true;
-        ((MeshT)right).PreserveOriginalTextures = true;
+        ((MeshT)left).KeepOriginalTextures = true;
+        ((MeshT)right).KeepOriginalTextures = true;
 
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
@@ -200,8 +200,8 @@ public class Mesh3Tests
         
         mesh.Split(xutils, center.X, out var left, out var right);
         
-        ((MeshT)left).PreserveOriginalTextures = false;
-        ((MeshT)right).PreserveOriginalTextures = false;
+        ((MeshT)left).KeepOriginalTextures = false;
+        ((MeshT)right).KeepOriginalTextures = false;
         
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));

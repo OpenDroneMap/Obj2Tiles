@@ -25,7 +25,7 @@ public class MeshT : IMesh
 
     public string Name { get; set; } = DefaultName;
 
-    public bool PreserveOriginalTextures { get; set; }
+    public bool KeepOriginalTextures { get; set; }
 
     public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
         IEnumerable<FaceT> faces, IEnumerable<Material> materials)
@@ -835,7 +835,7 @@ public class MeshT : IMesh
     {
         var materialsPath = Path.ChangeExtension(path, "mtl");
 
-        if (!PreserveOriginalTextures)
+        if (!KeepOriginalTextures)
             TrimTextures(Path.GetDirectoryName(path));
 
         using (var writer = new FormattingStreamWriter(path, en))
@@ -886,7 +886,7 @@ public class MeshT : IMesh
             {
                 var material = _materials[index];
 
-                if (material.Texture != null && PreserveOriginalTextures)
+                if (material.Texture != null && KeepOriginalTextures)
                 {
                     var folder = Path.GetDirectoryName(path);
 

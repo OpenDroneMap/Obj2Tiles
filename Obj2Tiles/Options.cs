@@ -18,6 +18,9 @@ public class Options
 
     [Option('z', "zsplit", Required = false, HelpText = "Adds split along z axis", Default = false)]
     public bool ZSplit { get; set; }
+    
+    [Option('k', "keeptextures", Required = false, HelpText = "Keeps original textures", Default = false)]
+    public bool KeepOriginalTextures { get; set; }
 }
 
 public enum Stage
