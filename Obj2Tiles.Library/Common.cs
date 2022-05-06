@@ -11,22 +11,8 @@ public static class Common
 {
     public static double Epsilon = double.Epsilon * 10;
     
-    /*
-    public static void CopyImage(Image source, Image dest, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int destX, int destY)
-    {
-        dest.Mutate(x =>
-        {
-            x.Clip(new RectangularPolygon(destX, destY, sourceWidth, sourceHeight),
-                ctx =>
-                    ctx.DrawImage(source, new Point(destX - sourceX, destY - sourceY),
-                        1f));
-        });
-    }*/
-    
-    // Extract a sub-region of sourceImage as a new image
     public static void CopyImage(Image<Rgba32> sourceImage, Image<Rgba32> dest, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int destX, int destY)
     {
-        //Image<Rgba32> targetImage = new(sourceWidth, sourceHeight);
         var height = sourceHeight;
         
         sourceImage.ProcessPixelRows(dest, (sourceAccessor, targetAccessor) =>
@@ -40,12 +26,8 @@ public static class Common
                 {
                     targetRow[x + destX] = sourceRow[x + sourceX];
                 }
-                
-                //sourceRow.Slice(sourceX, sourceWidth).CopyTo(targetRow);
             }
         });
-
-        //return targetImage;
     }
     
     public static double Area(Vertex2 a, Vertex2 b, Vertex2 c)
