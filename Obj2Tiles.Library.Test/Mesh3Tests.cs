@@ -4,9 +4,7 @@ using System.Numerics;
 using NUnit.Framework;
 using Obj2Tiles.Library.Geometry;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using Path = System.IO.Path;
 
