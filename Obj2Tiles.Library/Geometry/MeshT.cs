@@ -407,9 +407,9 @@ public class MeshT : IMesh
             sw.Restart();
 
             Debug.WriteLine($"Material {material.Name} has {clusters.Count} clusters");
-
+            
             Debug.WriteLine("Bin packing clusters");
-            BinPackTextures(targetFolder, material, facesIndexes, clusters, newTextureVertices);
+            BinPackTextures(targetFolder, material, clusters, newTextureVertices);
             Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
         }
 
@@ -419,29 +419,26 @@ public class MeshT : IMesh
         Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
     }
 
-    private void BinPackTextures(string targetFolder, Material material, IReadOnlyList<int> facesIndexes,
-        IReadOnlyList<List<int>> clusters,
+    private void BinPackTextures(string targetFolder, Material material, IReadOnlyList<List<int>> clusters,
         IDictionary<Vertex2, int> newTextureVertices)
     {
         using var texture = Image.Load<Rgba32>(material.Texture);
         
         var textureWidth = texture.Width;
         var textureHeight = texture.Height;
-        var area = textureWidth * textureHeight;
+        var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
-        var textureArea = GetTextureArea(facesIndexes) * area * 8;
+        var textureArea =
+            clustersRects.Sum(r => Math.Max(r.Width * textureWidth, 1) * Math.Max(r.Height * textureHeight, 1));
         Debug.WriteLine("Texture area: " + textureArea);
 
         var edgeLength = Common.NextPowerOfTwo((int)Math.Sqrt(textureArea));
         Debug.WriteLine("Edge length: " + edgeLength);
 
-        var minPixelPerc = 0.5 / edgeLength;
-        Debug.WriteLine("Min pixel perc: " + minPixelPerc);
-
         // NOTE: We could enable rotations but it would be a bit more complex
         var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
 
-        using var newTexture = new Image<Rgba32>(edgeLength, edgeLength);
+        var newTexture = new Image<Rgba32>(edgeLength, edgeLength);
         
         for (var i = 0; i < clusters.Count; i++)
         {
@@ -464,7 +461,11 @@ public class MeshT : IMesh
                 FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
 
             if (newTextureClusterRect.Width == 0)
-                throw new NotImplementedException("Need to enlarge texture, not implemented yet");
+            {
+                // Need to enlarge texture
+                // Split texture in two and try again
+                throw new NotImplementedException("Texture enlargement not implemented");
+            }
 
             Debug.WriteLine("Found place for cluster at " + newTextureClusterRect);
 
@@ -475,11 +476,11 @@ public class MeshT : IMesh
             Common.CopyImage(texture, newTexture, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
                 newTextureClusterRect.X, adjustedDestY);
 
-            var textureScaleX = (float)textureWidth / edgeLength;
-            var textureScaleY = (float)textureHeight / edgeLength;
+            var textureScaleX = (double)textureWidth / edgeLength;
+            var textureScaleY = (double)textureHeight / edgeLength;
 
             Debug.WriteLine("Texture copied, now updating texture vertex coordinates");
-
+            
             for (var index = 0; index < cluster.Count; index++)
             {
                 var faceIndex = cluster[index];
@@ -500,20 +501,13 @@ public class MeshT : IMesh
                 var vtCdy = Math.Max(0, vtC.Y - clusterBoundary.Y) * textureScaleY;
 
                 // Cluster relative positions (percentage)
-                var relativeClusterX = newTextureClusterRect.X / (float)edgeLength;
-                var relativeClusterY = newTextureClusterRect.Y / (float)edgeLength;
+                var relativeClusterX = newTextureClusterRect.X / (double)edgeLength;
+                var relativeClusterY = newTextureClusterRect.Y / (double)edgeLength;
 
                 // New vertex coordinates
-                var newVtA = new Vertex2(relativeClusterX + vtAdx, relativeClusterY + vtAdy);
-                var newVtB = new Vertex2(relativeClusterX + vtBdx, relativeClusterY + vtBdy);
-                var newVtC = new Vertex2(relativeClusterX + vtCdx, relativeClusterY + vtCdy);
-
-                Debug.Assert(newVtA.X >= 0 && newVtA.X <= 1 && newVtA.Y >= 0 && newVtA.Y <= 1,
-                    "Texture vertex A out of bounds");
-                Debug.Assert(newVtB.X >= 0 && newVtB.X <= 1 && newVtB.Y >= 0 && newVtB.Y <= 1,
-                    "Texture vertex B out of bounds");
-                Debug.Assert(newVtC.X >= 0 && newVtC.X <= 1 && newVtC.Y >= 0 && newVtC.Y <= 1,
-                    "Texture vertex C out of bounds");
+                var newVtA = new Vertex2( Math.Clamp(relativeClusterX + vtAdx, 0, 1), Math.Clamp(relativeClusterY + vtAdy, 0, 1));
+                var newVtB = new Vertex2(Math.Clamp(relativeClusterX + vtBdx, 0, 1), Math.Clamp(relativeClusterY + vtBdy, 0, 1));
+                var newVtC = new Vertex2(Math.Clamp(relativeClusterX + vtCdx, 0, 1), Math.Clamp(relativeClusterY + vtCdy, 0, 1));
 
                 var newIndexVtA = newTextureVertices.AddIndex(newVtA);
                 var newIndexVtB = newTextureVertices.AddIndex(newVtB);
@@ -525,9 +519,10 @@ public class MeshT : IMesh
             }
         }
 
-        var textureFileName = $"{Name}-texture-{material.Name}.jpg";
+        var textureFileName = $"{Name}-texture-{material.Name}.{Path.GetExtension(material.Texture)}";
         var newPath = Path.Combine(targetFolder, textureFileName);
-        newTexture.SaveAsJpeg(newPath);
+        newTexture.Save(newPath);
+        newTexture.Dispose();
 
         material.Texture = textureFileName;
     }

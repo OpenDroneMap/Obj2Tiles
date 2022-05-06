@@ -37,6 +37,7 @@ public class Mesh3Tests
     private static readonly IVertexUtils zutils = new VertexUtilsZ();
 
     [Test]
+    [Explicit]
     public void WriteObj_Cube2_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_Repacking));
@@ -48,7 +49,8 @@ public class Mesh3Tests
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
     
-    [Test]
+    [Test]   
+    [Explicit]
     public void WriteObj_Cube2_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_PreserveOriginalTextures));
@@ -60,6 +62,7 @@ public class Mesh3Tests
     }
     
     [Test]
+    [Explicit]
     public void WriteObj_Cube_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube_Repacking));
@@ -72,6 +75,7 @@ public class Mesh3Tests
     }
     
     [Test]
+    [Explicit]
     public void WriteObj_Cube_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube_PreserveOriginalTextures));
@@ -83,6 +87,7 @@ public class Mesh3Tests
     }
     
     [Test]
+    [Explicit]
     public void WriteObj_Brighton_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Brighton_Repacking));
@@ -93,8 +98,22 @@ public class Mesh3Tests
         
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
-
+    
     [Test]
+    [Explicit]
+    public void WriteObj_Canyon_Repacking()
+    {
+        var testPath = GetTestOutputPath(nameof(WriteObj_Canyon_Repacking));
+        
+        var mesh = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\canyon\odm_texturing\odm_textured_model_geo.obj");
+
+        mesh.PreserveOriginalTextures = false;
+        
+        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
+    }
+    
+    [Test]
+    [Explicit]
     public void WriteObj_Splitted_Cube_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube_PreserveOriginalTextures));
@@ -113,6 +132,7 @@ public class Mesh3Tests
     }
 
     [Test]
+    [Explicit]
     public void WriteObj_SplittedX_Cube_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_SplittedX_Cube_Repacking));
@@ -131,6 +151,7 @@ public class Mesh3Tests
     }
     
     [Test]
+    [Explicit]
     public void WriteObj_SplittedX_Cube_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_SplittedX_Cube_PreserveOriginalTextures));
@@ -149,6 +170,7 @@ public class Mesh3Tests
     }
     
     [Test]
+    [Explicit]
     public void WriteObj_Splitted_Cube2_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube2_PreserveOriginalTextures));
@@ -167,6 +189,7 @@ public class Mesh3Tests
     }
 
     [Test]
+    [Explicit]
     public void WriteObj_Splitted_Cube2_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube2_Repacking));
@@ -222,9 +245,6 @@ public class Mesh3Tests
         
         Common.CopyImage(image, newImage, 0, 0, image.Width / 2, image.Height, 0, 0);
         newImage.SaveAsJpeg(Path.Combine(testPath, "out.jpg"));
-
-        //img.SaveAsJpeg(Path.Combine(testPath, "out2.jpg"));
-
     }
 
 }
