@@ -62,6 +62,7 @@ public static class Common
         var subEdge1Length = a.Distance(p);
         return subEdge1Length / edge1Length;
     }
+
 }
 
 public class FormattingStreamWriter : StreamWriter

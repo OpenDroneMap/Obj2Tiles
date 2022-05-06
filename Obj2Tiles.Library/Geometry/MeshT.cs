@@ -364,6 +364,10 @@ public class MeshT : IMesh
     {
         Debug.WriteLine("Trimming textures of " + Name);
 
+        var tasks = new List<Task>();
+        
+        LoadTexturesCache();
+        
         var facesByMaterial = GetFacesByMaterial();
 
         var newTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
@@ -409,7 +413,7 @@ public class MeshT : IMesh
             Debug.WriteLine($"Material {material.Name} has {clusters.Count} clusters");
 
             Debug.WriteLine("Bin packing clusters");
-            BinPackTextures(targetFolder, m, clusters, newTextureVertices);
+            BinPackTextures(targetFolder, m, clusters, newTextureVertices, tasks);
             Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
         }
 
@@ -417,14 +421,29 @@ public class MeshT : IMesh
         sw.Restart();
         _textureVertices = newTextureVertices.OrderBy(item => item.Value).Select(item => item.Key).ToList();
         Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
+        
+        Debug.WriteLine("Waiting for save tasks to finish");
+        sw.Restart();
+        Task.WaitAll(tasks.ToArray());
+        Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
+    }
+
+    private void LoadTexturesCache()
+    {
+        Parallel.ForEach(_materials, material => TexturesCache.GetTexture(material.Texture));
     }
 
     private void BinPackTextures(string targetFolder, int materialIndex, IReadOnlyList<List<int>> clusters,
-        IDictionary<Vertex2, int> newTextureVertices)
+        IDictionary<Vertex2, int> newTextureVertices, List<Task> tasks)
     {
         var material = _materials[materialIndex];
-        using var texture = Image.Load<Rgba32>(material.Texture);
+        //using var texture = Image.Load<Rgba32>(material.Texture);
 
+        if (material.Texture == null)
+            return;
+        
+        var texture = TexturesCache.GetTexture(material.Texture);
+        
         var textureWidth = texture.Width;
         var textureHeight = texture.Height;
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
@@ -562,8 +581,17 @@ public class MeshT : IMesh
         textureFileName = $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}";
 
         newPath = Path.Combine(targetFolder, textureFileName);
-        newTexture.Save(newPath);
-        newTexture.Dispose();
+
+        var saveTask = new Task(t =>
+        {
+            var tx = t as Image<Rgba32>;
+            tx.Save(newPath);
+            Debug.WriteLine("Saved texture to " + newPath);
+            tx.Dispose();
+        }, newTexture, TaskCreationOptions.LongRunning);
+
+        tasks.Add(saveTask);
+        saveTask.Start();
 
         material.Texture = textureFileName;
     }
