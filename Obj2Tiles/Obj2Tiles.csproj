@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\MeshDecimatorCore\MeshDecimatorCore.csproj" />
       <ProjectReference Include="..\Obj2Tiles.Library\Obj2Tiles.Library.csproj" />
     </ItemGroup>
 

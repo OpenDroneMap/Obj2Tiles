@@ -7,6 +7,7 @@ using CommandLine;
 using CommandLine.Text;
 using Obj2Tiles.Library;
 using Obj2Tiles.Library.Geometry;
+using Obj2Tiles.Stages;
 
 namespace Obj2Tiles
 {
@@ -31,52 +32,41 @@ namespace Obj2Tiles
             Console.WriteLine(" *** OBJ to Tiles ***");
             Console.WriteLine();
 
-            var sw = new Stopwatch();
-
-            Console.WriteLine($" -> Loading OBJ file \"{opts.Input}\"");
-
-            sw.Start();
-            var mesh = MeshUtils.LoadMesh(opts.Input);
-
-            Console.WriteLine(" ?> Loaded {0} vertices, {1} faces in {2}ms", mesh.VertexCount, mesh.FacesCount,
-                sw.ElapsedMilliseconds);
-
-            Console.WriteLine(
-                $" -> Splitting with a depth of {opts.Divisions}" + (opts.ZSplit ? " with z-split" : ""));
-
-            var meshes = new ConcurrentBag<IMesh>();
-
-            //Common.Epsilon = 0.00001f;
+            var stages = new List<IStage>();
             
-            sw.Restart();
-
-            var count = opts.ZSplit
-                ? await MeshUtils.RecurseSplitXYZ(mesh, opts.Divisions, meshes)
-                : await MeshUtils.RecurseSplitXY(mesh, opts.Divisions, meshes);
-
-            sw.Stop();
-
-            Console.WriteLine(
-                $" ?> Done {count} edge splits in {sw.ElapsedMilliseconds}ms ({(double)count / sw.ElapsedMilliseconds:F2} split/ms)");
-
-            Console.WriteLine(" -> Writing tiles");
-
-            Directory.CreateDirectory(opts.Output);
-
-            sw.Restart();
-
-            var ms = meshes.ToArray();
-            for (var index = 0; index < ms.Length; index++)
+            switch (opts.StopAt)
             {
-                var m = ms[index];
+                case Stage.Splitting:
+                    
+                    stages.Add(new SplitStage(opts.Input, opts.Output, opts.Divisions, opts.ZSplit,
+                        opts.KeepOriginalTextures));
+                    
+                    break;
+                case Stage.Decimation:
+                    
+                    stages.Add(new SplitStage(opts.Input, opts.Output, opts.Divisions, opts.ZSplit,
+                        opts.KeepOriginalTextures));
+                    
+                    Console.WriteLine(" !> Decimation stage not yet implemented");
+                    
+                    break;
+                case Stage.Tiles:
+                    
+                    stages.Add(new SplitStage(opts.Input, opts.Output, opts.Divisions, opts.ZSplit,
+                        opts.KeepOriginalTextures));
+                    
+                    Console.WriteLine(" !> Decimation stage not yet implemented");
+                    Console.WriteLine(" !> Tiling stage not yet implemented");
 
-                if (m is MeshT t)
-                    t.KeepOriginalTextures = opts.KeepOriginalTextures;
-                
-                m.WriteObj(Path.Combine(opts.Output, $"{m.Name}.obj"));
+                    
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
-            Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
+            foreach (var stage in stages)
+                await stage.Run();
+
         }
     }
 }
