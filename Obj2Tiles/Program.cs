@@ -44,8 +44,13 @@ namespace Obj2Tiles
                     break;
                 case Stage.Decimation:
                     
-                    stages.Add(new SplitStage(opts.Input, opts.Output, opts.Divisions, opts.ZSplit,
+                    var tempFolder = Path.Combine(Path.GetTempPath(), "obj2tiles-" + Guid.NewGuid());
+                    Directory.CreateDirectory(tempFolder);
+                    
+                    stages.Add(new SplitStage(opts.Input, tempFolder, opts.Divisions, opts.ZSplit,
                         opts.KeepOriginalTextures));
+                    
+                    //stages.Add(new DecimationStage(tempFolder, opts.Output));
                     
                     Console.WriteLine(" !> Decimation stage not yet implemented");
                     
@@ -65,7 +70,10 @@ namespace Obj2Tiles
             }
 
             foreach (var stage in stages)
+            {
+                Console.WriteLine(" -> Running stage " + stage.GetType().Name);
                 await stage.Run();
+            }
 
         }
     }
