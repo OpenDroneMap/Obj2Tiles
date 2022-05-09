@@ -222,7 +222,7 @@ namespace MeshDecimatorCore.Algorithms
         #endregion
 
         #region Fields
-        private bool preserveSeams = false;
+
         private bool preserveFoldovers = false;
         private bool enableSmartLink = true;
         private int maxIterationCount = 100;
@@ -254,65 +254,8 @@ namespace MeshDecimatorCore.Algorithms
         /// Gets or sets if seams should be preserved.
         /// Default value: false
         /// </summary>
-        public bool PreserveSeams
-        {
-            get { return preserveSeams; }
-            set { preserveSeams = value; }
-        }
+        public bool PreserveSeams { get; set; } = false;
 
-        /// <summary>
-        /// Gets or sets if foldovers should be preserved.
-        /// Default value: false
-        /// </summary>
-        public bool PreserveFoldovers
-        {
-            get { return preserveFoldovers; }
-            set { preserveFoldovers = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets if a feature for smarter vertex linking should be enabled, reducing artifacts in the
-        /// decimated result at the cost of a slightly more expensive initialization by treating vertices at
-        /// the same position as the same vertex while separating the attributes.
-        /// Default value: true
-        /// </summary>
-        public bool EnableSmartLink
-        {
-            get { return enableSmartLink; }
-            set { enableSmartLink = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets the maximum iteration count. Higher number is more expensive but can bring you closer to your target quality.
-        /// Sometimes a lower maximum count might be desired in order to lower the performance cost.
-        /// Default value: 100
-        /// </summary>
-        public int MaxIterationCount
-        {
-            get { return maxIterationCount; }
-            set { maxIterationCount = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets the agressiveness of this algorithm. Higher number equals higher quality, but more expensive to run.
-        /// Default value: 7.0
-        /// </summary>
-        public double Agressiveness
-        {
-            get { return agressiveness; }
-            set { agressiveness = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets the maximum squared distance between two vertices in order to link them.
-        /// Note that this value is only used if EnableSmartLink is true.
-        /// Default value: double.Epsilon
-        /// </summary>
-        public double VertexLinkDistanceSqr
-        {
-            get { return vertexLinkDistanceSqr; }
-            set { vertexLinkDistanceSqr = value; }
-        }
         #endregion
 
         #region Constructor
@@ -677,19 +620,19 @@ namespace MeshDecimatorCore.Algorithms
                     if (vertices[i0].border != vertices[i1].border)
                         continue;
                     // Seam check
-                    else if (vertices[i0].seam != vertices[i1].seam)
+                    if (vertices[i0].seam != vertices[i1].seam)
                         continue;
                     // Foldover check
-                    else if (vertices[i0].foldover != vertices[i1].foldover)
+                    if (vertices[i0].foldover != vertices[i1].foldover)
                         continue;
                     // If borders should be preserved
-                    else if (preserveBorders && vertices[i0].border)
+                    if (preserveBorders && vertices[i0].border)
                         continue;
                     // If seams should be preserved
-                    else if (preserveSeams && vertices[i0].seam)
+                    if (PreserveSeams && vertices[i0].seam)
                         continue;
                     // If foldovers should be preserved
-                    else if (preserveFoldovers && vertices[i0].foldover)
+                    if (preserveFoldovers && vertices[i0].foldover)
                         continue;
 
                     // Compute vertex to collapse to
@@ -1340,7 +1283,7 @@ namespace MeshDecimatorCore.Algorithms
 
                 if (Verbose && (iteration % 5) == 0)
                 {
-                    Logging.LogVerbose("iteration {0} - triangles {1} threshold {2}", iteration, (startTrisCount - deletedTris), threshold);
+                    Logging.LogVerbose(" ?> iteration {0} - triangles {1} threshold {2}", iteration, (startTrisCount - deletedTris), threshold);
                 }
 
                 // Remove vertices & mark deleted triangles

@@ -448,7 +448,8 @@ public class MeshT : IMesh
         var textureHeight = texture.Height;
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
-        CalculateMaxMinAreaRect(clustersRects, textureWidth, textureHeight, out var maxWidth, out var maxHeight, out var textureArea);
+        CalculateMaxMinAreaRect(clustersRects, textureWidth, textureHeight, out var maxWidth, out var maxHeight,
+            out var textureArea);
         
         Debug.WriteLine("Texture area: " + textureArea);
 
@@ -518,7 +519,7 @@ public class MeshT : IMesh
                     FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
                 
                 if (newTextureClusterRect.Width == 0)
-                    throw new Exception("Find room for cluster in a newly created texture, this is not supposed to happen");
+                    throw new Exception($"Find room for cluster in a newly created texture, this is not supposed to happen. {clusterWidth}x{clusterHeight} in {edgeLength}x{edgeLength} with occupancy {binPack.Occupancy()}");
                
             }
 
@@ -596,15 +597,10 @@ public class MeshT : IMesh
         material.Texture = textureFileName;
     }
 
-    private void CalculateMaxMinAreaRect(RectangleF[] clustersRects, int textureWidth, int textureHeight, out float maxWidth, out float maxHeight, out float textureArea)
+    private void CalculateMaxMinAreaRect(RectangleF[] clustersRects, int textureWidth, int textureHeight,
+        out double maxWidth, out double maxHeight, out double textureArea)
     {
 
-        // var textureArea = clustersRects.Sum(r => Math.Max(r.Width * textureWidth, 1) * Math.Max(r.Height * textureHeight, 1));
-
-        
-        /*        var maxWidth = clustersRects.Max(rect => rect.Width) * textureWidth;
-        var maxHeight = clustersRects.Max(rect => rect.Height) * textureHeight;
-*/
         maxWidth = 0;
         maxHeight = 0;
         textureArea = 0;
@@ -613,21 +609,21 @@ public class MeshT : IMesh
         {
             var rect = clustersRects[index];
 
-            textureArea += Math.Max(rect.Width * textureWidth, 1) * Math.Max(rect.Height * textureHeight, 1);
-            
+            textureArea += Math.Max(Math.Ceiling(rect.Width * textureWidth), 1) * Math.Max(Math.Ceiling(rect.Height * textureHeight), 1);
+
             if (rect.Width > maxWidth)
             {
                 maxWidth = rect.Width;
             }
-            
+
             if (rect.Height > maxHeight)
             {
                 maxHeight = rect.Height;
             }
         }
-        
-        maxWidth *= textureWidth;
-        maxHeight *= textureHeight;
+
+        maxWidth = Math.Ceiling(maxWidth * textureWidth);
+        maxHeight = Math.Ceiling(maxHeight * textureHeight);
 
     }
 

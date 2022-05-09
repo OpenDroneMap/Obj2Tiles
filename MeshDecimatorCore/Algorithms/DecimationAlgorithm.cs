@@ -43,45 +43,19 @@ namespace MeshDecimatorCore.Algorithms
         #endregion
 
         #region Fields
-        private bool preserveBorders = false;
+
         private int maxVertexCount = 0;
-        private bool verbose = false;
 
         private StatusReportCallback statusReportInvoker = null;
         #endregion
 
         #region Properties
-        /// <summary>
-        /// Gets or sets if borders should be kept.
-        /// Default value: false
-        /// </summary>
-        [Obsolete("Use the 'DecimationAlgorithm.PreserveBorders' property instead.", false)]
-        public bool KeepBorders
-        {
-            get { return preserveBorders; }
-            set { preserveBorders = value; }
-        }
 
         /// <summary>
         /// Gets or sets if borders should be preserved.
         /// Default value: false
         /// </summary>
-        public bool PreserveBorders
-        {
-            get { return preserveBorders; }
-            set { preserveBorders = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets if linked vertices should be kept.
-        /// Default value: false
-        /// </summary>
-        [Obsolete("This feature has been removed, for more details why please read the readme.", true)]
-        public bool KeepLinkedVertices
-        {
-            get { return false; }
-            set { }
-        }
+        public bool PreserveBorders { get; set; } = false;
 
         /// <summary>
         /// Gets or sets the maximum vertex count. Set to zero for no limitation.
@@ -89,19 +63,16 @@ namespace MeshDecimatorCore.Algorithms
         /// </summary>
         public int MaxVertexCount
         {
-            get { return maxVertexCount; }
-            set { maxVertexCount = Math.MathHelper.Max(value, 0); }
+            get => maxVertexCount;
+            set => maxVertexCount = Math.MathHelper.Max(value, 0);
         }
 
         /// <summary>
         /// Gets or sets if verbose information should be printed in the console.
         /// Default value: false
         /// </summary>
-        public bool Verbose
-        {
-            get { return verbose; }
-            set { verbose = value; }
-        }
+        public bool Verbose { get; set; } = false;
+
         #endregion
 
         #region Events

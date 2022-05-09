@@ -1,50 +1,45 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Xml;
 using Obj2Tiles.Library.Geometry;
 
 namespace Obj2Tiles.Stages;
 
-public class SplitStage : IStage
+
+public static partial class StagesFacade
 {
 
-    public readonly string SourcePath;
-    public readonly string DestPath;
-    public readonly bool ZSplit;
-    public readonly int Divisions;
-    public readonly bool KeepOriginalTextures;
-
-    public SplitStage(string sourcePath, string destPath, int divisions, bool zSplit, bool keepOriginalTextures)
-    {
-        SourcePath = sourcePath;
-        DestPath = destPath;
-        Divisions = divisions;
-        ZSplit = zSplit;
-        KeepOriginalTextures = keepOriginalTextures;
-    }
-
-    public async Task Run()
+    public static async Task Split(string sourcePath, string destPath, int divisions, bool zSplit = false,
+        bool keepOriginalTextures = false, int? compressTextures = null, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
     {
         var sw = new Stopwatch();
 
-        Console.WriteLine($" -> Loading OBJ file \"{SourcePath}\"");
+        Console.WriteLine($" -> Loading OBJ file \"{sourcePath}\"");
 
         sw.Start();
-        var mesh = MeshUtils.LoadMesh(SourcePath);
+        var mesh = MeshUtils.LoadMesh(sourcePath);
 
         Console.WriteLine(" ?> Loaded {0} vertices, {1} faces in {2}ms", mesh.VertexCount, mesh.FacesCount,
             sw.ElapsedMilliseconds);
 
         Console.WriteLine(
-            $" -> Splitting with a depth of {Divisions}" + (ZSplit ? " with z-split" : ""));
+            $" -> Splitting with a depth of {divisions}" + (zSplit ? " with z-split" : ""));
 
         var meshes = new ConcurrentBag<IMesh>();
-            
+
         sw.Restart();
 
-        var count = ZSplit
-            ? await MeshUtils.RecurseSplitXYZ(mesh, Divisions, meshes)
-            : await MeshUtils.RecurseSplitXY(mesh, Divisions, meshes);
+        Func<IMesh, Vertex3> getSplitPoint = splitPointStrategy switch
+        {
+            SplitPointStrategy.AbsoluteCenter => m => m.Bounds.Center,
+            SplitPointStrategy.VertexBaricenter => m => m.GetVertexBaricenter(),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        var count = zSplit
+            ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, getSplitPoint, meshes)
+            : await MeshUtils.RecurseSplitXY(mesh, divisions, getSplitPoint, meshes);
 
         sw.Stop();
 
@@ -53,7 +48,7 @@ public class SplitStage : IStage
 
         Console.WriteLine(" -> Writing tiles");
 
-        Directory.CreateDirectory(DestPath);
+        Directory.CreateDirectory(destPath);
 
         sw.Restart();
 
@@ -65,13 +60,21 @@ public class SplitStage : IStage
             var m = ms[index];
 
             if (m is MeshT t)
-                t.KeepOriginalTextures = KeepOriginalTextures;
-                
-            m.WriteObj(Path.Combine(DestPath, $"{m.Name}.obj"));
-            
-            await File.WriteAllTextAsync(Path.Combine(DestPath, $"{m.Name}.json"), JsonSerializer.Serialize(m.Bounds, indented));
-            
+                t.KeepOriginalTextures = keepOriginalTextures;
+
+            m.WriteObj(Path.Combine(destPath, $"{m.Name}.obj"));
+
+            await File.WriteAllTextAsync(Path.Combine(destPath, $"{m.Name}.json"),
+                JsonSerializer.Serialize(m.Bounds, indented));
         }
 
-        Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");    }
+        Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
+    }
+
+}
+
+public enum SplitPointStrategy
+{
+    AbsoluteCenter,
+    VertexBaricenter
 }
