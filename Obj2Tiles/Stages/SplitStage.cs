@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text.Json;
 using Obj2Tiles.Library.Geometry;
 
 namespace Obj2Tiles.Stages;
@@ -56,6 +57,8 @@ public class SplitStage : IStage
 
         sw.Restart();
 
+        var indented = new JsonSerializerOptions { WriteIndented = true };
+
         var ms = meshes.ToArray();
         for (var index = 0; index < ms.Length; index++)
         {
@@ -65,6 +68,9 @@ public class SplitStage : IStage
                 t.KeepOriginalTextures = KeepOriginalTextures;
                 
             m.WriteObj(Path.Combine(DestPath, $"{m.Name}.obj"));
+            
+            await File.WriteAllTextAsync(Path.Combine(DestPath, $"{m.Name}.json"), JsonSerializer.Serialize(m.Bounds, indented));
+            
         }
 
         Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");    }
