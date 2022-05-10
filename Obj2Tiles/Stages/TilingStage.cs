@@ -1,10 +1,19 @@
-﻿namespace Obj2Tiles.Stages;
+﻿using Arctron.Obj23dTiles;
+
+namespace Obj2Tiles.Stages;
 
 public static partial class StagesFacade
 {
 
-    public static Task Tile(string sourcePath, string destPath)
+    public static async Task Tile(string sourcePath, string destPath, int lods)
     {
-        throw new NotImplementedException();
+        
+        var files = Directory.GetFiles(Path.Combine(sourcePath, "LOD-0"), "*.obj");
+
+        var converter = new TilesConverter(Path.Combine(sourcePath, "LOD-0"), destPath, new GisPosition());
+
+        converter.Run();
+
+
     }
 }

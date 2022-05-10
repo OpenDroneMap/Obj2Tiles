@@ -33,6 +33,5 @@ public enum Stage
 {
     Decimation,
     Splitting,
-    Conversion,
     Tiling
 }

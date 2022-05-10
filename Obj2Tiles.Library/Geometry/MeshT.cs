@@ -601,7 +601,6 @@ public class MeshT : IMesh
                     break;
                 case TexturesStrategy.KeepOriginal:
                     throw new InvalidOperationException("TexturesStrategy.KeepOriginal is meaningless here, we are repacking!");
-                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
