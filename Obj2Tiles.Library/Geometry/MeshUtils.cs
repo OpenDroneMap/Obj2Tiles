@@ -6,9 +6,8 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class MeshUtils
 {
-    
     private static readonly CultureInfo en = CultureInfo.GetCultureInfo("en-US");
-    
+
     public static IMesh LoadMesh(string fileName)
     {
         using var reader = new StreamReader(fileName);
@@ -85,7 +84,7 @@ public class MeshUtils
                             vt2 - 1,
                             vt3 - 1,
                             materialsDict[currentMaterial]);
-                        
+
                         facesT.Add(faceT);
                     }
                     else
@@ -94,7 +93,7 @@ public class MeshUtils
                             v1 - 1,
                             v2 - 1,
                             v3 - 1);
-                        
+
                         faces.Add(face);
                     }
 
@@ -126,16 +125,16 @@ public class MeshUtils
             ? new MeshT(vertices, textureVertices, facesT, materials)
             : new Mesh(vertices, faces);
     }
-    
+
     #region Splitters
 
     private static readonly IVertexUtils yutils3 = new VertexUtilsY();
     private static readonly IVertexUtils xutils3 = new VertexUtilsX();
     private static readonly IVertexUtils zutils3 = new VertexUtilsZ();
 
-    public static async Task<int> RecurseSplitXY(IMesh mesh, int depth, ConcurrentBag<IMesh> meshes)
+    public static async Task<int> RecurseSplitXY(IMesh mesh, int depth, Box3 bounds, ConcurrentBag<IMesh> meshes)
     {
-        var center = mesh.GetVertexBaricenter();
+        var center = bounds.Center; 
 
         var count = mesh.Split(xutils3, center.X, out var left, out var right);
         count += left.Split(yutils3, center.Y, out var topleft, out var bottomleft);
@@ -147,7 +146,7 @@ public class MeshUtils
         {
             if (topleft.FacesCount > 0)
                 meshes.Add(topleft);
-            
+
             if (bottomleft.FacesCount > 0) meshes.Add(bottomleft);
             if (topright.FacesCount > 0) meshes.Add(topright);
             if (bottomright.FacesCount > 0) meshes.Add(bottomright);
@@ -157,19 +156,74 @@ public class MeshUtils
 
         var tasks = new List<Task<int>>();
 
-        if (topleft.FacesCount > 0) tasks.Add(RecurseSplitXY(topleft, nextDepth, meshes));
-        if (bottomleft.FacesCount > 0) tasks.Add(RecurseSplitXY(bottomleft, nextDepth, meshes));
-        if (topright.FacesCount > 0) tasks.Add(RecurseSplitXY(topright, nextDepth, meshes));
-        if (bottomright.FacesCount > 0) tasks.Add(RecurseSplitXY(bottomright, nextDepth, meshes));
+        if (topleft.FacesCount > 0)
+        {        
+            var topleftBounds = new Box3(bounds.Min, new Vertex3(center.X, center.Y, bounds.Max.Z));
+            tasks.Add(RecurseSplitXY(topleft, nextDepth, topleftBounds, meshes));
+        }
+
+        if (bottomleft.FacesCount > 0)
+        {
+            var bottomleftBounds = new Box3(new Vertex3(center.X, bounds.Min.Y, center.Z), new Vertex3(bounds.Max.X, center.Y, bounds.Max.Z));
+            tasks.Add(RecurseSplitXY(bottomleft, nextDepth, bottomleftBounds, meshes));
+        }
+
+        if (topright.FacesCount > 0)
+        {
+            var toprightBounds = new Box3(new Vertex3(center.X, bounds.Min.Y, center.Z), new Vertex3(bounds.Max.X, center.Y, bounds.Max.Z));
+            tasks.Add(RecurseSplitXY(topright, nextDepth, toprightBounds, meshes));
+        }
+
+        if (bottomright.FacesCount > 0)
+        {
+            var bottomrightBounds = new Box3(new Vertex3(center.X, bounds.Min.Y, center.Z), new Vertex3(bounds.Max.X, center.Y, bounds.Max.Z));
+            tasks.Add(RecurseSplitXY(bottomright, nextDepth, bottomrightBounds, meshes));
+        }
+
+        await Task.WhenAll(tasks);
+
+        return count + tasks.Sum(t => t.Result);
+    }
+    
+    public static async Task<int> RecurseSplitXY(IMesh mesh, int depth, Func<IMesh, Vertex3> getSplitPoint,
+        ConcurrentBag<IMesh> meshes)
+    {
+        var center = getSplitPoint(mesh); //mesh.GetVertexBaricenter();
+
+        var count = mesh.Split(xutils3, center.X, out var left, out var right);
+        count += left.Split(yutils3, center.Y, out var topleft, out var bottomleft);
+        count += right.Split(yutils3, center.Y, out var topright, out var bottomright);
+
+        var nextDepth = depth - 1;
+
+        if (nextDepth == 0)
+        {
+            if (topleft.FacesCount > 0)
+                meshes.Add(topleft);
+
+            if (bottomleft.FacesCount > 0) meshes.Add(bottomleft);
+            if (topright.FacesCount > 0) meshes.Add(topright);
+            if (bottomright.FacesCount > 0) meshes.Add(bottomright);
+
+            return count;
+        }
+
+        var tasks = new List<Task<int>>();
+
+        if (topleft.FacesCount > 0) tasks.Add(RecurseSplitXY(topleft, nextDepth, getSplitPoint, meshes));
+        if (bottomleft.FacesCount > 0) tasks.Add(RecurseSplitXY(bottomleft, nextDepth, getSplitPoint, meshes));
+        if (topright.FacesCount > 0) tasks.Add(RecurseSplitXY(topright, nextDepth, getSplitPoint, meshes));
+        if (bottomright.FacesCount > 0) tasks.Add(RecurseSplitXY(bottomright, nextDepth, getSplitPoint, meshes));
 
         await Task.WhenAll(tasks);
 
         return count + tasks.Sum(t => t.Result);
     }
 
-    public static async Task<int> RecurseSplitXYZ(IMesh mesh, int depth, ConcurrentBag<IMesh> meshes)
+    public static async Task<int> RecurseSplitXYZ(IMesh mesh, int depth, Func<IMesh, Vertex3> getSplitPoint,
+        ConcurrentBag<IMesh> meshes)
     {
-        var center = mesh.GetVertexBaricenter();
+        var center = getSplitPoint(mesh);
 
         var count = mesh.Split(xutils3, center.X, out var left, out var right);
         count += left.Split(yutils3, center.Y, out var topleft, out var bottomleft);
@@ -200,20 +254,108 @@ public class MeshUtils
 
         var tasks = new List<Task<int>>();
 
-        if (topleftnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(topleftnear, nextDepth, meshes));
-        if (topleftfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(topleftfar, nextDepth, meshes));
-        if (bottomleftnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomleftnear, nextDepth, meshes));
-        if (bottomleftfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomleftfar, nextDepth, meshes));
+        if (topleftnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(topleftnear, nextDepth, getSplitPoint, meshes));
+        if (topleftfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(topleftfar, nextDepth, getSplitPoint, meshes));
+        if (bottomleftnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomleftnear, nextDepth, getSplitPoint, meshes));
+        if (bottomleftfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomleftfar, nextDepth, getSplitPoint, meshes));
 
-        if (toprightnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(toprightnear, nextDepth, meshes));
-        if (toprightfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(toprightfar, nextDepth, meshes));
-        if (bottomrightnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomrightnear, nextDepth, meshes));
-        if (bottomrightfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomrightfar, nextDepth, meshes));
+        if (toprightnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(toprightnear, nextDepth, getSplitPoint, meshes));
+        if (toprightfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(toprightfar, nextDepth, getSplitPoint, meshes));
+        if (bottomrightnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomrightnear, nextDepth, getSplitPoint, meshes));
+        if (bottomrightfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomrightfar, nextDepth, getSplitPoint, meshes));
 
         await Task.WhenAll(tasks);
 
         return count + tasks.Sum(t => t.Result);
     }
+    
+        public static async Task<int> RecurseSplitXYZ(IMesh mesh, int depth, Box3 bounds,
+        ConcurrentBag<IMesh> meshes)
+        {
+            var center = bounds.Center;
+
+        var count = mesh.Split(xutils3, center.X, out var left, out var right);
+        count += left.Split(yutils3, center.Y, out var topleft, out var bottomleft);
+        count += right.Split(yutils3, center.Y, out var topright, out var bottomright);
+
+        count += topleft.Split(zutils3, center.Z, out var topleftnear, out var topleftfar);
+        count += bottomleft.Split(zutils3, center.Z, out var bottomleftnear, out var bottomleftfar);
+
+        count += topright.Split(zutils3, center.Z, out var toprightnear, out var toprightfar);
+        count += bottomright.Split(zutils3, center.Z, out var bottomrightnear, out var bottomrightfar);
+
+        var nextDepth = depth - 1;
+
+        if (nextDepth == 0)
+        {
+            if (topleftnear.FacesCount > 0) meshes.Add(topleftnear);
+            if (topleftfar.FacesCount > 0) meshes.Add(topleftfar);
+            if (bottomleftnear.FacesCount > 0) meshes.Add(bottomleftnear);
+            if (bottomleftfar.FacesCount > 0) meshes.Add(bottomleftfar);
+
+            if (toprightnear.FacesCount > 0) meshes.Add(toprightnear);
+            if (toprightfar.FacesCount > 0) meshes.Add(toprightfar);
+            if (bottomrightnear.FacesCount > 0) meshes.Add(bottomrightnear);
+            if (bottomrightfar.FacesCount > 0) meshes.Add(bottomrightfar);
+
+            return count;
+        }
+
+        var tasks = new List<Task<int>>();
+
+        if (topleftnear.FacesCount > 0)
+        {        
+            var topleftnearbounds = new Box3(bounds.Min, new Vertex3(center.X, center.Y, center.Z));
+            tasks.Add(RecurseSplitXYZ(topleftnear, nextDepth, topleftnearbounds, meshes));
+        }
+
+        if (topleftfar.FacesCount > 0)
+        {
+            var topleftfarbounds = new Box3(new Vertex3(center.X, center.Y, center.Z), bounds.Max);
+            tasks.Add(RecurseSplitXYZ(topleftfar, nextDepth, topleftfarbounds, meshes));
+        }
+
+        if (bottomleftnear.FacesCount > 0)
+        {
+            var bottomleftnearbounds = new Box3(bounds.Min, new Vertex3(center.X, center.Y, center.Z));
+            tasks.Add(RecurseSplitXYZ(bottomleftnear, nextDepth, bottomleftnearbounds, meshes));
+        }
+
+        if (bottomleftfar.FacesCount > 0)
+        {
+            var bottomleftfarbounds = new Box3(new Vertex3(center.X, center.Y, center.Z), bounds.Max);
+            tasks.Add(RecurseSplitXYZ(bottomleftfar, nextDepth, bottomleftfarbounds, meshes));
+        }
+
+        if (toprightnear.FacesCount > 0)
+        {
+            var toprightnearbounds = new Box3(bounds.Min, new Vertex3(center.X, center.Y, center.Z));
+            tasks.Add(RecurseSplitXYZ(toprightnear, nextDepth, toprightnearbounds, meshes));
+        }
+
+        if (toprightfar.FacesCount > 0)
+        {
+            var toprightfarbounds = new Box3(new Vertex3(center.X, center.Y, center.Z), bounds.Max);
+            tasks.Add(RecurseSplitXYZ(toprightfar, nextDepth, toprightfarbounds, meshes));
+        }
+
+        if (bottomrightnear.FacesCount > 0)
+        {
+            var bottomrightnearbounds = new Box3(bounds.Min, new Vertex3(center.X, center.Y, center.Z));
+            tasks.Add(RecurseSplitXYZ(bottomrightnear, nextDepth, bottomrightnearbounds, meshes));
+        }
+
+        if (bottomrightfar.FacesCount > 0)
+        {
+            var bottomrightfarbounds = new Box3(new Vertex3(center.X, center.Y, center.Z), bounds.Max);
+            tasks.Add(RecurseSplitXYZ(bottomrightfar, nextDepth, bottomrightfarbounds, meshes));
+        }
+
+        await Task.WhenAll(tasks);
+
+        return count + tasks.Sum(t => t.Result);
+    }
+
 
     #endregion
 }
