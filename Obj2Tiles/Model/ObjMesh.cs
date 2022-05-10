@@ -1,4 +1,5 @@
 ﻿#region License
+
 /*
 MIT License
 
@@ -22,10 +23,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
 #endregion
 
 using System.Globalization;
 using MeshDecimatorCore.Math;
+using Obj2Tiles.Library.Geometry;
 
 namespace Obj2Tiles.Model
 {
@@ -35,11 +38,14 @@ namespace Obj2Tiles.Model
     public sealed class ObjMesh
     {
         #region Consts
+
         private const int VertexInitialCapacity = 20000;
         private const int IndexInitialCapacity = 40000;
+
         #endregion
 
         #region Structs
+
         private struct FaceIndex : IEquatable<FaceIndex>
         {
             public readonly int vertexIndex;
@@ -65,14 +71,17 @@ namespace Obj2Tiles.Model
                 if (obj is FaceIndex)
                 {
                     var other = (FaceIndex)obj;
-                    return (vertexIndex == other.vertexIndex && texCoordIndex == other.texCoordIndex && normalIndex == other.normalIndex);
+                    return (vertexIndex == other.vertexIndex && texCoordIndex == other.texCoordIndex &&
+                            normalIndex == other.normalIndex);
                 }
+
                 return false;
             }
 
             public bool Equals(FaceIndex other)
             {
-                return (vertexIndex == other.vertexIndex && texCoordIndex == other.texCoordIndex && normalIndex == other.normalIndex);
+                return (vertexIndex == other.vertexIndex && texCoordIndex == other.texCoordIndex &&
+                        normalIndex == other.normalIndex);
             }
 
             public override string ToString()
@@ -80,9 +89,11 @@ namespace Obj2Tiles.Model
                 return $"{{Vertex:{vertexIndex}, TexCoord:{texCoordIndex}, Normal:{normalIndex}}}";
             }
         }
+
         #endregion
 
         #region Fields
+
         private Vector3d[] vertices = null;
         private Vector3[] normals = null;
         private Vector2[] texCoords2D = null;
@@ -91,9 +102,11 @@ namespace Obj2Tiles.Model
         private string[] subMeshMaterials = null;
 
         private string[] materialLibraries = null;
+
         #endregion
 
         #region Properties
+
         /// <summary>
         /// Gets or sets the vertices for this mesh.
         /// </summary>
@@ -169,6 +182,7 @@ namespace Obj2Tiles.Model
                     Array.Copy(indices, 0, combinedIndices, offset, indices.Length);
                     offset += indices.Length;
                 }
+
                 return combinedIndices;
             }
             set
@@ -234,15 +248,18 @@ namespace Obj2Tiles.Model
             get => materialLibraries;
             set => materialLibraries = value;
         }
+
+        public Box3 Bounds { get; private set; }
+
         #endregion
 
         #region Constructor
+
         /// <summary>
         /// Creates a new OBJ mesh.
         /// </summary>
         public ObjMesh()
         {
-
         }
 
         /// <summary>
@@ -266,10 +283,13 @@ namespace Obj2Tiles.Model
             this.vertices = vertices;
             this.subMeshIndices = indices;
         }
+
         #endregion
 
         #region Public Methods
+
         #region Read File
+
         /// <summary>
         /// Reads an OBJ mesh from a file.
         /// Please note that this method only supports extremely simple OBJ meshes.
@@ -295,7 +315,12 @@ namespace Obj2Tiles.Model
             string currentObject = null;
             string currentMaterial = null;
             int newFaceIndex = 0;
-            using (StreamReader reader = File.OpenText(path))
+
+            double minX = double.MaxValue, maxX = double.MinValue;
+            double minY = double.MaxValue, maxY = double.MinValue;
+            double minZ = double.MaxValue, maxZ = double.MinValue;
+
+            using (var reader = File.OpenText(path))
             {
                 string line;
                 while ((line = reader.ReadLine()) != null)
@@ -310,11 +335,15 @@ namespace Obj2Tiles.Model
                         if (lineSplit.Length < 4)
                             throw new InvalidDataException("Vertices needs at least 3 components.");
 
-                        double f0, f1, f2;
-                        double.TryParse(lineSplit[1], NumberStyles.Float, CultureInfo.InvariantCulture, out f0);
-                        double.TryParse(lineSplit[2], NumberStyles.Float, CultureInfo.InvariantCulture, out f1);
-                        double.TryParse(lineSplit[3], NumberStyles.Float, CultureInfo.InvariantCulture, out f2);
-                        readVertexList.Add(new Vector3d(f0, f1, f2));
+                        double.TryParse(lineSplit[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var x);
+                        double.TryParse(lineSplit[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var y);
+                        double.TryParse(lineSplit[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var z);
+                        readVertexList.Add(new Vector3d(x, y, z));
+                        
+                        if (x < minX) minX = x; else if (x > maxX) maxX = x;
+                        if (y < minY) minY = y; else if (y > maxY) maxY = y;
+                        if (z < minZ) minZ = z; else if (z > maxZ) maxZ = z;
+                        
                     }
                     else if (string.Equals(firstPart, "vn"))
                     {
@@ -354,6 +383,7 @@ namespace Obj2Tiles.Model
                         {
                             f2 = 0f;
                         }
+
                         readTexCoordList.Add(new Vector3(f0, f1, f2));
                     }
                     else if (string.Equals(firstPart, "f"))
@@ -404,6 +434,7 @@ namespace Obj2Tiles.Model
                                 {
                                     texIndex = -1;
                                 }
+
                                 normalIndex = ShiftIndex(normalIndex, readNormalList.Count);
                             }
                             else
@@ -549,6 +580,7 @@ namespace Obj2Tiles.Model
                         {
                             processedNormalList.Add(normalList[index]);
                         }
+
                         if (hasTexCoords)
                         {
                             processedTexCoordList.Add(texCoordList[index]);
@@ -592,10 +624,13 @@ namespace Obj2Tiles.Model
             subMeshIndices = processedIndices.ToArray();
             subMeshMaterials = subMeshMaterialList.ToArray();
             materialLibraries = materialLibraryList.ToArray();
+            Bounds = new Box3(minX, minY, minZ, maxX, maxY, maxZ);
         }
+
         #endregion
 
         #region Write File
+
         /// <summary>
         /// Writes this OBJ mesh to a file.
         /// </summary>
@@ -604,10 +639,11 @@ namespace Obj2Tiles.Model
         {
             if (vertices == null)
                 throw new InvalidOperationException("There are no vertices to write for this mesh.");
-            else if (subMeshIndices == null)
+            if (subMeshIndices == null)
                 throw new InvalidOperationException("There are no indices to write for this mesh.");
-            else if (subMeshMaterials != null && subMeshMaterials.Length != subMeshIndices.Length)
-                throw new InvalidOperationException("The number of sub-mesh material names does not match the count of sub-mesh index arrays.");
+            if (subMeshMaterials != null && subMeshMaterials.Length != subMeshIndices.Length)
+                throw new InvalidOperationException(
+                    "The number of sub-mesh material names does not match the count of sub-mesh index arrays.");
 
             // TODO: Optimize the output by sharing vertices, normals, etc
 
@@ -634,10 +670,13 @@ namespace Obj2Tiles.Model
                 WriteSubMeshes(writer, subMeshIndices, subMeshMaterials, hasTexCoords, hasNormals);
             }
         }
+
         #endregion
+
         #endregion
 
         #region Private Methods
+
         private static void WriteVertices(TextWriter writer, Vector3d[] vertices)
         {
             for (int i = 0; i < vertices.Length; i++)
@@ -701,7 +740,8 @@ namespace Obj2Tiles.Model
             }
         }
 
-        private static void WriteSubMeshes(TextWriter writer, int[][] subMeshIndices, string[] subMeshMaterials, bool hasTexCoords, bool hasNormals)
+        private static void WriteSubMeshes(TextWriter writer, int[][] subMeshIndices, string[] subMeshMaterials,
+            bool hasTexCoords, bool hasNormals)
         {
             for (int subMeshIndex = 0; subMeshIndex < subMeshIndices.Length; subMeshIndex++)
             {
@@ -810,8 +850,10 @@ namespace Obj2Tiles.Model
                     ++count;
                 }
             }
+
             return count;
         }
+
         #endregion
     }
 }

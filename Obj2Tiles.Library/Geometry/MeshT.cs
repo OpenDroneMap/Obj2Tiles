@@ -4,6 +4,7 @@ using System.Numerics;
 using Obj2Tiles.Library.Algos;
 using Obj2Tiles.Library.Materials;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using Path = System.IO.Path;
 
@@ -25,7 +26,7 @@ public class MeshT : IMesh
 
     public string Name { get; set; } = DefaultName;
 
-    public bool KeepOriginalTextures { get; set; }
+    public TexturesStrategy TexturesStrategy { get; set; }
 
     public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
         IEnumerable<FaceT> faces, IEnumerable<Material> materials)
@@ -365,9 +366,9 @@ public class MeshT : IMesh
         Debug.WriteLine("Trimming textures of " + Name);
 
         var tasks = new List<Task>();
-        
+
         LoadTexturesCache();
-        
+
         var facesByMaterial = GetFacesByMaterial();
 
         var newTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
@@ -421,7 +422,7 @@ public class MeshT : IMesh
         sw.Restart();
         _textureVertices = newTextureVertices.OrderBy(item => item.Value).Select(item => item.Key).ToList();
         Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-        
+
         Debug.WriteLine("Waiting for save tasks to finish");
         sw.Restart();
         Task.WaitAll(tasks.ToArray());
@@ -433,34 +434,35 @@ public class MeshT : IMesh
         Parallel.ForEach(_materials, material => TexturesCache.GetTexture(material.Texture));
     }
 
+    private static readonly JpegEncoder encoder = new JpegEncoder { Quality = 75 };
+    
     private void BinPackTextures(string targetFolder, int materialIndex, IReadOnlyList<List<int>> clusters,
         IDictionary<Vertex2, int> newTextureVertices, List<Task> tasks)
     {
         var material = _materials[materialIndex];
-        //using var texture = Image.Load<Rgba32>(material.Texture);
 
         if (material.Texture == null)
             return;
-        
+
         var texture = TexturesCache.GetTexture(material.Texture);
-        
+
         var textureWidth = texture.Width;
         var textureHeight = texture.Height;
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
         CalculateMaxMinAreaRect(clustersRects, textureWidth, textureHeight, out var maxWidth, out var maxHeight,
             out var textureArea);
-        
+
         Debug.WriteLine("Texture area: " + textureArea);
 
         var edgeLength = Math.Max(Common.NextPowerOfTwo((int)Math.Sqrt(textureArea)), 32);
-        
+
         if (edgeLength < maxWidth)
             edgeLength = Common.NextPowerOfTwo((int)maxWidth);
 
         if (edgeLength < maxHeight)
             edgeLength = Common.NextPowerOfTwo((int)maxHeight);
-        
+
         Debug.WriteLine("Edge length: " + edgeLength);
 
         // NOTE: We could enable rotations but it would be a bit more complex
@@ -517,10 +519,10 @@ public class MeshT : IMesh
                 // This is the second time we are here
                 newTextureClusterRect = binPack.Insert(clusterWidth, clusterHeight,
                     FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
-                
+
                 if (newTextureClusterRect.Width == 0)
-                    throw new Exception($"Find room for cluster in a newly created texture, this is not supposed to happen. {clusterWidth}x{clusterHeight} in {edgeLength}x{edgeLength} with occupancy {binPack.Occupancy()}");
-               
+                    throw new Exception(
+                        $"Find room for cluster in a newly created texture, this is not supposed to happen. {clusterWidth}x{clusterHeight} in {edgeLength}x{edgeLength} with occupancy {binPack.Occupancy()}");
             }
 
             Debug.WriteLine("Found place for cluster at " + newTextureClusterRect);
@@ -579,14 +581,31 @@ public class MeshT : IMesh
             }
         }
 
-        textureFileName = $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}";
+        textureFileName = TexturesStrategy == TexturesStrategy.Repack ? 
+            $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}" :
+            $"{Name}-texture-{material.Name}.jpg";
 
         newPath = Path.Combine(targetFolder, textureFileName);
 
         var saveTask = new Task(t =>
         {
             var tx = t as Image<Rgba32>;
-            tx.Save(newPath);
+
+            switch (TexturesStrategy)
+            {
+                case TexturesStrategy.RepackCompressed:
+                    tx.SaveAsJpeg(newPath, encoder);
+                    break;
+                case TexturesStrategy.Repack:
+                    tx.Save(newPath);
+                    break;
+                case TexturesStrategy.KeepOriginal:
+                    throw new InvalidOperationException("TexturesStrategy.KeepOriginal is meaningless here, we are repacking!");
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
             Debug.WriteLine("Saved texture to " + newPath);
             tx.Dispose();
         }, newTexture, TaskCreationOptions.LongRunning);
@@ -600,7 +619,6 @@ public class MeshT : IMesh
     private void CalculateMaxMinAreaRect(RectangleF[] clustersRects, int textureWidth, int textureHeight,
         out double maxWidth, out double maxHeight, out double textureArea)
     {
-
         maxWidth = 0;
         maxHeight = 0;
         textureArea = 0;
@@ -609,7 +627,8 @@ public class MeshT : IMesh
         {
             var rect = clustersRects[index];
 
-            textureArea += Math.Max(Math.Ceiling(rect.Width * textureWidth), 1) * Math.Max(Math.Ceiling(rect.Height * textureHeight), 1);
+            textureArea += Math.Max(Math.Ceiling(rect.Width * textureWidth), 1) *
+                           Math.Max(Math.Ceiling(rect.Height * textureHeight), 1);
 
             if (rect.Width > maxWidth)
             {
@@ -624,7 +643,6 @@ public class MeshT : IMesh
 
         maxWidth = Math.Ceiling(maxWidth * textureWidth);
         maxHeight = Math.Ceiling(maxHeight * textureHeight);
-
     }
 
     /// <summary>
@@ -859,7 +877,7 @@ public class MeshT : IMesh
     {
         var materialsPath = Path.ChangeExtension(path, "mtl");
 
-        if (!KeepOriginalTextures)
+        if (TexturesStrategy != TexturesStrategy.KeepOriginal)
             TrimTextures(Path.GetDirectoryName(path));
 
         using (var writer = new FormattingStreamWriter(path, en))
@@ -910,7 +928,7 @@ public class MeshT : IMesh
             {
                 var material = _materials[index];
 
-                if (material.Texture != null && KeepOriginalTextures)
+                if (material.Texture != null && TexturesStrategy == TexturesStrategy.KeepOriginal)
                 {
                     var folder = Path.GetDirectoryName(path);
 
@@ -960,4 +978,11 @@ public class MeshT : IMesh
     public int VertexCount => _vertices.Count;
 
     #endregion
+}
+
+public enum TexturesStrategy
+{
+    KeepOriginal,
+    Repack,
+    RepackCompressed
 }

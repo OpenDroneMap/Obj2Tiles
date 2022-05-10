@@ -6,12 +6,11 @@ using Obj2Tiles.Library.Geometry;
 
 namespace Obj2Tiles.Stages;
 
-
 public static partial class StagesFacade
 {
-
     public static async Task Split(string sourcePath, string destPath, int divisions, bool zSplit = false,
-        bool keepOriginalTextures = false, int? compressTextures = null, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
+        Box3? bounds = null,
+        TexturesStrategy textureStrategy = TexturesStrategy.Repack, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
     {
         var sw = new Stopwatch();
 
@@ -30,16 +29,27 @@ public static partial class StagesFacade
 
         sw.Restart();
 
-        Func<IMesh, Vertex3> getSplitPoint = splitPointStrategy switch
+        int count;
+        
+        if (bounds != null)
         {
-            SplitPointStrategy.AbsoluteCenter => m => m.Bounds.Center,
-            SplitPointStrategy.VertexBaricenter => m => m.GetVertexBaricenter(),
-            _ => throw new ArgumentOutOfRangeException()
-        };
+            count = zSplit
+                ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, bounds, meshes)
+                : await MeshUtils.RecurseSplitXY(mesh, divisions, bounds, meshes);
+        }
+        else
+        {
+            Func<IMesh, Vertex3> getSplitPoint = splitPointStrategy switch
+            {
+                SplitPointStrategy.AbsoluteCenter => m => m.Bounds.Center,
+                SplitPointStrategy.VertexBaricenter => m => m.GetVertexBaricenter(),
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
-        var count = zSplit
-            ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, getSplitPoint, meshes)
-            : await MeshUtils.RecurseSplitXY(mesh, divisions, getSplitPoint, meshes);
+            count = zSplit
+                ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, getSplitPoint, meshes)
+                : await MeshUtils.RecurseSplitXY(mesh, divisions, getSplitPoint, meshes);
+        }
 
         sw.Stop();
 
@@ -60,7 +70,7 @@ public static partial class StagesFacade
             var m = ms[index];
 
             if (m is MeshT t)
-                t.KeepOriginalTextures = keepOriginalTextures;
+                t.TexturesStrategy = textureStrategy;
 
             m.WriteObj(Path.Combine(destPath, $"{m.Name}.obj"));
 
@@ -70,8 +80,8 @@ public static partial class StagesFacade
 
         Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
     }
-
 }
+
 
 public enum SplitPointStrategy
 {

@@ -2,13 +2,15 @@
 using MeshDecimatorCore;
 using MeshDecimatorCore.Algorithms;
 using MeshDecimatorCore.Math;
+using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Model;
+using Mesh = MeshDecimatorCore.Mesh;
 
 namespace Obj2Tiles.Stages;
 
 public static partial class StagesFacade
 {
-    public static async Task<string[]> Decimate(string sourcePath, string destPath, int lods)
+    public static async Task<DecimateResult> Decimate(string sourcePath, string destPath, int lods)
     {
         if (lods < 1)
             throw new ArgumentException("LODs must be at least 1");
@@ -17,6 +19,7 @@ public static partial class StagesFacade
 
         var sourceObjMesh = new ObjMesh();
         sourceObjMesh.ReadFile(sourcePath);
+        var bounds = sourceObjMesh.Bounds;
 
         var fileName = Path.GetFileName(sourcePath);
         var originalSourceFile = Path.Combine(destPath, fileName);
@@ -43,7 +46,7 @@ public static partial class StagesFacade
 
         await Task.WhenAll(tasks);
 
-        return destFiles.ToArray();
+        return new DecimateResult { DestFiles = destFiles.ToArray(), Bounds = bounds };
 
     }
 

@@ -45,7 +45,7 @@ public class Mesh3Tests
 
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
 
-        mesh.KeepOriginalTextures = false;
+        mesh.TexturesStrategy = TexturesStrategy.Repack;
 
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -57,7 +57,7 @@ public class Mesh3Tests
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_PreserveOriginalTextures));
 
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
-        mesh.KeepOriginalTextures = true;
+        mesh.TexturesStrategy = TexturesStrategy.KeepOriginal;
 
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -70,7 +70,7 @@ public class Mesh3Tests
 
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
 
-        mesh.KeepOriginalTextures = false;
+        mesh.TexturesStrategy = TexturesStrategy.Repack;
 
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -82,7 +82,7 @@ public class Mesh3Tests
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube_PreserveOriginalTextures));
 
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
-        mesh.KeepOriginalTextures = true;
+        mesh.TexturesStrategy = TexturesStrategy.KeepOriginal;
 
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -96,7 +96,7 @@ public class Mesh3Tests
         var mesh = (MeshT)MeshUtils.LoadMesh(
             @"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
 
-        mesh.KeepOriginalTextures = false;
+        mesh.TexturesStrategy = TexturesStrategy.Repack;
 
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -109,7 +109,7 @@ public class Mesh3Tests
 
         var mesh = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\canyon\odm_texturing\odm_textured_model_geo.obj");
 
-        mesh.KeepOriginalTextures = false;
+        mesh.TexturesStrategy = TexturesStrategy.Repack;
 
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
     }
@@ -126,8 +126,8 @@ public class Mesh3Tests
 
         mesh.Split(xutils, center.X, out var left, out var right);
 
-        ((MeshT)left).KeepOriginalTextures = true;
-        ((MeshT)right).KeepOriginalTextures = true;
+        ((MeshT)left).TexturesStrategy = TexturesStrategy.KeepOriginal;
+        ((MeshT)right).TexturesStrategy = TexturesStrategy.KeepOriginal;
 
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
@@ -145,8 +145,8 @@ public class Mesh3Tests
 
         mesh.Split(xutils, center.X, out var left, out var right);
 
-        ((MeshT)left).KeepOriginalTextures = false;
-        ((MeshT)right).KeepOriginalTextures = false;
+        ((MeshT)left).TexturesStrategy = TexturesStrategy.Repack;
+        ((MeshT)right).TexturesStrategy = TexturesStrategy.Repack;
 
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
@@ -164,8 +164,8 @@ public class Mesh3Tests
 
         mesh.Split(xutils, center.X, out var left, out var right);
 
-        ((MeshT)left).KeepOriginalTextures = true;
-        ((MeshT)right).KeepOriginalTextures = true;
+        ((MeshT)left).TexturesStrategy = TexturesStrategy.KeepOriginal;
+        ((MeshT)right).TexturesStrategy = TexturesStrategy.KeepOriginal;
 
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
@@ -183,8 +183,8 @@ public class Mesh3Tests
 
         mesh.Split(xutils, center.X, out var left, out var right);
 
-        ((MeshT)left).KeepOriginalTextures = true;
-        ((MeshT)right).KeepOriginalTextures = true;
+        ((MeshT)left).TexturesStrategy = TexturesStrategy.KeepOriginal;
+        ((MeshT)right).TexturesStrategy = TexturesStrategy.KeepOriginal;
 
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
@@ -202,8 +202,8 @@ public class Mesh3Tests
 
         mesh.Split(xutils, center.X, out var left, out var right);
 
-        ((MeshT)left).KeepOriginalTextures = false;
-        ((MeshT)right).KeepOriginalTextures = false;
+        ((MeshT)left).TexturesStrategy = TexturesStrategy.Repack;
+        ((MeshT)right).TexturesStrategy = TexturesStrategy.Repack;
 
         left.WriteObj(Path.Combine(testPath, "left.obj"));
         right.WriteObj(Path.Combine(testPath, "right.obj"));
