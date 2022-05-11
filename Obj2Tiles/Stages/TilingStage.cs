@@ -22,35 +22,17 @@ public static partial class StagesFacade
                 var outputFolder = Path.Combine(destPath, "LOD-" + lod);
                 Directory.CreateDirectory(outputFolder);
                 
-                //var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".b3dm"));
-                //var obj = TilesConverter.WriteB3dm(file, outputFile, null);
-                
-                //Debug.WriteLine(obj.ToString());
-                
-                //var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".gltf"));
-                //var opts = new GltfOptions { Binary = false, WithBatchTable = false, ObjEncoding = Encoding.UTF8};
-                //var converter = new Converter(file, opts);
-                //converter.WriteFile(outputFile2);
-                
-                //var converter = Converter.MakeDefault();
-                //converter.Convert(file, outputFile);
                 var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".b3dm"));
                 ConvertB3dm(file, outputFile);
                 
                 File.Copy(Path.ChangeExtension(file, ".json"), Path.ChangeExtension(outputFile, ".json"));
 
-                //var glbConv = new Gltf2GlbConverter();
-                //glbConv.Convert(new Gltf2GlbOptions(outputFile));
-
             }
 
         }
         
-
-        //var converter = new TilesConverter(Path.Combine(sourcePath, "LOD-0"), destPath, new GisPosition());
-
-        //converter.Run();
-
+        // Generate tileset.json
+        
 
     }
     
