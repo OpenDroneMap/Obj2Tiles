@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Obj2Tiles.Library.Test", "O
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeshDecimatorCore", "MeshDecimatorCore\MeshDecimatorCore.csproj", "{BF40855D-9C70-41C7-9116-975B3720220F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Obj2Tiles.Test", "Obj2Tiles.Test\Obj2Tiles.Test.csproj", "{8D547495-44B8-4AB7-8DF3-9F9755B52DFD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{BF40855D-9C70-41C7-9116-975B3720220F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BF40855D-9C70-41C7-9116-975B3720220F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BF40855D-9C70-41C7-9116-975B3720220F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D547495-44B8-4AB7-8DF3-9F9755B52DFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D547495-44B8-4AB7-8DF3-9F9755B52DFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D547495-44B8-4AB7-8DF3-9F9755B52DFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D547495-44B8-4AB7-8DF3-9F9755B52DFD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

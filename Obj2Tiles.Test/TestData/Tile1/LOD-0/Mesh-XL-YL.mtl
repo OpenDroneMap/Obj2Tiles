@@ -1,0 +1,45 @@
+newmtl material0000
+map_Kd Mesh-XL-YL-texture-material0000.png
+Ka 1 1 1
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 1
+
+newmtl material0001
+map_Kd Mesh-XL-YL-texture-material0001.png
+Ka 1 1 1
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 1
+
+newmtl material0002
+map_Kd Mesh-XL-YL-texture-material0002.png
+Ka 1 1 1
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 1
+
+newmtl material0003
+map_Kd Mesh-XL-YL-texture-material0003.png
+Ka 1 1 1
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 1
+
+newmtl material0004
+map_Kd Mesh-XL-YL-texture-material0004.png
+Ka 1 1 1
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 1
+

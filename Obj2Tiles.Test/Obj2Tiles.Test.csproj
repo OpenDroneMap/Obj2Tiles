@@ -1,0 +1,130 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <Nullable>enable</Nullable>
+
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Arctron.Obj23dTiles" Version="1.1.2" />
+        <PackageReference Include="Arctron.Obj2Gltf" Version="1.1.2" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+        <PackageReference Include="NUnit" Version="3.13.2" />
+        <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
+        <PackageReference Include="coverlet.collector" Version="3.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MeshDecimatorCore\MeshDecimatorCore.csproj" />
+      <ProjectReference Include="..\Obj2Tiles.Library\Obj2Tiles.Library.csproj" />
+      <ProjectReference Include="..\Obj2Tiles\Obj2Tiles.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YL.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YL.mtl">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YL.obj">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YL-texture-material0000.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YL-texture-material0001.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YL-texture-material0002.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YL-texture-material0003.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YL-texture-material0004.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YR.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YR.mtl">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YR.obj">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YR-texture-material0000.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YR-texture-material0001.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YR-texture-material0002.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YR-texture-material0003.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XL-YR-texture-material0004.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL.mtl">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL.obj">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL-texture-material0000.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL-texture-material0001.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL-texture-material0002.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL-texture-material0003.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL-texture-material0003-1.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YL-texture-material0004.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR.mtl">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR.obj">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR-texture-material0000.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR-texture-material0001.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR-texture-material0001-1.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR-texture-material0002.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR-texture-material0003.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR-texture-material0004.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>

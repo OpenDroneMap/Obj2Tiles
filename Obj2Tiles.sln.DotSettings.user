@@ -1,7 +1,12 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
 	<s:String x:Key="/Default/Environment/Highlighting/HighlightingSourceSnapshotLocation/@EntryValue">C:\Users\IT 2\AppData\Local\JetBrains\Rider2022.1\resharper-host\temp\Rider\vAny\CoverageData\_Obj2Tiles.646907580\Snapshot\snapshot.utdcvr</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=8cfa9633_002D5694_002D4575_002Dbcaf_002Ddd5c529f5081/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Image_TestHalfImage" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
-  &lt;TestAncestor&gt;&#xD;
-    &lt;TestId&gt;NUnit3x::54DA9B0D-75B8-43B5-A704-5870B8FDA465::net6.0::Obj2Tiles.Library.Test.Mesh3Tests.Image_TestHalfImage&lt;/TestId&gt;&#xD;
-  &lt;/TestAncestor&gt;&#xD;
-&lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=fdf883b1_002Dda9b_002D461b_002D9236_002D0d0fcaee036c/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Session" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;And&gt;&#xD;
+    &lt;TestAncestor&gt;&#xD;
+      &lt;TestId&gt;NUnit3x::8D547495-44B8-4AB7-8DF3-9F9755B52DFD::net6.0::Obj2Tiles.Test.StagesTests.TilingStage_Tile&lt;/TestId&gt;&#xD;
+    &lt;/TestAncestor&gt;&#xD;
+    &lt;Project Location="C:\Users\IT 2\source\repos\Obj2Tiles\Obj2Tiles.Test" Presentation="&amp;lt;Obj2Tiles.Test&amp;gt;" /&gt;&#xD;
+    &lt;Namespace&gt;Obj2Tiles.Test&lt;/Namespace&gt;&#xD;
+  &lt;/And&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	</wpf:ResourceDictionary>
