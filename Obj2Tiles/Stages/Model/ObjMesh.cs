@@ -30,7 +30,7 @@ using System.Globalization;
 using MeshDecimatorCore.Math;
 using Obj2Tiles.Library.Geometry;
 
-namespace Obj2Tiles.Model
+namespace Obj2Tiles.Stages.Model
 {
     /// <summary>
     /// A very simple OBJ mesh.

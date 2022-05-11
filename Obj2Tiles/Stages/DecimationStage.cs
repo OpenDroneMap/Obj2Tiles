@@ -3,7 +3,7 @@ using MeshDecimatorCore;
 using MeshDecimatorCore.Algorithms;
 using MeshDecimatorCore.Math;
 using Obj2Tiles.Library.Geometry;
-using Obj2Tiles.Model;
+using Obj2Tiles.Stages.Model;
 using Mesh = MeshDecimatorCore.Mesh;
 
 namespace Obj2Tiles.Stages;

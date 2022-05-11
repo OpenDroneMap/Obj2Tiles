@@ -7,8 +7,8 @@ using CommandLine;
 using CommandLine.Text;
 using Obj2Tiles.Library;
 using Obj2Tiles.Library.Geometry;
-using Obj2Tiles.Model;
 using Obj2Tiles.Stages;
+using Obj2Tiles.Stages.Model;
 
 namespace Obj2Tiles
 {

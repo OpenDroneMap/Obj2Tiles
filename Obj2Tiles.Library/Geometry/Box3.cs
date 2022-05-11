@@ -1,8 +1,12 @@
-﻿namespace Obj2Tiles.Library.Geometry
+﻿using System.Text.Json.Serialization;
+
+namespace Obj2Tiles.Library.Geometry
 {
     public class Box3
     {
+        [JsonInclude]
         public readonly Vertex3 Min;
+        [JsonInclude]
         public readonly Vertex3 Max;
 
         public Box3(Vertex3 min, Vertex3 max)

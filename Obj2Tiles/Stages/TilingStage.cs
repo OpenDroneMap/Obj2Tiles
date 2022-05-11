@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using Obj2Tiles.Tiles;
 using SilentWave;
 using SilentWave.Obj2Gltf;
 
@@ -33,8 +34,10 @@ public static partial class StagesFacade
                 
                 //var converter = Converter.MakeDefault();
                 //converter.Convert(file, outputFile);
-                var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".glb"));
-                ConvertGlb(file, outputFile);
+                var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".b3dm"));
+                ConvertB3dm(file, outputFile);
+                
+                File.Copy(Path.ChangeExtension(file, ".json"), Path.ChangeExtension(outputFile, ".json"));
 
                 //var glbConv = new Gltf2GlbConverter();
                 //glbConv.Convert(new Gltf2GlbOptions(outputFile));
@@ -52,7 +55,7 @@ public static partial class StagesFacade
     }
     
     
-    private static void ConvertGlb(string objPath, string destPath)
+    private static void ConvertB3dm(string objPath, string destPath)
     {
         var dir = Path.GetDirectoryName(objPath);
         var name = Path.GetFileNameWithoutExtension(objPath);
@@ -66,7 +69,16 @@ public static partial class StagesFacade
         glbConv.Convert(new Gltf2GlbOptions(outputFile));
         
         File.Delete(outputFile);
-        File.Move(Path.ChangeExtension(outputFile, ".glb"), destPath);
+
+        var glbFile = Path.ChangeExtension(outputFile, ".glb");
+
+        var b3dm = new B3dm(File.ReadAllBytes(glbFile));
+        
+        File.WriteAllBytes(destPath, b3dm.ToBytes());
+
+        //File.Move(Path.ChangeExtension(outputFile, ".glb"), destPath);
+
+
 
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Numerics;
 using System.Text.Json;
 using System.Xml;
 using Obj2Tiles.Library.Geometry;

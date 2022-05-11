@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace Obj2Tiles.Library.Geometry;
 
@@ -8,8 +9,11 @@ public class Vertex3
     private static int Index = 0;
     private readonly int index;
     
+    [JsonInclude]
     public readonly double X;
+    [JsonInclude]
     public readonly double Y;
+    [JsonInclude]
     public readonly double Z;
 
     public Vertex3(double x, double y, double z)
