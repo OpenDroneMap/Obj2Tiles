@@ -1,0 +1,62 @@
+﻿<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <AssemblyTitle>Obj2Gltf</AssemblyTitle>
+    <AssemblyName>SilentWave.Obj2Gltf</AssemblyName>
+    <RootNamespace>SilentWave.Obj2Gltf</RootNamespace>
+    <Version>1.1.8</Version>
+    <PackageTags>obj gltf glb</PackageTags>
+    <Description>Convert wavefront obj file to gltf file and gltf to glb</Description>
+    <Configurations>Source;Debug;Release</Configurations>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>10</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Source'">
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoBuild>true</NoBuild>
+    <NoWarn>CS8021</NoWarn>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>contentFiles</ContentTargetFolders>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <PackageId>SilentWave.Obj2Gltf.Sources</PackageId>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'!='Source'">
+    <PackageId>SilentWave.Obj2Gltf</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)'=='Source'">
+    <Compile Include="**\*.cs" Exclude="obj\**">
+      <Pack>true</Pack>
+      <PackagePath>$(ContentTargetFolders)\cs\netstandard2.0\$(PackageId)\%(Identity)</PackagePath>
+    </Compile>
+    <EmbeddedResource Update="@(EmbeddedResource)">
+      <Pack>true</Pack>
+      <PackagePath>$(ContentTargetFolders)\any\any\$(PackageId)\%(RecursiveDir)\</PackagePath>
+    </EmbeddedResource>
+    <PackageReference Remove="@(PackageReference)" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+
+  <Import Project=".\DisableSourceUnwanted.targets" Condition="'$(Configuration)'=='Source'" />
+  
+
+  <Target Name="DisplayMessages" AfterTargets="Build">
+    <Message Text="Project File Name = $(MSBuildProjectFile)" />
+    <Message Text="Project Extension = $(MSBuildProjectExtension)" />
+    <Message Importance="high" Text="Project Configuration = $(Configuration)" />
+  </Target>
+
+</Project>

@@ -9,12 +9,11 @@
 
     <ItemGroup>
       <ProjectReference Include="..\MeshDecimatorCore\MeshDecimatorCore.csproj" />
+      <ProjectReference Include="..\Obj2Gltf\Obj2Gltf.csproj" />
       <ProjectReference Include="..\Obj2Tiles.Library\Obj2Tiles.Library.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Arctron.Obj23dTiles" Version="1.1.2" />
-      <PackageReference Include="Arctron.Obj2Gltf" Version="1.1.2" />
       <PackageReference Include="CommandLineParser" Version="2.8.0" />
     </ItemGroup>
 

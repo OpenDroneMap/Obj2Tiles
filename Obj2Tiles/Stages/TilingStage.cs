@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using Arctron.Obj23dTiles;
-using Arctron.Obj2Gltf;
+using SilentWave;
+using SilentWave.Obj2Gltf;
 
 namespace Obj2Tiles.Stages;
 
@@ -21,16 +21,24 @@ public static partial class StagesFacade
                 var outputFolder = Path.Combine(destPath, "LOD-" + lod);
                 Directory.CreateDirectory(outputFolder);
                 
-                var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".b3dm"));
+                //var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".b3dm"));
                 //var obj = TilesConverter.WriteB3dm(file, outputFile, null);
                 
                 //Debug.WriteLine(obj.ToString());
                 
-                var outputFile2 = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".gltf"));
-                var opts = new GltfOptions { Binary = false, WithBatchTable = false, ObjEncoding = Encoding.UTF8};
-                var converter = new Converter(file, opts);
-                converter.WriteFile(outputFile2);
+                //var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".gltf"));
+                //var opts = new GltfOptions { Binary = false, WithBatchTable = false, ObjEncoding = Encoding.UTF8};
+                //var converter = new Converter(file, opts);
+                //converter.WriteFile(outputFile2);
                 
+                //var converter = Converter.MakeDefault();
+                //converter.Convert(file, outputFile);
+                var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".glb"));
+                ConvertGlb(file, outputFile);
+
+                //var glbConv = new Gltf2GlbConverter();
+                //glbConv.Convert(new Gltf2GlbOptions(outputFile));
+
             }
 
         }
@@ -40,6 +48,25 @@ public static partial class StagesFacade
 
         //converter.Run();
 
+
+    }
+    
+    
+    private static void ConvertGlb(string objPath, string destPath)
+    {
+        var dir = Path.GetDirectoryName(objPath);
+        var name = Path.GetFileNameWithoutExtension(objPath);
+
+        var converter = Converter.MakeDefault();
+        var outputFile = dir != null ? Path.Combine(dir, $"{name}.gltf") : $"{name}.gltf";
+            
+        converter.Convert(objPath, outputFile);
+
+        var glbConv = new Gltf2GlbConverter();
+        glbConv.Convert(new Gltf2GlbOptions(outputFile));
+        
+        File.Delete(outputFile);
+        File.Move(Path.ChangeExtension(outputFile, ".glb"), destPath);
 
     }
 }
