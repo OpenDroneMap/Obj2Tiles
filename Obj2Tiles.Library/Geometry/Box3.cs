@@ -14,7 +14,7 @@ namespace Obj2Tiles.Library.Geometry
             Min = min;
             Max = max;
         }
-
+        
         public Box3(double minX, double minY, double minZ, double maxX, double maxY, double maxZ)
         {
             Min = new Vertex3(minX, minY, minZ);

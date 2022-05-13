@@ -154,7 +154,7 @@ namespace Obj2Tiles
                     Console.WriteLine(" => Tiling stage");
                     sw.Restart();
                     
-                    await StagesFacade.Tile(tempFolderSplit, opts.Output, opts.LODs);
+                    StagesFacade.Tile(tempFolderSplit, opts.Output, opts.LODs);
 
                     Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
                     

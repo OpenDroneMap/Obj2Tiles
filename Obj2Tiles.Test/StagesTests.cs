@@ -26,11 +26,11 @@ public class StagesTests
     }
 
     [Test]
-    public async Task TilingStage_Tile()
+    public void TilingStage_Tile()
     {
         var testPath = GetTestOutputPath(nameof(TilingStage_Tile));
 
-        await StagesFacade.Tile("TestData/Tile1", testPath, 1);
+        StagesFacade.Tile("TestData/Tile1", testPath, 1);
         
     }
 }
