@@ -11,7 +11,7 @@ public class Asset
 public class BoundingVolume
 {
     [JsonProperty("box")]
-    public List<double> Box { get; set; }
+    public double[] Box { get; set; }
 }
 
 public class Content
@@ -35,7 +35,7 @@ public class Tileset
 public class TileElement
 {
     [JsonProperty("transform")]
-    public List<double> Transform { get; set; }
+    public double[] Transform { get; set; }
 
     [JsonProperty("boundingVolume")]
     public BoundingVolume BoundingVolume { get; set; }

@@ -1,4 +1,6 @@
-﻿namespace Obj2Tiles;
+﻿using Obj2Tiles.Stages.Model;
+
+namespace Obj2Tiles;
 
 public static class Utils
 {
@@ -13,7 +15,7 @@ public static class Utils
         foreach (var line in objFile)
         {
             if (!line.StartsWith("mtllib")) continue;
-            
+
             var mtlPath = Path.Combine(folderName, line[7..].Trim());
             dependencies.Add(line[7..].Trim());
 
@@ -21,7 +23,6 @@ public static class Utils
         }
 
         return dependencies;
-
     }
 
     private static IEnumerable<string> GetMtlDependencies(string mtlPath)
@@ -30,7 +31,7 @@ public static class Utils
 
         var dependencies = new List<string>();
 
-        
+
         foreach (var line in mtlFile)
         {
             if (line.StartsWith("map_Kd"))
@@ -96,8 +97,16 @@ public static class Utils
                 continue;
             }
         }
-        
-        return dependencies;
 
+        return dependencies;
+    }
+
+
+    public static BoundingVolume ToBoundingVolume(this BoxDTO box)
+    {
+        return new BoundingVolume
+        {
+            Box = new[] { box.Center.X, -box.Center.Z, box.Center.Y, box.Width / 2, 0, 0, 0, -box.Depth / 2, 0, 0, 0, box.Height / 2 }
+        };
     }
 }
