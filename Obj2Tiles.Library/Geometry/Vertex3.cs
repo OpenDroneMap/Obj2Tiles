@@ -5,10 +5,7 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class Vertex3
 {
-    
-    private static int Index = 0;
-    private readonly int index;
-    
+
     [JsonInclude]
     public readonly double X;
     [JsonInclude]
@@ -21,19 +18,11 @@ public class Vertex3
         X = x;
         Y = y;
         Z = z; 
-        index = Index++;
     }
 
     public override string ToString()
     {
-        return  $"[{index}] ({X}; {Y}; {Z})";
-    }
-
-    private static readonly CultureInfo culture = new("en-US");
-    
-    public string ToObj()
-    {
-        return string.Format(culture, "v {0} {1} {2}", X, Y, Z);
+        return  $"[({X}; {Y}; {Z})";
     }
 
     protected bool Equals(Vertex3 other)
@@ -65,6 +54,36 @@ public class Vertex3
     public double Distance(Vertex3 other)
     {
         return Math.Sqrt((X - other.X) * (X - other.X) + (Y - other.Y) * (Y - other.Y) + (Z - other.Z) * (Z - other.Z));
+    }
+    
+    public static Vertex3 operator +(Vertex3 a, Vertex3 b)
+    {
+        return new Vertex3(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
+    }
+    
+    public static Vertex3 operator -(Vertex3 a, Vertex3 b)
+    {
+        return new Vertex3(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
+    }
+    
+    public static Vertex3 operator *(Vertex3 a, double b)
+    {
+        return new Vertex3(a.X * b, a.Y * b, a.Z * b);
+    }
+    
+    public static Vertex3 operator /(Vertex3 a, double b)
+    {
+        return new Vertex3(a.X / b, a.Y / b, a.Z / b);
+    }
+    
+    public static Vertex3 operator *(double a, Vertex3 b)
+    {
+        return new Vertex3(a * b.X, a * b.Y, a * b.Z);
+    }
+    
+    public Vertex3 Cross(Vertex3 other)
+    {
+        return new Vertex3(Y * other.Z - Z * other.Y, Z * other.X - X * other.Z, X * other.Y - Y * other.X);
     }
     
     public Vertex3 CutEdgePerc(Vertex3 b, double perc)
