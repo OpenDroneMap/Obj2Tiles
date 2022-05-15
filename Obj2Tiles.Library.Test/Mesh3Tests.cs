@@ -290,6 +290,7 @@ public class Mesh3Tests
     }
     
     [Test]
+    [Explicit]
     public void Orientation_TestBrighton()
     {
         var mesh = (MeshT)MeshUtils.LoadMesh(
