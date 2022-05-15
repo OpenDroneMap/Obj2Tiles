@@ -36,6 +36,16 @@ public static class Common
         ) / 2;
     }
 
+    public static Vertex3 Orientation(Vertex3 a, Vertex3 b, Vertex3 c)
+    {
+        // Calculate triangle orientation
+        var v0 = b - a;
+        var v1 = c - a;
+        var v2 = v0.Cross(v1);
+        return v2;
+        
+    }
+
     public static int NextPowerOfTwo(int x)
     {
         x--;

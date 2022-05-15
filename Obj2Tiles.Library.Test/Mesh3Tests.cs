@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using FluentAssertions;
 using NUnit.Framework;
 using Obj2Tiles.Library.Geometry;
 using SixLabors.ImageSharp;
@@ -245,5 +246,56 @@ public class Mesh3Tests
 
         Common.CopyImage(image, newImage, 0, 0, image.Width / 2, image.Height, 0, 0);
         newImage.SaveAsJpeg(Path.Combine(testPath, "out.jpg"));
+    }
+
+    [Test]
+    public void Orientation_TestOk()
+    {
+        var v1 = new Vertex3(0, 0, 0);
+        var v2 = new Vertex3(1, 0, 0);
+        var v3 = new Vertex3(0, 1, 0);
+        
+        var o = Common.Orientation(v1, v2, v3);
+
+        o.Z.Should().Be(1);
+        o.X.Should().Be(0);
+        o.Y.Should().Be(0);
+    }
+    
+    
+    [Test]
+    public void Orientation_TestZero()
+    {
+        var v1 = new Vertex3(0, 0, 0);
+        var v2 = new Vertex3(0, 0, 0);
+        var v3 = new Vertex3(0, 0, 0);
+        
+        var o = Common.Orientation(v1, v2, v3);
+
+        o.Z.Should().Be(0);
+        o.X.Should().Be(0);
+        o.Y.Should().Be(0);
+    }
+
+    [Test]
+    public void Orientation_TestCubeMesh()
+    {
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
+
+        var orientation = mesh.GetAverageOrientation();
+
+        orientation.X.Should().Be(0);
+        orientation.Y.Should().Be(0);
+        orientation.Z.Should().Be(0);
+    }
+    
+    [Test]
+    public void Orientation_TestBrighton()
+    {
+        var mesh = (MeshT)MeshUtils.LoadMesh(
+            @"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
+
+        var orientation = mesh.GetAverageOrientation();
+
     }
 }

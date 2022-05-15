@@ -435,7 +435,7 @@ public class MeshT : IMesh
     }
 
     private static readonly JpegEncoder encoder = new JpegEncoder { Quality = 75 };
-    
+
     private void BinPackTextures(string targetFolder, int materialIndex, IReadOnlyList<List<int>> clusters,
         IDictionary<Vertex2, int> newTextureVertices, List<Task> tasks)
     {
@@ -581,9 +581,9 @@ public class MeshT : IMesh
             }
         }
 
-        textureFileName = TexturesStrategy == TexturesStrategy.Repack ? 
-            $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}" :
-            $"{Name}-texture-{material.Name}.jpg";
+        textureFileName = TexturesStrategy == TexturesStrategy.Repack
+            ? $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}"
+            : $"{Name}-texture-{material.Name}.jpg";
 
         newPath = Path.Combine(targetFolder, textureFileName);
 
@@ -600,7 +600,8 @@ public class MeshT : IMesh
                     tx.Save(newPath);
                     break;
                 case TexturesStrategy.KeepOriginal:
-                    throw new InvalidOperationException("TexturesStrategy.KeepOriginal is meaningless here, we are repacking!");
+                    throw new InvalidOperationException(
+                        "TexturesStrategy.KeepOriginal is meaningless here, we are repacking!");
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -839,6 +840,40 @@ public class MeshT : IMesh
 
             return new Box3(minX, minY, minZ, maxX, maxY, maxZ);
         }
+    }
+
+    public Vertex3 GetAverageOrientation()
+    {
+        double x = 0;
+        double y = 0;
+        double z = 0;
+        
+        for (var index = 0; index < _faces.Count; index++)
+        {
+            var f = _faces[index];
+            var v1 = _vertices[f.IndexA];
+            var v2 = _vertices[f.IndexB];
+            var v3 = _vertices[f.IndexC];
+
+            var orientation = Common.Orientation(v1, v2, v3);
+            
+            x += orientation.X;
+            y += orientation.Y;
+            z += orientation.Z;
+
+        }
+        
+        x /= _faces.Count;
+        y /= _faces.Count;
+        z /= _faces.Count;
+
+        // Calculate x, y and z angles
+        var xAngle = Math.Atan2(y, z);
+        var yAngle = Math.Atan2(x, z);
+        var zAngle = Math.Atan2(y, x);
+        
+        return new Vertex3(xAngle, yAngle, zAngle);
+
     }
 
     public Vertex3 GetVertexBaricenter()
