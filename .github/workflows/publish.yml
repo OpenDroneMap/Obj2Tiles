@@ -18,7 +18,9 @@ jobs:
       with:
         dotnet-version: 6.0.x
     - name: Create packages folder
-      run: mkdir publish-packages
+      run: |
+        cd Obj2Tiles
+        mkdir publish-packages
     - name: Publish win-x64
       run: |
         cd Obj2Tiles
