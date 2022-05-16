@@ -21,6 +21,7 @@ jobs:
       run: mkdir publish-packages
     - name: Publish win-x64
       run: |
+        cd Obj2Tiles
         dotnet publish -p:PublishProfile=win-x64.pubxml
         pwd
         ls .
@@ -28,22 +29,27 @@ jobs:
         zip -r ./publish-packages/win-x64.zip ./bin/Release/net6.0/publish/win-x64/
     - name: Publish win-arm
       run: |
+        cd Obj2Tiles
         dotnet publish -p:PublishProfile=win-arm.pubxml
         zip -r ./publish-packages/win-arm.zip ./bin/Release/net6.0/publish/win-arm/
     - name: Publish win-arm64
       run: |
+        cd Obj2Tiles
         dotnet publish -p:PublishProfile=win-arm64.pubxml
         zip -r ./publish-packages/win-arm64.zip ./bin/Release/net6.0/publish/win-arm64/        
     - name: Publish linux-x64
       run: |
+        cd Obj2Tiles
         dotnet publish -p:PublishProfile=linux-x64.pubxml
         zip -r ./publish-packages/linux-x64.zip ./bin/Release/net6.0/publish/linux-x64/
     - name: Publish linux-arm
       run: |
+        cd Obj2Tiles
         dotnet publish -p:PublishProfile=linux-arm.pubxml
         zip -r ./publish-packages/linux-arm.zip ./bin/Release/net6.0/publish/linux-arm/
     - name: Publish osx-x64
       run: |
+        cd Obj2Tiles
         dotnet publish -p:PublishProfile=osx-x64.pubxml
         zip -r ./publish-packages/osx-x64.zip ./bin/Release/net6.0/publish/osx-x64/     
     - uses: actions/upload-artifact@v3
