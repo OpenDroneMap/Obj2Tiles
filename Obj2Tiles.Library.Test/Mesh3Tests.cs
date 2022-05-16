@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using FluentAssertions;
 using NUnit.Framework;
+using Obj2Tiles.Common;
 using Obj2Tiles.Library.Geometry;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -16,6 +17,8 @@ public class Mesh3Tests
 {
     private const string TestDataPath = "TestData";
     private const string TestOutputPath = "TestOutput";
+    private const string BrightonTexturingTestUrl = "https://github.com/DroneDB/test_data/raw/master/brighton/odm_texturing.zip";
+
 
     private string GetTestOutputPath(string testName)
     {
@@ -37,7 +40,6 @@ public class Mesh3Tests
     private static readonly IVertexUtils zutils = new VertexUtilsZ();
 
     [Test]
-    [Explicit]
     public void WriteObj_Cube2_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_Repacking));
@@ -50,7 +52,6 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_Cube2_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_PreserveOriginalTextures));
@@ -62,7 +63,6 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_Cube_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube_Repacking));
@@ -75,7 +75,6 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_Cube_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube_PreserveOriginalTextures));
@@ -87,18 +86,19 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_Brighton_Repacking()
     {
-        var testPath = GetTestOutputPath(nameof(WriteObj_Brighton_Repacking));
+        using var fs = new TestFS(BrightonTexturingTestUrl, nameof(Mesh3Tests));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh(
-            @"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(fs.TestFolder, "odm_textured_model_geo.obj"));
 
         mesh.TexturesStrategy = TexturesStrategy.Repack;
+        var outputPath = Path.Combine(fs.TestFolder, "output");
+        Directory.CreateDirectory(outputPath);
 
-        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
+        mesh.WriteObj(Path.Combine(outputPath, "mesh.obj"));
     }
+
 
     [Test]
     [Explicit]
@@ -114,7 +114,6 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_Splitted_Cube_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube_PreserveOriginalTextures));
@@ -133,7 +132,6 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_SplittedX_Cube_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_SplittedX_Cube_Repacking));
@@ -152,7 +150,6 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_SplittedX_Cube_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_SplittedX_Cube_PreserveOriginalTextures));
@@ -171,7 +168,6 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_Splitted_Cube2_PreserveOriginalTextures()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube2_PreserveOriginalTextures));
@@ -190,7 +186,6 @@ public class Mesh3Tests
     }
 
     [Test]
-    [Explicit]
     public void WriteObj_Splitted_Cube2_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube2_Repacking));
@@ -290,11 +285,12 @@ public class Mesh3Tests
     }
     
     [Test]
-    [Explicit]
     public void Orientation_TestBrighton()
     {
-        var mesh = (MeshT)MeshUtils.LoadMesh(
-            @"C:\datasets\drone_dataset_brighton_beach\odm_texturing\odm_textured_model_geo.obj");
+        
+        using var fs = new TestFS(BrightonTexturingTestUrl, nameof(Mesh3Tests));
+
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(fs.TestFolder, "odm_textured_model_geo.obj"));
 
         var orientation = mesh.GetAverageOrientation();
 

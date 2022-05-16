@@ -20,6 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Obj2Tiles.Common\Obj2Tiles.Common.csproj" />
       <ProjectReference Include="..\Obj2Tiles.Library\Obj2Tiles.Library.csproj" />
     </ItemGroup>
 

@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Obj2Gltf", "Obj2Gltf\Obj2Gl
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{B3C78679-791A-4617-BD84-8E725B8151F9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Obj2Tiles.Common", "Obj2Tiles.Common\Obj2Tiles.Common.csproj", "{6AFF35B1-E6BB-4EAB-8AB8-6096E09EBC2B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,10 @@ Global
 		{9FCD0D81-B20A-4022-AFD5-EAFD458771D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9FCD0D81-B20A-4022-AFD5-EAFD458771D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9FCD0D81-B20A-4022-AFD5-EAFD458771D8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AFF35B1-E6BB-4EAB-8AB8-6096E09EBC2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AFF35B1-E6BB-4EAB-8AB8-6096E09EBC2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AFF35B1-E6BB-4EAB-8AB8-6096E09EBC2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AFF35B1-E6BB-4EAB-8AB8-6096E09EBC2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BF40855D-9C70-41C7-9116-975B3720220F} = {B3C78679-791A-4617-BD84-8E725B8151F9}
