@@ -17,7 +17,11 @@ public static partial class StagesFacade
 
         ConvertAllB3dm(sourcePath, destPath, lods);
 
+        Console.WriteLine(" -> Generating tileset.json");
+        
         const int baseError = 1024;
+
+        var ecef = coords.ToEcef();
 
         // Generate tileset.json
         var tileset = new Tileset
@@ -28,30 +32,35 @@ public static partial class StagesFacade
             {
                 GeometricError = baseError,
                 Refine = "ADD",
+                
+                // No rotation & scaling
                 Transform = new[]
                 {
-                    0.9686356343768792,
-                    0.24848542777253735,
+                    1,
                     0,
                     0,
-                    -0.15986460744966327,
-                    0.623177611820219,
-                    0.765567091384559,
                     0,
-                    0.19023226619126932,
-                    -0.7415555652213445,
-                    0.6433560667227647,
+                    
                     0,
-                    1215011.9317263428,
-                    -4736309.3434217675,
-                    4081602.0044800863,
+                    1,
+                    0,
+                    0,
+                    
+                    0,
+                    0,
+                    1,
+                    0,
+                    
+                    ecef[0],
+                    ecef[1],
+                    ecef[2],
                     1
                 },
-                Content = null,
                 Children = new List<TileElement>()
             }
         };
 
+        
         var masterDescriptors = Directory.GetFiles(Path.Combine(destPath, "LOD-0"), "*.json");
 
         var maxX = double.MinValue;
@@ -110,6 +119,7 @@ public static partial class StagesFacade
 
         File.WriteAllText(Path.Combine(destPath, "tileset.json"),
             JsonConvert.SerializeObject(tileset, Formatting.Indented));
+        
     }
 
     private static void ConvertAllB3dm(string sourcePath, string destPath, int lods)
@@ -131,16 +141,19 @@ public static partial class StagesFacade
             }
         }
 
-        Parallel.ForEach(filesToConvert, (file) => { ConvertB3dm(file.Item1, file.Item2); });
+        Parallel.ForEach(filesToConvert, (file) =>
+        {
+            Console.WriteLine($" -> Converting to b3dm '{file.Item1}'");
+            ConvertB3dm(file.Item1, file.Item2);
+        });
     }
 
     private static readonly GpsCoords DefaultGpsCoords = new()
     {
-        Altitude = 0, // 120
-        Latitude = 45.479,
-        Longitude = 9.155
+        Altitude = 130,
+        Latitude = 45.46424200394995, 
+        Longitude = 9.190277486808588
     };
-
 
     private static void ConvertB3dm(string objPath, string destPath)
     {
@@ -163,11 +176,4 @@ public static partial class StagesFacade
 
         File.WriteAllBytes(destPath, b3dm.ToBytes());
     }
-}
-
-public class GpsCoords
-{
-    public double Latitude { get; set; }
-    public double Longitude { get; set; }
-    public double Altitude { get; set; }
 }

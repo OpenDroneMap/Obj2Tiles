@@ -35,7 +35,6 @@ namespace Obj2Tiles
                 Console.WriteLine(" ?> Auto is not supported yet, using default values");
             }
 
-            string? tempFolderSplit;
             string? tempFolderDecimation;
 
             Directory.CreateDirectory(opts.Output);
@@ -85,8 +84,6 @@ namespace Obj2Tiles
                     Console.WriteLine();
                     Console.WriteLine(" => Splitting stage");
 
-                    //var sw2 = Stopwatch.StartNew();
-
                     tasks = new List<Task>();
 
                     for (var index = 0; index < decimateRes.DestFiles.Length; index++)
@@ -128,7 +125,7 @@ namespace Obj2Tiles
                     Console.WriteLine();
                     Console.WriteLine(" => Splitting stage");
 
-                    tempFolderSplit = CreateTempFolder($"{pipelineId}-obj2tiles-split");
+                    var tempFolderSplit = CreateTempFolder($"{pipelineId}-obj2tiles-split");
                     
                     tasks = new List<Task>();
 
