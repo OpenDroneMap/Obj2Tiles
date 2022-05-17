@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace SilentWave.Gltf
+namespace SilentWave.Obj2Gltf.Gltf
 {
     static class Extensions
     {

@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace SilentWave
+namespace SilentWave.Obj2Gltf
 {
     public class Gltf2GlbOptions
     {

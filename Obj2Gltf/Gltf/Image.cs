@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Newtonsoft.Json;
 
-namespace SilentWave.Gltf
+namespace SilentWave.Obj2Gltf.Gltf
 {
     /// <summary>
     /// Image data used to create a texture.

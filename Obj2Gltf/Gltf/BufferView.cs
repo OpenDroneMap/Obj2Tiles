@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace SilentWave.Gltf
+namespace SilentWave.Obj2Gltf.Gltf
 {
     /// <summary>
     /// A view into a buffer generally representing a subset of the buffer.

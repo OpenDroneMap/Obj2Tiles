@@ -1,4 +1,4 @@
-﻿namespace SilentWave.Gltf
+﻿namespace SilentWave.Obj2Gltf.Gltf
 {
     /// <summary>
     /// The type of primitives to render.

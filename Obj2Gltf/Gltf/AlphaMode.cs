@@ -1,4 +1,4 @@
-﻿namespace SilentWave.Gltf
+﻿namespace SilentWave.Obj2Gltf.Gltf
 {
     /// <summary>
     /// The alpha rendering mode of a material.

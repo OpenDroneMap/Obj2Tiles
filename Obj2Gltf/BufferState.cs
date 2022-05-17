@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using SilentWave.Gltf;
-using GltfBuffer = SilentWave.Gltf.Buffer;
+using SilentWave.Obj2Gltf.Gltf;
+using GltfBuffer = SilentWave.Obj2Gltf.Gltf.Buffer;
 
 namespace SilentWave.Obj2Gltf
 {

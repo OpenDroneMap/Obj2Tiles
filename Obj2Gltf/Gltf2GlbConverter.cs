@@ -1,13 +1,12 @@
-﻿using SilentWave.Gltf;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using SilentWave.Obj2Gltf.Gltf;
 
-namespace SilentWave
+namespace SilentWave.Obj2Gltf
 {
     public class Gltf2GlbConverter
     {

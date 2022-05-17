@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using SilentWave.Obj2Gltf.WaveFront;
-using SilentWave.Gltf;
 using System.IO;
 using Newtonsoft.Json;
+using SilentWave.Obj2Gltf.Gltf;
 
 namespace SilentWave.Obj2Gltf
 {

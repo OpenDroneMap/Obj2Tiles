@@ -1,10 +1,7 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
+using Newtonsoft.Json;
 
-namespace SilentWave
+namespace SilentWave.Obj2Gltf
 {
     public static class JsonHelper
     {
