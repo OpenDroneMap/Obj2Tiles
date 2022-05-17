@@ -11,15 +11,16 @@ namespace Obj2Tiles.Stages;
 
 public static partial class StagesFacade
 {
-    public static void Tile(string sourcePath, string destPath, int lods, Dictionary<string, Box3>[] boundsMapper, GpsCoords? coords = null)
+    public static void Tile(string sourcePath, string destPath, int lods, Dictionary<string, Box3>[] boundsMapper,
+        GpsCoords? coords = null)
     {
         coords ??= DefaultGpsCoords;
 
         ConvertAllB3dm(sourcePath, destPath, lods);
 
         Console.WriteLine(" -> Generating tileset.json");
-        
-        const double baseError = 1024;
+
+        var baseError = Math.Pow(3, lods);
 
         var ecef = coords.ToEcef();
 
@@ -32,7 +33,7 @@ public static partial class StagesFacade
             {
                 GeometricError = baseError,
                 Refine = "ADD",
-                
+
                 // No rotation & scaling
                 Transform = new[]
                 {
@@ -40,17 +41,17 @@ public static partial class StagesFacade
                     0,
                     0,
                     0,
-                    
+
                     0,
                     1,
                     0,
                     0,
-                    
+
                     0,
                     0,
                     1,
                     0,
-                    
+
                     ecef[0],
                     ecef[1],
                     ecef[2],
@@ -59,7 +60,7 @@ public static partial class StagesFacade
                 Children = new List<TileElement>()
             }
         };
-        
+
         var maxX = double.MinValue;
         var minX = double.MaxValue;
         var maxY = double.MinValue;
@@ -72,32 +73,34 @@ public static partial class StagesFacade
         foreach (var descriptor in masterDescriptors)
         {
             var currentTileElement = tileset.Root;
+            
+            var refBox = boundsMapper[0][descriptor];
 
             for (var lod = lods - 1; lod >= 0; lod--)
             {
                 var box3 = boundsMapper[lod][descriptor];
-                
+
                 if (box3.Min.X < minX)
                     minX = box3.Min.X;
 
                 if (box3.Max.X > maxX)
                     maxX = box3.Max.X;
-                
+
                 if (box3.Min.Y < minY)
                     minY = box3.Min.Y;
-                
+
                 if (box3.Max.Y > maxY)
                     maxY = box3.Max.Y;
-                
+
                 if (box3.Min.Z < minZ)
                     minZ = box3.Min.Z;
-                
+
                 if (box3.Max.Z > maxZ)
                     maxZ = box3.Max.Z;
-                
+
                 var tile = new TileElement
                 {
-                    GeometricError = baseError / Math.Pow(2, lod),
+                    GeometricError = lod == 0 ? 0 : CalculateGeometricError(refBox, box3, lod),
                     Refine = "REPLACE",
                     Children = new List<TileElement>(),
                     Content = new Content
@@ -118,18 +121,26 @@ public static partial class StagesFacade
 
         File.WriteAllText(Path.Combine(destPath, "tileset.json"),
             JsonConvert.SerializeObject(tileset, Formatting.Indented));
-        
     }
-    
+
     // Calculate mesh geometric error
     private static double CalculateGeometricError(Box3 refBox, Box3 box, int lod)
     {
-        var error = refBox.Max.X - refBox.Min.X;
-        var lodError = error / Math.Pow(2, lod);
-        var boxError = box.Max.X - box.Min.X;
-        return lodError * boxError;
-    }
 
+        var dW = Math.Abs(refBox.Width - box.Width) / box.Width + 1;
+        var dH = Math.Abs(refBox.Height - box.Height) / box.Height + 1;
+        var dD = Math.Abs(refBox.Depth - box.Depth) / box.Depth + 1;
+       
+        return Math.Pow(dW + dH + dD, lod);
+        /*
+        var maxSize = Math.Max(refBox.Width, Math.Max(refBox.Height, refBox.Depth));
+        var maxTileSize = Math.Max(box.Width, Math.Max(box.Height, box.Depth));
+
+        var error = maxSize / maxTileSize;
+
+        // LOD 0 is the highest resolution
+        return Math.Pow(error, lod);*/
+    }
 
     private static void ConvertAllB3dm(string sourcePath, string destPath, int lods)
     {
@@ -159,7 +170,7 @@ public static partial class StagesFacade
     private static readonly GpsCoords DefaultGpsCoords = new()
     {
         Altitude = 130,
-        Latitude = 45.46424200394995, 
+        Latitude = 45.46424200394995,
         Longitude = 9.190277486808588
     };
 
