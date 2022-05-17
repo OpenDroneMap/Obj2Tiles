@@ -41,7 +41,7 @@ namespace Obj2Tiles
             
             Func<string, string> createTempFolder = opts.UseSystemTempFolder
                 ? s => CreateTempFolder(s, Path.GetTempPath())
-                : s => CreateTempFolder(s, opts.Output);
+                : s => CreateTempFolder(s, Path.Combine(opts.Output, ".temp"));
 
             string? destFolderDecimation = null;
             string? destFolderSplit = null;
@@ -107,6 +107,11 @@ namespace Obj2Tiles
 
                 if (destFolderSplit != null && destFolderSplit != opts.Output)
                     Directory.Delete(destFolderSplit, true);
+
+                var tmpFolder = Path.Combine(opts.Output, ".temp");
+                
+                if (Directory.Exists(tmpFolder))
+                    Directory.Delete(tmpFolder, true);
 
                 Console.WriteLine(" ?> Cleaning up ok");
             }
