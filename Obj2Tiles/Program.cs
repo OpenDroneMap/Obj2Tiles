@@ -30,6 +30,8 @@ namespace Obj2Tiles
             Console.WriteLine(" *** OBJ to Tiles ***");
             Console.WriteLine();
 
+            if (!CheckOptions(opts)) return;
+
             Directory.CreateDirectory(opts.Output);
 
             var pipelineId = Guid.NewGuid().ToString();
@@ -45,6 +47,7 @@ namespace Obj2Tiles
 
             try
             {
+               
                 destFolderDecimation = opts.StopAt == Stage.Decimation
                     ? opts.Output
                     : createTempFolder($"{pipelineId}-obj2tiles-decimation");
@@ -123,6 +126,42 @@ namespace Obj2Tiles
                     Console.WriteLine(" ?> Cleaning up ok");
                 }
             }
+        }
+
+        private static bool CheckOptions(Options opts)
+       {
+
+            if (string.IsNullOrWhiteSpace(opts.Input))
+            {
+                Console.WriteLine(" !> Input file is required");
+                return false;
+            }
+            
+            if (!File.Exists(opts.Input))
+            {
+                Console.WriteLine(" !> Input file does not exist");
+                return false;
+            }
+            
+            if (string.IsNullOrWhiteSpace(opts.Output))
+            {
+                Console.WriteLine(" !> Output folder is required");
+                return false;
+            }
+            
+            if (opts.LODs < 1)
+            {
+                Console.WriteLine(" !> LODs must be at least 1");
+                return false;
+            }
+            
+            if (opts.Divisions < 1)
+            {
+                Console.WriteLine(" !> Divisions must be at least 1");
+                return false;
+            }
+            
+            return true;
         }
 
 

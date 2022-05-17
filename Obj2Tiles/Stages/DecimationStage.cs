@@ -11,8 +11,6 @@ public static partial class StagesFacade
 {
     public static async Task<DecimateResult> Decimate(string sourcePath, string destPath, int lods)
     {
-        if (lods < 1)
-            throw new ArgumentException("LODs must be at least 1");
         
         var qualities = Enumerable.Range(0, lods - 1).Select(i => 1.0f - ((i + 1) / (float)lods)).ToArray();
 
