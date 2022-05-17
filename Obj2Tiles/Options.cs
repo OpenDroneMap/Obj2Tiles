@@ -23,9 +23,6 @@ public class Options
     [Option('l', "lods", Required = false, HelpText = "How many levels of details", Default = 3)]
     public int LODs { get; set; }
 
-    [Option('a', "auto", Required = false, HelpText = "Automatically estimates the divisions/LODs parameters", Default = false)]
-    public bool Auto { get; set; }
-
     [Option('k', "keeptextures", Required = false, HelpText = "Keeps original textures", Default = false)]
     public bool KeepOriginalTextures { get; set; }
     

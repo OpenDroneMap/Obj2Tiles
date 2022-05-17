@@ -30,9 +30,6 @@ namespace Obj2Tiles
             Console.WriteLine(" *** OBJ to Tiles ***");
             Console.WriteLine();
 
-            if (opts.Auto)
-                Console.WriteLine(" ?> Auto is not supported yet, using default values");
-
             Directory.CreateDirectory(opts.Output);
 
             var pipelineId = Guid.NewGuid().ToString();
