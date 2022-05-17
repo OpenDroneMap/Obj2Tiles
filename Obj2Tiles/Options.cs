@@ -38,9 +38,6 @@ public class Options
     [Option("alt", Required = false, HelpText = "Altitude of the mesh", Default = null)]
     public double? Altitude { get; set; }
     
-    [Option('v', "verbose", Required = false, HelpText = "Verbose output", Default = false)]
-    public bool Verbose { get; set; }
-    
     [Option("use-system-temp", Required = false, HelpText = "Uses the system temp folder", Default = false)]
     public bool UseSystemTempFolder { get; set; }
 }

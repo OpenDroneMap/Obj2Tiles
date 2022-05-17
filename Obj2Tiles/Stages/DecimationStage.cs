@@ -64,8 +64,10 @@ public static partial class StagesFacade
         var sourceTexCoords3D = sourceObjMesh.TexCoords3D;
         var sourceSubMeshIndices = sourceObjMesh.SubMeshIndices;
 
-        var sourceMesh = new Mesh(sourceVertices, sourceSubMeshIndices);
-        sourceMesh.Normals = sourceNormals;
+        var sourceMesh = new Mesh(sourceVertices, sourceSubMeshIndices)
+        {
+            Normals = sourceNormals
+        };
 
         if (sourceTexCoords2D != null)
         {
@@ -90,7 +92,6 @@ public static partial class StagesFacade
         stopwatch.Reset();
         stopwatch.Start();
 
-        //var algorithm = MeshDecimation.CreateAlgorithm(Algorithm.Default);
         var algorithm = new FastQuadricMeshSimplification
         {
             PreserveSeams = true,

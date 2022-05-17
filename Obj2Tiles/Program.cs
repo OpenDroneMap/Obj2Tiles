@@ -37,9 +37,8 @@ namespace Obj2Tiles
 
             var pipelineId = Guid.NewGuid().ToString();
             var sw = new Stopwatch();
-            var swg = new Stopwatch();
-            swg.Start();
-
+            var swg = Stopwatch.StartNew();
+            
             Func<string, string> createTempFolder = opts.UseSystemTempFolder
                 ? s => CreateTempFolder(s, Path.GetTempPath())
                 : s => CreateTempFolder(s, opts.Output);
@@ -80,7 +79,7 @@ namespace Obj2Tiles
                 if (opts.StopAt == Stage.Splitting)
                     return;
 
-                var gpsCoords = (opts.Latitude != null && opts.Longitude != null && opts.Altitude != null)
+                var gpsCoords = opts.Latitude != null && opts.Longitude != null && opts.Altitude != null
                     ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude.Value)
                     : null;
 
