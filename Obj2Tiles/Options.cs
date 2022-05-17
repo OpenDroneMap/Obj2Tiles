@@ -40,6 +40,9 @@ public class Options
     
     [Option("use-system-temp", Required = false, HelpText = "Uses the system temp folder", Default = false)]
     public bool UseSystemTempFolder { get; set; }
+    
+    [Option("keep-intermediate", Required = false, HelpText = "Keeps the intermediate files (do not cleanup)", Default = false)]
+    public bool KeepIntermediateFiles { get; set; }
 }
 
 public enum Stage

@@ -100,20 +100,31 @@ namespace Obj2Tiles
                 Console.WriteLine();
                 Console.WriteLine(" => Pipeline completed in {0}", swg.Elapsed);
 
-                Console.WriteLine(" => Cleaning up");
-
-                if (destFolderDecimation != null && destFolderDecimation != opts.Output)
-                    Directory.Delete(destFolderDecimation, true);
-
-                if (destFolderSplit != null && destFolderSplit != opts.Output)
-                    Directory.Delete(destFolderSplit, true);
-
                 var tmpFolder = Path.Combine(opts.Output, ".temp");
-                
-                if (Directory.Exists(tmpFolder))
-                    Directory.Delete(tmpFolder, true);
 
-                Console.WriteLine(" ?> Cleaning up ok");
+                if (opts.KeepIntermediateFiles)
+                {
+                    Console.WriteLine(
+                        $" ?> Skipping cleanup, intermediate files are in '{tmpFolder}' with pipeline id '{pipelineId}'");
+                    
+                    Console.WriteLine(" ?> You should delete this folder manually, it is only for debugging purposes");
+                }
+                else
+                {
+
+                    Console.WriteLine(" => Cleaning up");
+
+                    if (destFolderDecimation != null && destFolderDecimation != opts.Output)
+                        Directory.Delete(destFolderDecimation, true);
+
+                    if (destFolderSplit != null && destFolderSplit != opts.Output)
+                        Directory.Delete(destFolderSplit, true);
+
+                    if (Directory.Exists(tmpFolder))
+                        Directory.Delete(tmpFolder, true);
+
+                    Console.WriteLine(" ?> Cleaning up ok");
+                }
             }
         }
 
