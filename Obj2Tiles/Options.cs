@@ -32,7 +32,7 @@ public class Options
     [Option("lon", Required = false, HelpText = "Longitude of the mesh", Default = null)]
     public double? Longitude { get; set; }
     
-    [Option("alt", Required = false, HelpText = "Altitude of the mesh", Default = null)]
+    [Option("alt", Required = false, HelpText = "Altitude of the mesh (meters)", Default = null)]
     public double? Altitude { get; set; }
     
     [Option("use-system-temp", Required = false, HelpText = "Uses the system temp folder", Default = false)]
