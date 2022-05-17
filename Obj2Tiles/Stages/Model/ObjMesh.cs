@@ -349,13 +349,11 @@ namespace Obj2Tiles.Stages.Model
                         if (lineSplit.Length != 4)
                             throw new InvalidDataException("Normals must be 3 components.");
 
-                        if (readNormalList == null)
-                            readNormalList = new List<Vector3>(VertexInitialCapacity);
+                        readNormalList ??= new List<Vector3>(VertexInitialCapacity);
 
-                        float f0, f1, f2;
-                        float.TryParse(lineSplit[1], NumberStyles.Float, CultureInfo.InvariantCulture, out f0);
-                        float.TryParse(lineSplit[2], NumberStyles.Float, CultureInfo.InvariantCulture, out f1);
-                        float.TryParse(lineSplit[3], NumberStyles.Float, CultureInfo.InvariantCulture, out f2);
+                        float.TryParse(lineSplit[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var f0);
+                        float.TryParse(lineSplit[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var f1);
+                        float.TryParse(lineSplit[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var f2);
                         readNormalList.Add(new Vector3(f0, f1, f2));
                     }
                     else if (string.Equals(firstPart, "vt"))
@@ -363,12 +361,11 @@ namespace Obj2Tiles.Stages.Model
                         if (lineSplit.Length < 3)
                             throw new InvalidDataException("Texture coordinates needs at least 2 components.");
 
-                        if (readTexCoordList == null)
-                            readTexCoordList = new List<Vector3>(VertexInitialCapacity);
+                        readTexCoordList ??= new List<Vector3>(VertexInitialCapacity);
 
-                        float f0, f1, f2;
-                        float.TryParse(lineSplit[1], NumberStyles.Float, CultureInfo.InvariantCulture, out f0);
-                        float.TryParse(lineSplit[2], NumberStyles.Float, CultureInfo.InvariantCulture, out f1);
+                        float f2;
+                        float.TryParse(lineSplit[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var f0);
+                        float.TryParse(lineSplit[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var f1);
                         if (lineSplit.Length > 3)
                         {
                             float.TryParse(lineSplit[3], NumberStyles.Float, CultureInfo.InvariantCulture, out f2);
@@ -390,12 +387,14 @@ namespace Obj2Tiles.Stages.Model
                         if (lineSplit.Length < 4)
                             throw new InvalidDataException("Faces must have at least three indices.");
 
-                        int vertexIndex, texIndex, normalIndex;
                         tempFaceList.Clear();
                         for (int i = 1; i < lineSplit.Length; i++)
                         {
                             string word = lineSplit[i];
                             int slashCount = CountOccurrences(word, '/');
+                            int vertexIndex;
+                            int texIndex;
+                            int normalIndex;
                             if (slashCount == 0)
                             {
                                 int.TryParse(word, out vertexIndex);
@@ -442,9 +441,8 @@ namespace Obj2Tiles.Stages.Model
                                     $"Invalid face data are supported (expected a maximum of two slashes, but found {slashCount}.");
                             }
 
-                            int faceIndex;
                             var face = new FaceIndex(vertexIndex, texIndex, normalIndex);
-                            if (faceTable.TryGetValue(face, out faceIndex))
+                            if (faceTable.TryGetValue(face, out var faceIndex))
                             {
                                 tempFaceList.Add(faceIndex);
                             }
@@ -458,8 +456,7 @@ namespace Obj2Tiles.Stages.Model
 
                                 if (readNormalList != null)
                                 {
-                                    if (normalList == null)
-                                        normalList = new List<Vector3>(VertexInitialCapacity);
+                                    normalList ??= new List<Vector3>(VertexInitialCapacity);
 
                                     if (normalIndex >= 0 && normalIndex < readNormalList.Count)
                                     {
@@ -473,8 +470,7 @@ namespace Obj2Tiles.Stages.Model
 
                                 if (readTexCoordList != null)
                                 {
-                                    if (texCoordList == null)
-                                        texCoordList = new List<Vector3>(VertexInitialCapacity);
+                                    texCoordList ??= new List<Vector3>(VertexInitialCapacity);
 
                                     if (texIndex >= 0 && texIndex < readTexCoordList.Count)
                                     {
@@ -528,11 +524,11 @@ namespace Obj2Tiles.Stages.Model
                         {
                             subMeshIndicesList.Add(triangleIndexList.ToArray());
                             triangleIndexList.Clear();
-
+                            /*
                             if (subMeshMaterialList.Count != subMeshIndicesList.Count)
                             {
                                 subMeshMaterialList.Add("none");
-                            }
+                            }*/
                         }
 
                         subMeshMaterialList.Add(materialName);
@@ -545,10 +541,11 @@ namespace Obj2Tiles.Stages.Model
                 subMeshIndicesList.Add(triangleIndexList.ToArray());
                 triangleIndexList.Clear();
 
+                /*
                 if (currentMaterial == null)
                 {
                     subMeshMaterialList.Add("none");
-                }
+                }*/
             }
 
             int subMeshCount = subMeshIndicesList.Count;
@@ -567,8 +564,7 @@ namespace Obj2Tiles.Stages.Model
                 for (int i = 0; i < indices.Length; i++)
                 {
                     int index = indices[i];
-                    int mappedIndex;
-                    if (indexMappings.TryGetValue(index, out mappedIndex))
+                    if (indexMappings.TryGetValue(index, out var mappedIndex))
                     {
                         indices[i] = mappedIndex;
                     }
@@ -621,8 +617,8 @@ namespace Obj2Tiles.Stages.Model
             }
 
             subMeshIndices = processedIndices.ToArray();
-            subMeshMaterials = subMeshMaterialList.ToArray();
-            materialLibraries = materialLibraryList.ToArray();
+            subMeshMaterials = subMeshMaterialList.Any() ? subMeshMaterialList.ToArray() : null;
+            materialLibraries = materialLibraryList.Any() ? materialLibraryList.ToArray() : null;
             Bounds = new Box3(minX, minY, minZ, maxX, maxY, maxZ);
         }
 
