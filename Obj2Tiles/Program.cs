@@ -31,171 +31,93 @@ namespace Obj2Tiles
             Console.WriteLine();
 
             if (opts.Auto)
-            {
                 Console.WriteLine(" ?> Auto is not supported yet, using default values");
-            }
-
-            string? tempFolderDecimation;
 
             Directory.CreateDirectory(opts.Output);
 
             var pipelineId = Guid.NewGuid().ToString();
             var sw = new Stopwatch();
+            var swg = new Stopwatch();
+            swg.Start();
 
-            string[] destFiles;
-            List<Task>? tasks;
-            DecimateResult? decimateRes;
-            switch (opts.StopAt)
+            Func<string, string> createTempFolder = opts.UseSystemTempFolder
+                ? s => CreateTempFolder(s, Path.GetTempPath())
+                : s => CreateTempFolder(s, opts.Output);
+
+            string? destFolderDecimation = null;
+            string? destFolderSplit = null;
+
+            try
             {
-                case Stage.Decimation:
+                destFolderDecimation = opts.StopAt == Stage.Decimation
+                    ? opts.Output
+                    : createTempFolder($"{pipelineId}-obj2tiles-decimation");
 
-                    Console.WriteLine(" => Decimation stage");
-                    sw.Start();
+                Console.WriteLine($" => Decimation stage with {opts.LODs} LODs");
+                sw.Start();
 
-                    await StagesFacade.Decimate(opts.Input, opts.Output, opts.LODs);
+                var decimateRes = await StagesFacade.Decimate(opts.Input, destFolderDecimation, opts.LODs);
 
-                    Console.WriteLine(" ?> Decimation stage done in {0}", sw.Elapsed);
-                    Console.WriteLine(" -> Copying obj dependencies");
-                    
-                    sw.Restart();
-                    
-                    CopyObjDependencies(opts.Input, opts.Output);
+                Console.WriteLine(" ?> Decimation stage done in {0}", sw.Elapsed);
 
-                    Console.WriteLine(" ?> Dependencies copied in {0}", sw.Elapsed);
+                if (opts.StopAt == Stage.Decimation)
+                    return;
 
-                    break;
+                Console.WriteLine();
+                Console.WriteLine(
+                    $" => Splitting stage with {opts.Divisions} divisions {(opts.ZSplit ? "and Z-split" : "")}");
 
-                case Stage.Splitting:
+                destFolderSplit = opts.StopAt == Stage.Splitting
+                    ? opts.Output
+                    : createTempFolder($"{pipelineId}-obj2tiles-split");
 
-                    tempFolderDecimation = CreateTempFolder($"{pipelineId}-obj2tiles-decimation");
+                var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
+                    opts.ZSplit,
+                    decimateRes.Bounds);
 
-                    Console.WriteLine(" => Decimation stage");
-                    sw.Start();
+                Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 
-                    decimateRes = await StagesFacade.Decimate(opts.Input, tempFolderDecimation, opts.LODs);
+                if (opts.StopAt == Stage.Splitting)
+                    return;
 
-                    Console.WriteLine(" ?> Decimation stage done in {0}", sw.Elapsed);
-                    Console.WriteLine(" -> Copying obj dependencies");
+                var gpsCoords = (opts.Latitude != null && opts.Longitude != null && opts.Altitude != null)
+                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude.Value)
+                    : null;
 
-                    sw.Restart();
-                    CopyObjDependencies(opts.Input, tempFolderDecimation);
-                    Console.WriteLine(" ?> Dependencies copied in {0}", sw.Elapsed);
+                Console.WriteLine();
+                Console.WriteLine($" => Tiling stage {(gpsCoords != null ? $"with GPS coords {gpsCoords}" : "")}");
 
-                    Console.WriteLine();
-                    Console.WriteLine(" => Splitting stage");
+                sw.Restart();
 
-                    tasks = new List<Task>();
+                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, boundsMapper, gpsCoords);
 
-                    for (var index = 0; index < decimateRes.DestFiles.Length; index++)
-                    {
-                        var file = decimateRes.DestFiles[index];
-
-                        // We compress textures except the first one (the original one)
-                        var splitTask = StagesFacade.Split(file, Path.Combine(opts.Output, "LOD-" + index),
-                            opts.Divisions, opts.ZSplit, decimateRes.Bounds,
-                            index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed);
-
-                        tasks.Add(splitTask);
-                    }
-
-                    await Task.WhenAll(tasks);
-
-                    Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
-
-                    Directory.Delete(tempFolderDecimation, true);
-
-                    break;
-                
-                case Stage.Tiling:
-
-                    tempFolderDecimation = CreateTempFolder($"{pipelineId}-obj2tiles-decimation");
-
-                    Console.WriteLine(" => Decimation stage");
-                    sw.Start();
-
-                    decimateRes = await StagesFacade.Decimate(opts.Input, tempFolderDecimation, opts.LODs);
-
-                    Console.WriteLine(" ?> Decimation stage done in {0}", sw.Elapsed);
-                    Console.WriteLine(" -> Copying obj dependencies");
-
-                    sw.Restart();
-                    CopyObjDependencies(opts.Input, tempFolderDecimation);
-                    Console.WriteLine(" ?> Dependencies copied in {0}", sw.Elapsed);
-
-                    Console.WriteLine();
-                    Console.WriteLine(" => Splitting stage");
-
-                    var tempFolderSplit = CreateTempFolder($"{pipelineId}-obj2tiles-split");
-                    
-                    tasks = new List<Task>();
-
-                    for (var index = 0; index < decimateRes.DestFiles.Length; index++)
-                    {
-                        var file = decimateRes.DestFiles[index];
-
-                        // We compress textures except the first one (the original one)
-                        var splitTask = StagesFacade.Split(file, Path.Combine(tempFolderSplit, "LOD-" + index),
-                            opts.Divisions, opts.ZSplit, decimateRes.Bounds,
-                            index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed);
-
-                        tasks.Add(splitTask);
-                    }
-
-                    await Task.WhenAll(tasks);
-
-                    Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
-                    
-                    Directory.Delete(tempFolderDecimation, true);
-
-                    Console.WriteLine();
-                    Console.WriteLine(" => Tiling stage");
-                    sw.Restart();
-                    
-                    StagesFacade.Tile(tempFolderSplit, opts.Output, opts.LODs);
-
-                    Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
-                    
-                    Directory.Delete(tempFolderSplit, true);
-                    
-                    break;
-                
-                default:
-                    throw new ArgumentOutOfRangeException();
+                Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
             }
-
-        }
-
-        private static void CopyObjDependencies(string input, string output)
-        {
-            var dependencies = Utils.GetObjDependencies(input);
-
-            foreach (var dependency in dependencies)
+            catch (Exception ex)
             {
-                if (Path.IsPathRooted(dependency))
-                {
-                    Debug.WriteLine(" ?> Cannot copy dependency because the path is rooted");
-                    continue;
-                }
+                Console.WriteLine(" !> Exception: {0}", ex.Message);
+            }
+            finally
+            {
+                Console.WriteLine();
+                Console.WriteLine(" => Pipeline completed in {0}", swg.Elapsed);
 
-                var dependencyDestPath = Path.Combine(output, dependency);
+                Console.WriteLine(" => Cleaning up");
 
-                var destFolder = Path.GetDirectoryName(dependencyDestPath);
-                if (destFolder != null) Directory.CreateDirectory(destFolder);
+                if (destFolderDecimation != null && destFolderDecimation != opts.Output)
+                    Directory.Delete(destFolderDecimation, true);
 
-                if (File.Exists(dependencyDestPath))
-                {
-                    continue;
-                }
+                if (destFolderSplit != null && destFolderSplit != opts.Output)
+                    Directory.Delete(destFolderSplit, true);
 
-                File.Copy(Path.Combine(Path.GetDirectoryName(input), dependency), dependencyDestPath, true);
-
-                Console.WriteLine($" -> Copied {dependency}");
+                Console.WriteLine(" ?> Cleaning up ok");
             }
         }
 
-        private static string CreateTempFolder(string folderName)
+
+        private static string CreateTempFolder(string folderName, string baseFolder)
         {
-            var tempFolder = Path.Combine(Path.GetTempPath(), folderName);
+            var tempFolder = Path.Combine(baseFolder, folderName);
             Directory.CreateDirectory(tempFolder);
             return tempFolder;
         }

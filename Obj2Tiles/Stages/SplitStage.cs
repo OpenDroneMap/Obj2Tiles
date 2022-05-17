@@ -7,22 +7,45 @@ namespace Obj2Tiles.Stages;
 
 public static partial class StagesFacade
 {
-    public static async Task Split(string sourcePath, string destPath, int divisions, bool zSplit = false,
+    
+    public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions, bool zsplit, Box3 bounds)
+    {
+        var tasks = new List<Task<Dictionary<string, Box3>>>();
+
+        for (var index = 0; index < sourceFiles.Length; index++)
+        {
+            var file = sourceFiles[index];
+
+            // We compress textures except the first one (the original one)
+            var splitTask = Split(file, Path.Combine(destFolder, "LOD-" + index),
+                divisions, zsplit, bounds,
+                index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed);
+
+            tasks.Add(splitTask);
+        }
+
+        await Task.WhenAll(tasks);
+        
+        return tasks.Select(task => task.Result).ToArray();
+        
+    }
+    
+    public static async Task<Dictionary<string, Box3>> Split(string sourcePath, string destPath, int divisions, bool zSplit = false,
         Box3? bounds = null,
         TexturesStrategy textureStrategy = TexturesStrategy.Repack, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
     {
         var sw = new Stopwatch();
+        var tilesBounds = new Dictionary<string, Box3>();
 
         Console.WriteLine($" -> Loading OBJ file \"{sourcePath}\"");
 
         sw.Start();
         var mesh = MeshUtils.LoadMesh(sourcePath);
 
-        Console.WriteLine(" ?> Loaded {0} vertices, {1} faces in {2}ms", mesh.VertexCount, mesh.FacesCount,
-            sw.ElapsedMilliseconds);
+        Console.WriteLine($" ?> Loaded {mesh.VertexCount} vertices, {mesh.FacesCount} faces in {sw.ElapsedMilliseconds}ms");
 
         Console.WriteLine(
-            $" -> Splitting with a depth of {divisions}" + (zSplit ? " with z-split" : ""));
+            $" -> Splitting with a depth of {divisions}{(zSplit ? " with z-split" : "")}");
 
         var meshes = new ConcurrentBag<IMesh>();
 
@@ -42,7 +65,7 @@ public static partial class StagesFacade
             {
                 SplitPointStrategy.AbsoluteCenter => m => m.Bounds.Center,
                 SplitPointStrategy.VertexBaricenter => m => m.GetVertexBaricenter(),
-                _ => throw new ArgumentOutOfRangeException()
+                _ => throw new ArgumentOutOfRangeException(nameof(splitPointStrategy))
             };
 
             count = zSplit
@@ -61,8 +84,6 @@ public static partial class StagesFacade
 
         sw.Restart();
 
-        var indented = new JsonSerializerOptions { WriteIndented = true };
-
         var ms = meshes.ToArray();
         for (var index = 0; index < ms.Length; index++)
         {
@@ -73,11 +94,13 @@ public static partial class StagesFacade
 
             m.WriteObj(Path.Combine(destPath, $"{m.Name}.obj"));
 
-            await File.WriteAllTextAsync(Path.Combine(destPath, $"{m.Name}.json"),
-                JsonSerializer.Serialize(m.Bounds, indented));
+            tilesBounds.Add(m.Name, m.Bounds);
+            
         }
 
         Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
+        
+        return tilesBounds;
     }
 }
 

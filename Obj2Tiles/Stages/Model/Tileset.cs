@@ -26,7 +26,7 @@ public class Tileset
     public Asset Asset { get; set; }
 
     [JsonProperty("geometricError")]
-    public int GeometricError { get; set; }
+    public double GeometricError { get; set; }
 
     [JsonProperty("root")]
     public TileElement Root { get; set; }
@@ -41,7 +41,7 @@ public class TileElement
     public BoundingVolume BoundingVolume { get; set; }
 
     [JsonProperty("geometricError")]
-    public int GeometricError { get; set; }
+    public double GeometricError { get; set; }
 
     [JsonProperty("refine")]
     public string Refine { get; set; }

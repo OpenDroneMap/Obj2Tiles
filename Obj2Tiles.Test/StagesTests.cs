@@ -1,7 +1,12 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using NUnit.Framework;
+using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Stages;
+using Obj2Tiles.Stages.Model;
 
 namespace Obj2Tiles.Test;
 
@@ -30,7 +35,16 @@ public class StagesTests
     {
         var testPath = GetTestOutputPath(nameof(TilingStage_Tile));
 
-        StagesFacade.Tile("TestData/Tile1", testPath, 1);
+        var boundsMapper = (from file in Directory.GetFiles("TestData/Tile1/LOD-0", "*.json")
+            let bounds = JsonConvert.DeserializeObject<BoxDTO>(File.ReadAllText(file))
+            select new
+            {
+                Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
+                    new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
+                Name = Path.GetFileNameWithoutExtension(file)
+            }).ToDictionary(item => item.Name, item => item.Bounds);
+    
+        StagesFacade.Tile("TestData/Tile1", testPath, 1, new[] { boundsMapper });
         
     }
 }

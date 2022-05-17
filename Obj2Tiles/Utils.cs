@@ -1,4 +1,6 @@
-﻿using Obj2Tiles.Stages.Model;
+﻿using System.Diagnostics;
+using Obj2Tiles.Library.Geometry;
+using Obj2Tiles.Stages.Model;
 
 namespace Obj2Tiles;
 
@@ -102,11 +104,39 @@ public static class Utils
     }
 
 
-    public static BoundingVolume ToBoundingVolume(this BoxDTO box)
+    public static BoundingVolume ToBoundingVolume(this Box3 box)
     {
         return new BoundingVolume
         {
             Box = new[] { box.Center.X, -box.Center.Z, box.Center.Y, box.Width / 2, 0, 0, 0, -box.Depth / 2, 0, 0, 0, box.Height / 2 }
         };
+    }
+    
+    public static void CopyObjDependencies(string input, string output)
+    {
+        var dependencies = Utils.GetObjDependencies(input);
+
+        foreach (var dependency in dependencies)
+        {
+            if (Path.IsPathRooted(dependency))
+            {
+                Debug.WriteLine(" ?> Cannot copy dependency because the path is rooted");
+                continue;
+            }
+
+            var dependencyDestPath = Path.Combine(output, dependency);
+
+            var destFolder = Path.GetDirectoryName(dependencyDestPath);
+            if (destFolder != null) Directory.CreateDirectory(destFolder);
+
+            if (File.Exists(dependencyDestPath))
+            {
+                continue;
+            }
+
+            File.Copy(Path.Combine(Path.GetDirectoryName(input), dependency), dependencyDestPath, true);
+
+            Console.WriteLine($" -> Copied {dependency}");
+        }
     }
 }

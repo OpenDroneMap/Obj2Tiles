@@ -44,6 +44,11 @@ public static partial class StagesFacade
         }
 
         await Task.WhenAll(tasks);
+        Console.WriteLine(" ?> Decimation done");
+        
+        Console.WriteLine(" -> Copying obj dependencies");
+        Utils.CopyObjDependencies(sourcePath, destPath);
+        Console.WriteLine(" ?> Dependencies copied");
 
         return new DecimateResult { DestFiles = destFiles.ToArray(), Bounds = bounds };
 

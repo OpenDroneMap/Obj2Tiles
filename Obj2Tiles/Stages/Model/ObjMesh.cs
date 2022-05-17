@@ -66,11 +66,10 @@ namespace Obj2Tiles.Stages.Model
                 return hashCode;
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
-                if (obj is FaceIndex)
+                if (obj is FaceIndex other)
                 {
-                    var other = (FaceIndex)obj;
                     return (vertexIndex == other.vertexIndex && texCoordIndex == other.texCoordIndex &&
                             normalIndex == other.normalIndex);
                 }

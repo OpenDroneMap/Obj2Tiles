@@ -1,6 +1,6 @@
 ﻿using Obj2Tiles.Library.Geometry;
 
-namespace Obj2Tiles.Stages.Model;
+namespace Obj2Tiles.Test;
 
 public class BoxDTO
 {

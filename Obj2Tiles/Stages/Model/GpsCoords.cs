@@ -5,6 +5,20 @@ public class GpsCoords
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double Altitude { get; set; }
+    
+    public GpsCoords(double latitude, double longitude, double altitude)
+    {
+        Latitude = latitude;
+        Longitude = longitude;
+        Altitude = altitude;
+    }
+    
+    public GpsCoords()
+    {
+        Latitude = 0;
+        Longitude = 0;
+        Altitude = 0;
+    }
 
     public double[] ToEcef()
     {
@@ -30,5 +44,10 @@ public class GpsCoords
         var z = (nu * (1 - eSq) + alt) * sinLat;
 
         return new[] { x, y, z };
+    }
+
+    public override string ToString()
+    {
+        return $"{Latitude}, {Longitude}, {Altitude}";
     }
 }

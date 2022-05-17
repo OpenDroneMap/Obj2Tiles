@@ -11,7 +11,7 @@ namespace Obj2Tiles.Stages;
 
 public static partial class StagesFacade
 {
-    public static void Tile(string sourcePath, string destPath, int lods, GpsCoords? coords = null)
+    public static void Tile(string sourcePath, string destPath, int lods, Dictionary<string, Box3>[] boundsMapper, GpsCoords? coords = null)
     {
         coords ??= DefaultGpsCoords;
 
@@ -19,7 +19,7 @@ public static partial class StagesFacade
 
         Console.WriteLine(" -> Generating tileset.json");
         
-        const int baseError = 1024;
+        const double baseError = 1024;
 
         var ecef = coords.ToEcef();
 
@@ -59,16 +59,15 @@ public static partial class StagesFacade
                 Children = new List<TileElement>()
             }
         };
-
         
-        var masterDescriptors = Directory.GetFiles(Path.Combine(destPath, "LOD-0"), "*.json");
-
         var maxX = double.MinValue;
         var minX = double.MaxValue;
         var maxY = double.MinValue;
         var minY = double.MaxValue;
         var maxZ = double.MinValue;
         var minZ = double.MaxValue;
+
+        var masterDescriptors = boundsMapper[0].Keys;
         
         foreach (var descriptor in masterDescriptors)
         {
@@ -76,7 +75,7 @@ public static partial class StagesFacade
 
             for (var lod = lods - 1; lod >= 0; lod--)
             {
-                var box3 = JsonConvert.DeserializeObject<BoxDTO>(File.ReadAllText(descriptor));
+                var box3 = boundsMapper[lod][descriptor];
                 
                 if (box3.Min.X < minX)
                     minX = box3.Min.X;
@@ -98,7 +97,7 @@ public static partial class StagesFacade
                 
                 var tile = new TileElement
                 {
-                    GeometricError = baseError / (1 << lod),
+                    GeometricError = baseError / Math.Pow(2, lod),
                     Refine = "REPLACE",
                     Children = new List<TileElement>(),
                     Content = new Content
@@ -113,7 +112,7 @@ public static partial class StagesFacade
             }
         }
 
-        var globalBox = new BoxDTO(new Box3(minX, minY, minZ, maxX, maxY, maxZ));
+        var globalBox = new Box3(minX, minY, minZ, maxX, maxY, maxZ);
 
         tileset.Root.BoundingVolume = globalBox.ToBoundingVolume();
 
@@ -121,6 +120,16 @@ public static partial class StagesFacade
             JsonConvert.SerializeObject(tileset, Formatting.Indented));
         
     }
+    
+    // Calculate mesh geometric error
+    private static double CalculateGeometricError(Box3 refBox, Box3 box, int lod)
+    {
+        var error = refBox.Max.X - refBox.Min.X;
+        var lodError = error / Math.Pow(2, lod);
+        var boxError = box.Max.X - box.Min.X;
+        return lodError * boxError;
+    }
+
 
     private static void ConvertAllB3dm(string sourcePath, string destPath, int lods)
     {
@@ -137,7 +146,6 @@ public static partial class StagesFacade
 
                 var outputFile = Path.Combine(outputFolder, Path.ChangeExtension(Path.GetFileName(file), ".b3dm"));
                 filesToConvert.Add(new Tuple<string, string>(file, outputFile));
-                File.Copy(Path.ChangeExtension(file, ".json"), Path.ChangeExtension(outputFile, ".json"), true);
             }
         }
 
