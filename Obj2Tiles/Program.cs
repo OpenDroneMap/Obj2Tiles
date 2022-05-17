@@ -71,8 +71,7 @@ namespace Obj2Tiles
                     : createTempFolder($"{pipelineId}-obj2tiles-split");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
-                    opts.ZSplit,
-                    decimateRes.Bounds);
+                    opts.ZSplit, decimateRes.Bounds, opts.KeepOriginalTextures);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 

@@ -7,8 +7,8 @@ namespace Obj2Tiles.Stages;
 
 public static partial class StagesFacade
 {
-    
-    public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions, bool zsplit, Box3 bounds)
+    public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
+        bool zsplit, Box3 bounds, bool keepOriginalTextures = false)
     {
         var tasks = new List<Task<Dictionary<string, Box3>>>();
 
@@ -17,22 +17,25 @@ public static partial class StagesFacade
             var file = sourceFiles[index];
 
             // We compress textures except the first one (the original one)
+            var textureStrategy = keepOriginalTextures ? TexturesStrategy.KeepOriginal :
+                index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed;
+
             var splitTask = Split(file, Path.Combine(destFolder, "LOD-" + index),
-                divisions, zsplit, bounds,
-                index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed);
+                divisions, zsplit, bounds, textureStrategy);
 
             tasks.Add(splitTask);
         }
 
         await Task.WhenAll(tasks);
-        
+
         return tasks.Select(task => task.Result).ToArray();
-        
     }
-    
-    public static async Task<Dictionary<string, Box3>> Split(string sourcePath, string destPath, int divisions, bool zSplit = false,
+
+    public static async Task<Dictionary<string, Box3>> Split(string sourcePath, string destPath, int divisions,
+        bool zSplit = false,
         Box3? bounds = null,
-        TexturesStrategy textureStrategy = TexturesStrategy.Repack, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
+        TexturesStrategy textureStrategy = TexturesStrategy.Repack,
+        SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
     {
         var sw = new Stopwatch();
         var tilesBounds = new Dictionary<string, Box3>();
@@ -42,7 +45,8 @@ public static partial class StagesFacade
         sw.Start();
         var mesh = MeshUtils.LoadMesh(sourcePath);
 
-        Console.WriteLine($" ?> Loaded {mesh.VertexCount} vertices, {mesh.FacesCount} faces in {sw.ElapsedMilliseconds}ms");
+        Console.WriteLine(
+            $" ?> Loaded {mesh.VertexCount} vertices, {mesh.FacesCount} faces in {sw.ElapsedMilliseconds}ms");
 
         Console.WriteLine(
             $" -> Splitting with a depth of {divisions}{(zSplit ? " with z-split" : "")}");
@@ -52,7 +56,7 @@ public static partial class StagesFacade
         sw.Restart();
 
         int count;
-        
+
         if (bounds != null)
         {
             count = zSplit
@@ -95,15 +99,13 @@ public static partial class StagesFacade
             m.WriteObj(Path.Combine(destPath, $"{m.Name}.obj"));
 
             tilesBounds.Add(m.Name, m.Bounds);
-            
         }
 
         Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
-        
+
         return tilesBounds;
     }
 }
-
 
 public enum SplitPointStrategy
 {

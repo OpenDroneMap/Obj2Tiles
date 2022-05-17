@@ -14,15 +14,22 @@ public static partial class StagesFacade
     public static void Tile(string sourcePath, string destPath, int lods, Dictionary<string, Box3>[] boundsMapper,
         GpsCoords? coords = null)
     {
-        coords ??= DefaultGpsCoords;
 
+        Console.WriteLine(" ?> Working on objs conversion");
+        
         ConvertAllB3dm(sourcePath, destPath, lods);
 
         Console.WriteLine(" -> Generating tileset.json");
 
-        var baseError = Math.Pow(3, lods);
-
+        if (coords == null)
+        {
+            Console.WriteLine(" ?> Using default coordinates");
+            coords = DefaultGpsCoords;
+        }
+        
         var ecef = coords.ToEcef();
+        
+        var baseError = Math.Pow(3, lods);
 
         // Generate tileset.json
         var tileset = new Tileset
@@ -132,14 +139,7 @@ public static partial class StagesFacade
         var dD = Math.Abs(refBox.Depth - box.Depth) / box.Depth + 1;
        
         return Math.Pow(dW + dH + dD, lod);
-        /*
-        var maxSize = Math.Max(refBox.Width, Math.Max(refBox.Height, refBox.Depth));
-        var maxTileSize = Math.Max(box.Width, Math.Max(box.Height, box.Depth));
 
-        var error = maxSize / maxTileSize;
-
-        // LOD 0 is the highest resolution
-        return Math.Pow(error, lod);*/
     }
 
     private static void ConvertAllB3dm(string sourcePath, string destPath, int lods)
