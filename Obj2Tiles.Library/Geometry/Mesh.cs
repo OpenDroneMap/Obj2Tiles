@@ -286,7 +286,7 @@ public class Mesh : IMesh
 
     public void WriteObj(string path)
     {
-        using var writer = new FormattingStreamWriter(path, CultureInfo.GetCultureInfo("en-US"));
+        using var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture);
         
         writer.Write("o ");
         writer.WriteLine(string.IsNullOrWhiteSpace(Name) ? DefaultName : Name);

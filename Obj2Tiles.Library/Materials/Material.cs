@@ -85,21 +85,21 @@ public class Material : ICloneable
                     break;
                 case "Ka":
                     ambientColor = new RGB(
-                        double.Parse(parts[1], en),
-                        double.Parse(parts[2], en),
-                        double.Parse(parts[3], en));
+                        double.Parse(parts[1], CultureInfo.InvariantCulture),
+                        double.Parse(parts[2], CultureInfo.InvariantCulture),
+                        double.Parse(parts[3], CultureInfo.InvariantCulture));
                     break;
                 case "Kd":
                     diffuseColor = new RGB(
-                        double.Parse(parts[1], en),
-                        double.Parse(parts[2], en),
-                        double.Parse(parts[3], en));
+                        double.Parse(parts[1], CultureInfo.InvariantCulture),
+                        double.Parse(parts[2], CultureInfo.InvariantCulture),
+                        double.Parse(parts[3], CultureInfo.InvariantCulture));
                     break;
                 case "Ks":
                     specularColor = new RGB(
-                        double.Parse(parts[1], en),
-                        double.Parse(parts[2], en),
-                        double.Parse(parts[3], en));
+                        double.Parse(parts[1], CultureInfo.InvariantCulture),
+                        double.Parse(parts[2], CultureInfo.InvariantCulture),
+                        double.Parse(parts[3], CultureInfo.InvariantCulture));
                     break;
                 case "Ns":
                     specularExponent = double.Parse(parts[1], CultureInfo.InvariantCulture);
@@ -124,8 +124,6 @@ public class Material : ICloneable
 
         return materials.ToArray();
     }
-
-    private static readonly CultureInfo en = CultureInfo.GetCultureInfo("en-US");
 
     public string ToMtl()
     {
@@ -161,13 +159,13 @@ public class Material : ICloneable
         if (SpecularExponent != null)
         {
             builder.Append("Ns ");
-            builder.AppendLine(SpecularExponent.Value.ToString(en));
+            builder.AppendLine(SpecularExponent.Value.ToString(CultureInfo.InvariantCulture));
         }
 
         if (Dissolve != null)
         {
             builder.Append("d ");
-            builder.AppendLine(Dissolve.Value.ToString(en));
+            builder.AppendLine(Dissolve.Value.ToString(CultureInfo.InvariantCulture));
         }
 
         if (IlluminationModel != null)

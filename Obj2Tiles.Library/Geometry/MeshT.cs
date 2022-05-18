@@ -897,8 +897,6 @@ public class MeshT : IMesh
         return new Vertex3(x, y, z);
     }
 
-    private static readonly CultureInfo en = CultureInfo.GetCultureInfo("en-US");
-
     public void WriteObj(string path)
     {
         if (!_materials.Any() || !_textureVertices.Any())
@@ -914,7 +912,7 @@ public class MeshT : IMesh
         if (TexturesStrategy != TexturesStrategy.KeepOriginal)
             TrimTextures(Path.GetDirectoryName(path));
 
-        using (var writer = new FormattingStreamWriter(path, en))
+        using (var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture))
         {
             writer.Write("o ");
             writer.WriteLine(string.IsNullOrWhiteSpace(Name) ? DefaultName : Name);
@@ -956,7 +954,7 @@ public class MeshT : IMesh
 
         var mtlFilePath = Path.ChangeExtension(path, "mtl");
 
-        using (var writer = new FormattingStreamWriter(mtlFilePath, en))
+        using (var writer = new FormattingStreamWriter(mtlFilePath, CultureInfo.InvariantCulture))
         {
             for (var index = 0; index < _materials.Count; index++)
             {
@@ -985,7 +983,7 @@ public class MeshT : IMesh
 
     private void _WriteObjWithoutTexture(string path)
     {
-        using var writer = new FormattingStreamWriter(path, en);
+        using var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture);
 
         writer.Write("o ");
         writer.WriteLine(string.IsNullOrWhiteSpace(Name) ? DefaultName : Name);

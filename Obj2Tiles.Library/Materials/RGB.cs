@@ -15,10 +15,8 @@ public class RGB
         B = b;
     }
 
-    private static readonly CultureInfo en = CultureInfo.GetCultureInfo("en-US");
-
     public override string ToString()
     {
-        return string.Format(en, "{0} {1} {2}", R, G, B);
+        return string.Format(CultureInfo.InvariantCulture, "{0} {1} {2}", R, G, B);
     }
 }

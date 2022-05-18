@@ -22,8 +22,8 @@ public class Vertex2
 
     public Vertex2(double x, double y)
     {
-        this.X = x;
-        this.Y = y;
+        X = x;
+        Y = y;
     }
 
     public readonly double X;
@@ -33,8 +33,6 @@ public class Vertex2
     {
         return $"({X}; {Y})";
     }
-
-    private static readonly CultureInfo culture = new("en-US");
 
     public static bool operator ==(Vertex2 a, Vertex2 b)
     {

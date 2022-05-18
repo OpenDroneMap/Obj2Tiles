@@ -6,7 +6,6 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class MeshUtils
 {
-    private static readonly CultureInfo en = CultureInfo.GetCultureInfo("en-US");
 
     public static IMesh LoadMesh(string fileName)
     {
@@ -35,14 +34,14 @@ public class MeshUtils
             {
                 case "v" when segs.Length >= 4:
                     vertices.Add(new Vertex3(
-                        double.Parse(segs[1], en),
-                        double.Parse(segs[2], en),
-                        double.Parse(segs[3], en)));
+                        double.Parse(segs[1], CultureInfo.InvariantCulture),
+                        double.Parse(segs[2], CultureInfo.InvariantCulture),
+                        double.Parse(segs[3], CultureInfo.InvariantCulture)));
                     break;
                 case "vt" when segs.Length >= 3:
                     textureVertices.Add(new Vertex2(
-                        double.Parse(segs[1], en),
-                        double.Parse(segs[2], en)));
+                        double.Parse(segs[1], CultureInfo.InvariantCulture),
+                        double.Parse(segs[2], CultureInfo.InvariantCulture)));
                     break;
                 case "vn" when segs.Length == 3:
                     // Skipping normals
