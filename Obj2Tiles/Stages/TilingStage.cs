@@ -29,7 +29,8 @@ public static partial class StagesFacade
         
         var ecef = coords.ToEcef();
         
-        var baseError = Math.Pow(3, lods);
+        // Don't ask me why 100, I have no idea but it works
+        const int baseError = 100;
 
         // Generate tileset.json
         var tileset = new Tileset
@@ -167,6 +168,7 @@ public static partial class StagesFacade
         });
     }
 
+    // Where is it?
     private static readonly GpsCoords DefaultGpsCoords = new()
     {
         Altitude = 130,
