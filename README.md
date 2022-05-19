@@ -60,6 +60,7 @@ You can control how many times the split is performed by using the `--divisions`
 
 Each split mesh is converted to B3DM format using [ObjConvert](https://github.com/SilentWave/ObjConvert). 
 Then the `tileset.json` is generated using the resulting files. You can specify the `--lat` and `--lon` and `--alt` parameters to set the location of the model.
+See the [Remarks](#Remarks) section to find out how to rotate the model.
 
 ## Running
 
@@ -110,6 +111,32 @@ Run all the pipeline stages and generate the `tileset.json` file in the output f
 ```
 Obj2Tiles --lods 8 --divisions 3 --lat 40.689434025350025 --lon -74.0444987716782 --alt 120 -i model.obj -o output
 ```
+
+## Rotating the model
+
+You can specify a 4x4 Transform matrix to account for translation, rotation and scaling. This is the matrix structure:
+
+![TransformationMatrix1](https://user-images.githubusercontent.com/7868983/169370131-18575153-4023-4a82-8ffd-3b5e2476dce2.png)
+
+The tiling stage uses this matrix to place the model in the requested geo location:
+
+![Translation-Matrix1](https://user-images.githubusercontent.com/7868983/169369875-3e337eb2-4168-4b43-b9dc-fef2cf6aecb0.png)
+
+But you can add scaling:
+
+![Scaling-Matrix1](https://user-images.githubusercontent.com/7868983/169370506-16878adf-ce0c-4ba7-a107-5315693b80d8.png)
+
+Or rotation around any of the 3 axes:
+
+![RotationX-Matrix1](https://user-images.githubusercontent.com/7868983/169370741-9ba79f00-90cf-429a-b5b4-26c8d3d3e355.png)
+
+![RotationY-Matrix1](https://user-images.githubusercontent.com/7868983/169370750-6cb3b744-e2fb-4606-912a-49e4a03905ae.png)
+
+![RotationZ-Matrix1](https://user-images.githubusercontent.com/7868983/169370755-03f016ca-ca8c-461d-a6e9-8643885cd624.png)
+
+By combining these matrices, you can rotate, scale and translate the model.
+
+You can find more details about this topic on [BrainVoyager](https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html)
 
 ## Remarks
 
