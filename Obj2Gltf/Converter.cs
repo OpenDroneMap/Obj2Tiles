@@ -14,14 +14,14 @@ namespace SilentWave.Obj2Gltf
     /// </summary>
     /// <param name="texturePath">The path where the texture can be found</param>
     /// <returns>The texture index (zero based)</returns>
-    public delegate Int32 GetOrAddTexture(String texturePath);
+    public delegate int GetOrAddTexture(string texturePath);
 
     /// <summary>
     /// obj2gltf converter
     /// </summary>
     public class Converter
     {
-        public static Converter MakeDefault() => new Converter(new ObjParser(), new MtlParser());
+        public static Converter MakeDefault() => new(new ObjParser(), new MtlParser());
 
         private readonly ObjParser _objParser;
         private readonly IMtlParser _mtlParser;
@@ -36,18 +36,18 @@ namespace SilentWave.Obj2Gltf
             _mtlParser = mtlParser ?? throw new ArgumentNullException(nameof(mtlParser));
         }
 
-        public void Convert(String objPath, String gltfPath, GltfConverterOptions options = null)
+        public void Convert(string objPath, string gltfPath, GltfConverterOptions options = null)
         {
-            if (String.IsNullOrWhiteSpace(objPath))
+            if (string.IsNullOrWhiteSpace(objPath))
                 throw new ArgumentNullException(nameof(objPath));
 
-            options = options ?? new GltfConverterOptions();
+            options ??= new GltfConverterOptions();
 
             var objModel = _objParser.Parse(objPath, options.RemoveDegenerateFaces, options.ObjEncoding);
             var objFolder = Path.GetDirectoryName(objPath);
 
 
-            if (!String.IsNullOrEmpty(objModel.MatFilename))
+            if (!string.IsNullOrEmpty(objModel.MatFilename))
             {
                 var matFile = Path.Combine(objFolder, objModel.MatFilename);
                 var mats = _mtlParser.ParseAsync(matFile).Result;
@@ -56,7 +56,7 @@ namespace SilentWave.Obj2Gltf
             Convert(objModel, gltfPath, options);
             if (options.DeleteOriginals)
             {
-                if (!String.IsNullOrEmpty(objModel.MatFilename))
+                if (!string.IsNullOrEmpty(objModel.MatFilename))
                 {
                     var matFile = Path.Combine(objFolder, objModel.MatFilename);
                     File.Delete(matFile);
@@ -65,10 +65,10 @@ namespace SilentWave.Obj2Gltf
             }
         }
 
-        private void Convert(ObjModel objModel, String outputFile, GltfConverterOptions options = null)
+        private void Convert(ObjModel objModel, string outputFile, GltfConverterOptions options = null)
         {
             if (objModel == null) throw new ArgumentNullException(nameof(objModel));
-            options = options ?? new GltfConverterOptions();
+            options ??= new GltfConverterOptions();
 
             var u32IndicesEnabled = objModel.RequiresUint32Indices();
 
@@ -107,16 +107,14 @@ namespace SilentWave.Obj2Gltf
         /// write converted data to file
         /// </summary>
         /// <param name="outputFile"></param>
-        private void WriteFile(GltfModel gltfModel, String outputFile)
+        private void WriteFile(GltfModel gltfModel, string outputFile)
         {
             if (gltfModel == null) throw new ArgumentNullException();
-            using (var file = File.CreateText(outputFile))
-            {
-                ToJson(gltfModel, file);
-            }
+            using var file = File.CreateText(outputFile);
+            ToJson(gltfModel, file);
         }
 
-        private static void ToJson(Object model, StreamWriter sw)
+        private static void ToJson(object model, StreamWriter sw)
         {
             var serializer = new JsonSerializer
             {
@@ -127,13 +125,13 @@ namespace SilentWave.Obj2Gltf
             serializer.Serialize(sw, model);
         }
 
-        private Boolean CheckWindingCorrect(SVec3 a, SVec3 b, SVec3 c, SVec3 normal)
+        private bool CheckWindingCorrect(SVec3 a, SVec3 b, SVec3 c, SVec3 normal)
         {
             var ba = new SVec3(b.X - a.X, b.Y - a.Y, b.Z - a.Z);
             var ca = new SVec3(c.X - a.X, c.Y - a.Y, c.Z - a.Z);
             var cross = SVec3.Cross(ba, ca);
 
-            return SVec3.Dot(normal, cross) > 0;
+            return SVec3.Dot(normal, cross) >= 0;
         }
 
 
@@ -147,12 +145,12 @@ namespace SilentWave.Obj2Gltf
         /// </summary>
         /// <param name="color"></param>
         /// <returns></returns>
-        public static Double Luminance(FactorColor color)
+        public static double Luminance(FactorColor color)
         {
             return color.Red * 0.2125 + color.Green * 0.7154 + color.Blue * 0.0721;
         }
 
-        private Int32 AddTexture(GltfModel gltfModel, String textureFilename)
+        private int AddTexture(GltfModel gltfModel, string textureFilename)
         {
             var image = new Image
             {
@@ -174,7 +172,7 @@ namespace SilentWave.Obj2Gltf
 
 
 
-        private Gltf.Material GetDefault(String name = "default", AlphaMode mode = AlphaMode.OPAQUE)
+        private Gltf.Material GetDefault(string name = "default", AlphaMode mode = AlphaMode.OPAQUE)
         {
             return new Gltf.Material
             {
@@ -183,14 +181,14 @@ namespace SilentWave.Obj2Gltf
                 //EmissiveFactor = new double[] { 1, 1, 1 },
                 PbrMetallicRoughness = new PbrMetallicRoughness
                 {
-                    BaseColorFactor = new Double[] { 0.5, 0.5, 0.5, 1 },
+                    BaseColorFactor = new double[] { 0.5, 0.5, 0.5, 1 },
                     MetallicFactor = 1.0,
                     RoughnessFactor = 0.0
                 }
             };
         }
 
-        private static Double Clamp(Double val, Double min, Double max)
+        private static double Clamp(double val, double min, double max)
         {
             if (val < min) return min;
             if (val > max) return max;
@@ -201,7 +199,7 @@ namespace SilentWave.Obj2Gltf
         /// </summary>
         /// <param name="mat"></param>
         /// <returns>roughnessFactor</returns>
-        private static Double ConvertTraditional2MetallicRoughness(WaveFront.Material mat)
+        private static double ConvertTraditional2MetallicRoughness(WaveFront.Material mat)
         {
             // Transform from 0-1000 range to 0-1 range. Then invert.
             //var roughnessFactor = mat.SpecularExponent; // options.metallicRoughness ? 1.0 : 0.0;
@@ -232,7 +230,7 @@ namespace SilentWave.Obj2Gltf
             return roughnessFactor;
         }
 
-        private Int32 AddMaterial(GltfModel gltfModel, Gltf.Material material)
+        private int AddMaterial(GltfModel gltfModel, Gltf.Material material)
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
             var matIndex = gltfModel.Materials.Count;
@@ -240,7 +238,7 @@ namespace SilentWave.Obj2Gltf
             return matIndex;
         }
 
-        Int32 GetTextureIndex(GltfModel gltfModel, String path)
+        int GetTextureIndex(GltfModel gltfModel, string path)
         {
             for (var i = 0; i < gltfModel.Textures.Count; i++)
             {
@@ -283,11 +281,11 @@ namespace SilentWave.Obj2Gltf
             }
             else
             {
-                gMat.PbrMetallicRoughness.BaseColorFactor = new Double[] { 0.7, 0.7, 0.7, alpha };
+                gMat.PbrMetallicRoughness.BaseColorFactor = new double[] { 0.7, 0.7, 0.7, alpha };
             }
 
 
-            var hasTexture = !String.IsNullOrEmpty(mat.DiffuseTextureFile);
+            var hasTexture = !string.IsNullOrEmpty(mat.DiffuseTextureFile);
             if (hasTexture)
             {
                 var index = getOrAddTextureFunction(mat.DiffuseTextureFile);
@@ -312,7 +310,7 @@ namespace SilentWave.Obj2Gltf
         }
 
         //TODO: move to gltf model ?!?
-        private Int32 GetMaterialIndex(GltfModel gltfModel, String matName)
+        private int GetMaterialIndex(GltfModel gltfModel, string matName)
         {
             for (var i = 0; i < gltfModel.Materials.Count; i++)
             {
@@ -328,7 +326,7 @@ namespace SilentWave.Obj2Gltf
 
         #region Meshes
 
-        private Int32 AddMesh(GltfModel gltfModel, ObjModel objModel, BufferState buffer, Geometry mesh)
+        private int AddMesh(GltfModel gltfModel, ObjModel objModel, BufferState buffer, Geometry mesh)
         {
             var ps = AddVertexAttributes(gltfModel, objModel, buffer, mesh);
 
@@ -387,13 +385,13 @@ namespace SilentWave.Obj2Gltf
 
 
                 // every primitive need their own vertex indices(v,t,n)
-                var faceVertexCache = new Dictionary<String, Int32>();
+                var faceVertexCache = new Dictionary<string, int>();
                 var faceVertexCount = 0;
 
                 //List<int[]> indiceList = new List<int[]>(faces.Count * 2);
                 //var matIndexList = new List<int>(faces.Count * 2);
 
-                var atts = new Dictionary<String, Int32>();
+                var atts = new Dictionary<string, int>();
                 var indicesAccessorIndex = bufferState.MakeIndicesAccessor(faceName + "_indices");
                 var accessorIndex = bufferState.MakePositionAccessor(faceName + "_positions");
                 atts.Add("POSITION", accessorIndex);
@@ -422,7 +420,7 @@ namespace SilentWave.Obj2Gltf
                 }
 
                 // f is a primitive
-                var iList = new List<Int32>(f.Triangles.Count * 3 * 2); // primitive indices
+                var iList = new List<int>(f.Triangles.Count * 3 * 2); // primitive indices
                 foreach (var triangle in f.Triangles)
                 {
                     var v1Index = triangle.V1.V - 1;
@@ -560,9 +558,9 @@ namespace SilentWave.Obj2Gltf
             return ps;
         }
 
-        private Int32 GetMaterialIndexOrDefault(GltfModel gltfModel, ObjModel objModel, String materialName)
+        private int GetMaterialIndexOrDefault(GltfModel gltfModel, ObjModel objModel, string materialName)
         {
-            if (String.IsNullOrEmpty(materialName)) materialName = "default";
+            if (string.IsNullOrEmpty(materialName)) materialName = "default";
 
             var materialIndex = GetMaterialIndex(gltfModel, materialName);
             if (materialIndex == -1)
@@ -594,7 +592,7 @@ namespace SilentWave.Obj2Gltf
             return materialIndex;
         }
 
-        private Int32 AddNode(GltfModel gltfModel, String name, Int32? meshIndex, Int32? parentIndex = null)
+        private int AddNode(GltfModel gltfModel, string name, int? meshIndex, int? parentIndex = null)
         {
             var node = new Node { Name = name, Mesh = meshIndex };
             var nodeIndex = gltfModel.Nodes.Count;
