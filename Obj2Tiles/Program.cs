@@ -155,9 +155,9 @@ namespace Obj2Tiles
                 return false;
             }
             
-            if (opts.Divisions < 1)
+            if (opts.Divisions < 0)
             {
-                Console.WriteLine(" !> Divisions must be at least 1");
+                Console.WriteLine(" !> Divisions must be non-negative");
                 return false;
             }
             

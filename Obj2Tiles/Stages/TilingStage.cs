@@ -187,8 +187,6 @@ public static partial class StagesFacade
         var glbConv = new Gltf2GlbConverter();
         glbConv.Convert(new Gltf2GlbOptions(outputFile));
 
-        File.Delete(outputFile);
-
         var glbFile = Path.ChangeExtension(outputFile, ".glb");
 
         var b3dm = new B3dm(File.ReadAllBytes(glbFile));
