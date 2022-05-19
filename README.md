@@ -117,3 +117,11 @@ All the pipeline stages are multi threaded to speed up the process.
 You can stop the pipeline at any stage by providing the `--stage` flag.
 If you need to keep the intermediate files, use the `--keep-intermediate` flag.
 You can use the `--use-system-temp` flag to use the system temp folder instead of the output folder.
+
+## Gallery
+
+![split-brighton](https://user-images.githubusercontent.com/7868983/169304507-5ccd970d-9fd2-4d09-81a1-e7f701cb913a.png)
+
+![z-split](https://user-images.githubusercontent.com/7868983/169304532-7b46712a-7bb7-4c2e-a799-12df6c227ee9.png)
+
+
