@@ -114,7 +114,7 @@ Obj2Tiles --lods 8 --divisions 3 --lat 40.689434025350025 --lon -74.044498771678
 
 ## Rotating the model
 
-You can specify a 4x4 Transform matrix to account for translation, rotation and scaling. This is the matrix structure:
+After generating `tileset.json`, you can edit the file and change the 4x4 Transform matrix to account for translation, rotation and scaling. This is the matrix structure:
 
 ![TransformationMatrix1](https://user-images.githubusercontent.com/7868983/169370131-18575153-4023-4a82-8ffd-3b5e2476dce2.png)
 
