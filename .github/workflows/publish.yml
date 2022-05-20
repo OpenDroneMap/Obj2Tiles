@@ -34,17 +34,17 @@ jobs:
       run: dotnet publish -p:PublishProfile=osx-x64.pubxml Obj2Tiles  
 
     - name: Zip win-x64
-      run: zip -r Obj2Tiles-Win64.zip -x "Obj2Tiles/bin/Release/net6.0/publish/win-x64/*"
+      run: zip -r Obj2Tiles-Win64.zip "Obj2Tiles/bin/Release/net6.0/publish/win-x64/*"
     - name: Zip win-arm
-      run: zip -r Obj2Tiles-WinArm.zip -x "Obj2Tiles/bin/Release/net6.0/publish/win-arm/*"
+      run: zip -r Obj2Tiles-WinArm.zip "Obj2Tiles/bin/Release/net6.0/publish/win-arm/*"
     - name: Zip win-arm64
-      run: zip -r Obj2Tiles-WinArm64.zip -x "Obj2Tiles/bin/Release/net6.0/publish/win-arm64/*"
+      run: zip -r Obj2Tiles-WinArm64.zip "Obj2Tiles/bin/Release/net6.0/publish/win-arm64/*"
     - name: Zip linux-x64
-      run: zip -r Obj2Tiles-Linux64.zip -x "Obj2Tiles/bin/Release/net6.0/publish/linux-x64/*"
+      run: zip -r Obj2Tiles-Linux64.zip "Obj2Tiles/bin/Release/net6.0/publish/linux-x64/*"
     - name: Zip linux-arm
-      run: zip -r Obj2Tiles-LinuxArm.zip -x "Obj2Tiles/bin/Release/net6.0/publish/linux-arm/*"
+      run: zip -r Obj2Tiles-LinuxArm.zip "Obj2Tiles/bin/Release/net6.0/publish/linux-arm/*"
     - name: Zip osx-x64
-      run: zip -r Obj2Tiles-Osx64.zip -x "Obj2Tiles/bin/Release/net6.0/publish/osx-x64/*"              
+      run: zip -r Obj2Tiles-Osx64.zip "Obj2Tiles/bin/Release/net6.0/publish/osx-x64/*"              
 
     - name: Release
       uses: softprops/action-gh-release@v1
