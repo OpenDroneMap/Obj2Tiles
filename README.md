@@ -64,11 +64,11 @@ See the [Remarks](#Remarks) section to find out how to rotate the model.
 
 ## Running
 
-Obj2Tiles is built using [.NET Core 6.0](https://dotnet.microsoft.com/en-us/download/dotnet/6.0). Releases are available on [GitHub](https://github.com/HeDo88TH/Obj2Tiles/releases) for a multitude of platforms (win / linux / mac).
-You can download the [latest release](https://github.com/HeDo88TH/Obj2Tiles/releases/latest) or compile it yourself using the following commands:
+Obj2Tiles is built using [.NET Core 6.0](https://dotnet.microsoft.com/en-us/download/dotnet/6.0). Releases are available on [GitHub](https://github.com/OpenDroneMap/Obj2Tiles/releases) for a multitude of platforms (win / linux / mac).
+You can download the [latest release](https://github.com/OpenDroneMap/Obj2Tiles/releases/latest) or compile it yourself using the following commands:
 
 ```
-git clone https://github.com/HeDo88TH/Obj2Tiles.git
+git clone https://github.com/OpenDroneMap/Obj2Tiles.git
 cd Obj2Tiles
 dotnet build -c Release
 ```
