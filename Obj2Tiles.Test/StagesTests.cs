@@ -47,4 +47,18 @@ public class StagesTests
         StagesFacade.Tile("TestData/Tile1", testPath, 1, new[] { boundsMapper });
         
     }
+
+    [Test]
+    public void TilingStage_TileCoords()
+    {
+        var gpsCoords = new GpsCoords
+        {
+            Altitude = 180,
+            Latitude = 45.46424200394995,
+            Longitude = 9.190277486808588
+        };
+
+        var transform = gpsCoords.ToEcefTransform();
+
+    }
 }

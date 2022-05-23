@@ -20,7 +20,7 @@ public class GpsCoords
         Altitude = 0;
     }
 
-    public double[] ToEcef()
+    public double[] ToEcefTransform()
     {
         var lat = Latitude * Math.PI / 180;
         var lon = Longitude * Math.PI / 180;
@@ -43,9 +43,43 @@ public class GpsCoords
         var y = (nu + alt) * cosLat * sinLon;
         var z = (nu * (1 - eSq) + alt) * sinLat;
 
-        return new[] { x, y, z };
+        var xr = -sinLon;
+        var yr = cosLon;
+        var zr = 0;
+       
+        var xe = -cosLon * sinLat;
+        var ye = -sinLon * sinLat;
+        var ze = cosLat;
+        
+        var xs = cosLat * cosLon;
+        var ys = cosLat * sinLon;
+        var zs = sinLat;
+        
+        return new[]
+        {
+            xr,
+            yr,
+            zr,
+            0,
+            
+            xs,
+            ys,
+            zs,
+            0,
+            
+            xe,
+            ye,
+            ze,
+            0,
+            
+            x, 
+            y,
+            z,
+            1
+        };
+        
     }
-
+    
     public override string ToString()
     {
         return $"{Latitude}, {Longitude}, {Altitude}";

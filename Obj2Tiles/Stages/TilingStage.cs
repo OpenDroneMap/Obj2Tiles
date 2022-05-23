@@ -26,10 +26,9 @@ public static partial class StagesFacade
             Console.WriteLine(" ?> Using default coordinates");
             coords = DefaultGpsCoords;
         }
-        
-        var ecef = coords.ToEcef();
-        
+       
         // Don't ask me why 100, I have no idea but it works
+        // https://github.com/CesiumGS/3d-tiles/issues/162
         const int baseError = 100;
 
         // Generate tileset.json
@@ -42,29 +41,7 @@ public static partial class StagesFacade
                 GeometricError = baseError,
                 Refine = "ADD",
 
-                // No rotation & scaling
-                Transform = new[]
-                {
-                    1,
-                    0,
-                    0,
-                    0,
-
-                    0,
-                    1,
-                    0,
-                    0,
-
-                    0,
-                    0,
-                    1,
-                    0,
-
-                    ecef[0],
-                    ecef[1],
-                    ecef[2],
-                    1
-                },
+                Transform = coords.ToEcefTransform(),
                 Children = new List<TileElement>()
             }
         };
@@ -171,7 +148,7 @@ public static partial class StagesFacade
     // Where is it?
     private static readonly GpsCoords DefaultGpsCoords = new()
     {
-        Altitude = 130,
+        Altitude = 180,
         Latitude = 45.46424200394995,
         Longitude = 9.190277486808588
     };
