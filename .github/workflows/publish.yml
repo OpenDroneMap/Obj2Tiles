@@ -34,18 +34,18 @@ jobs:
       run: dotnet publish -p:PublishProfile=osx-x64.pubxml Obj2Tiles  
 
     - name: Zip win-x64
-      run: zip -r Obj2Tiles-Win64.zip ./Obj2Tiles/bin/Release/net6.0/publish/win-x64/*
+      run: cd Obj2Tiles/bin/Release/net6.0/publish/win-x64/ && zip -r ../../../../../../Obj2Tiles-Win64.zip *
     - name: Zip win-arm
-      run: zip -r Obj2Tiles-WinArm.zip ./Obj2Tiles/bin/Release/net6.0/publish/win-arm/*
+      run: cd Obj2Tiles/bin/Release/net6.0/publish/win-arm/ && zip -r ../../../../../../Obj2Tiles-WinArm.zip *
     - name: Zip win-arm64
-      run: zip -r Obj2Tiles-WinArm64.zip ./Obj2Tiles/bin/Release/net6.0/publish/win-arm64/*
+      run: cd Obj2Tiles/bin/Release/net6.0/publish/win-arm64/ && zip -r ../../../../../../Obj2Tiles-WinArm64.zip *
     - name: Zip linux-x64
-      run: zip -r Obj2Tiles-Linux64.zip ./Obj2Tiles/bin/Release/net6.0/publish/linux-x64/*
+      run: cd Obj2Tiles/bin/Release/net6.0/publish/linux-x64/ && zip -r ../../../../../../Obj2Tiles-Linux64.zip *
     - name: Zip linux-arm
-      run: zip -r Obj2Tiles-LinuxArm.zip ./Obj2Tiles/bin/Release/net6.0/publish/linux-arm/*
+      run: cd Obj2Tiles/bin/Release/net6.0/publish/linux-arm/ && zip -r ../../../../../../Obj2Tiles-LinuxArm.zip *
     - name: Zip osx-x64
-      run: zip -r Obj2Tiles-Osx64.zip ./Obj2Tiles/bin/Release/net6.0/publish/osx-x64/*        
-
+      run: cd Obj2Tiles/bin/Release/net6.0/publish/osx-x64/ && zip -r ../../../../../../Obj2Tiles-Osx64.zip *
+      
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
