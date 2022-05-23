@@ -6,8 +6,12 @@
 ![languages](https://img.shields.io/github/languages/top/HeDo88TH/Obj2Tiles)
 [![Build & Test](https://github.com/HeDo88TH/Obj2Tiles/actions/workflows/build-test.yml/badge.svg)](https://github.com/HeDo88TH/Obj2Tiles/actions/workflows/build-test.yml)
 
-Obj2Tiles is a full fledged tool to convert OBJ files to 3D Tiles format. 
+Obj2Tiles is a fully fledged tool to convert OBJ files to 3D Tiles format. 
 It creates multiple LODs, splits the mesh and repacks the textures.
+
+## Installation
+
+You can download precompiled binaries for Windows, Linux and macOS from https://github.com/OpenDroneMap/Obj2Tiles/releases.
 
 ## Command line parameters
 
