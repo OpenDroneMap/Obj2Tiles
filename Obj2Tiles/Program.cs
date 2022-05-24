@@ -78,8 +78,8 @@ namespace Obj2Tiles
                 if (opts.StopAt == Stage.Splitting)
                     return;
 
-                var gpsCoords = opts.Latitude != null && opts.Longitude != null && opts.Altitude != null
-                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude.Value)
+                var gpsCoords = opts.Latitude != null && opts.Longitude != null
+                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude)
                     : null;
 
                 Console.WriteLine();
