@@ -148,7 +148,7 @@ public static partial class StagesFacade
     // Where is it?
     private static readonly GpsCoords DefaultGpsCoords = new()
     {
-        Altitude = 180,
+        Altitude = 0,
         Latitude = 45.46424200394995,
         Longitude = 9.190277486808588
     };
