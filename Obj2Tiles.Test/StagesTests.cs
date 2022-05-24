@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -59,6 +61,22 @@ public class StagesTests
         };
 
         var transform = gpsCoords.ToEcefTransform();
+
+    }
+    
+    [Test]
+    public void TilingStage_TileCoords2()
+    {
+        var gpsCoords = new GpsCoords
+        {
+            Altitude = 0,
+            Latitude = 46.84265123717067,
+            Longitude = -91.99400951340482
+        };
+
+        var transform = gpsCoords.ToEcefTransform();
+        
+        Console.WriteLine(JsonConvert.SerializeObject(transform, Formatting.Indented));
 
     }
 }
