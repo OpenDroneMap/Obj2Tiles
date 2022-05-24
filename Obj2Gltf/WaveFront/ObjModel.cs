@@ -11,11 +11,11 @@ namespace SilentWave.Obj2Gltf.WaveFront
     /// </summary>
     public class ObjModel
     {
-        public String Name { get; set; }
+        public string Name { get; set; }
         /// <summary>
         /// obj used mat file path
         /// </summary>
-        public String MatFilename { get; set; }
+        public string MatFilename { get; set; }
         /// <summary>
         /// vertices coordinates list
         /// </summary>
@@ -29,7 +29,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// </summary>
         public List<SVec2> Uvs { get; set; } = new List<SVec2>();
 
-        private Dictionary<String, Geometry> _Geometries = new Dictionary<String, Geometry>();
+        private Dictionary<string, Geometry> _Geometries = new Dictionary<string, Geometry>();
         /// <summary>
         /// grouped geometries
         /// </summary>
@@ -44,7 +44,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// <param name="writer"></param>
         public void Write(StreamWriter writer)
         {
-            if (!String.IsNullOrEmpty(MatFilename))
+            if (!string.IsNullOrEmpty(MatFilename))
             {
                 writer.WriteLine($"mtllib {MatFilename}");
             }
@@ -54,8 +54,8 @@ namespace SilentWave.Obj2Gltf.WaveFront
             foreach (var g in Geometries) g.Write(writer);
         }
 
-        private static FaceVertex GetVertex(FaceVertex v, Dictionary<Int32, Int32> pnts,
-            Dictionary<Int32, Int32> normals, Dictionary<Int32, Int32> uvs)
+        private static FaceVertex GetVertex(FaceVertex v, Dictionary<int, int> pnts,
+            Dictionary<int, int> normals, Dictionary<int, int> uvs)
         {
             var v1p = v.V;
             var v1n = v.N;
@@ -76,7 +76,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
         }
 
         private Geometry AddGeo(Geometry g, GeomBox box,
-            List<Int32> pnts, List<Int32> normals, List<Int32> uvs)
+            List<int> pnts, List<int> normals, List<int> uvs)
         {
             var gg = new Geometry(g.Id);
 
@@ -135,9 +135,9 @@ namespace SilentWave.Obj2Gltf.WaveFront
             //}
 
 
-            var pntDict = new Dictionary<Int32, Int32>();
-            var normDict = new Dictionary<Int32, Int32>();
-            var uvDict = new Dictionary<Int32, Int32>();
+            var pntDict = new Dictionary<int, int>();
+            var normDict = new Dictionary<int, int>();
+            var uvDict = new Dictionary<int, int>();
 
             foreach (var p in pntList)
             {
@@ -191,15 +191,15 @@ namespace SilentWave.Obj2Gltf.WaveFront
 
         class GeomBox
         {
-            public Int32 Index { get; set; } = -1;
+            public int Index { get; set; } = -1;
 
             public SVec3 Center { get; set; }
 
-            public SortedSet<Int32> Pnts { get; set; }
+            public SortedSet<int> Pnts { get; set; }
 
-            public SortedSet<Int32> Norms { get; set; }
+            public SortedSet<int> Norms { get; set; }
 
-            public SortedSet<Int32> Uvs { get; set; }
+            public SortedSet<int> Uvs { get; set; }
         }
 
         private GeomBox GetBoxIndex(Geometry g, IList<BoundingBox> boxes)
@@ -218,9 +218,9 @@ namespace SilentWave.Obj2Gltf.WaveFront
 
         private GeomBox GetCenter(Geometry g)
         {
-            var ps = new SortedSet<Int32>();
-            var ns = new SortedSet<Int32>();
-            var ts = new SortedSet<Int32>();
+            var ps = new SortedSet<int>();
+            var ns = new SortedSet<int>();
+            var ts = new SortedSet<int>();
             var sumX = 0.0f;
             var sumY = 0.0f;
             var sumZ = 0.0f;
@@ -330,7 +330,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
             return box;
         }
 
-        public Geometry[] GetOrAddGeometries(params String[] names)
+        public Geometry[] GetOrAddGeometries(params string[] names)
         {
             var results = new List<Geometry>();
             foreach (var name in names)

@@ -64,12 +64,12 @@ namespace SilentWave.Obj2Gltf.Geom
             var v2 = rotation.GetColumn(1);
             var v3 = rotation.GetColumn(2);
 
-            var u1 = Single.MinValue; //-Number.MAX_VALUE;
-            var u2 = Single.MinValue; //-Number.MAX_VALUE;
-            var u3 = Single.MinValue; //-Number.MAX_VALUE;
-            var l1 = Single.MaxValue; //Number.MAX_VALUE;
-            var l2 = Single.MaxValue; //Number.MAX_VALUE;
-            var l3 = Single.MaxValue; //Number.MAX_VALUE;
+            var u1 = float.MinValue; //-Number.MAX_VALUE;
+            var u2 = float.MinValue; //-Number.MAX_VALUE;
+            var u3 = float.MinValue; //-Number.MAX_VALUE;
+            var l1 = float.MaxValue; //Number.MAX_VALUE;
+            var l2 = float.MaxValue; //Number.MAX_VALUE;
+            var l3 = float.MaxValue; //Number.MAX_VALUE;
 
             for (var i = 0; i < length; i++)
             {

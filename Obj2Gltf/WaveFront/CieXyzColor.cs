@@ -11,8 +11,8 @@ namespace SilentWave.Obj2Gltf.WaveFront
     /// </summary>
     public class CieXyzColor
     {
-        public Single X { get; set; }
-        public Single Y { get; set; }
-        public Single Z { get; set; }
+        public float X { get; set; }
+        public float Y { get; set; }
+        public float Z { get; set; }
     }
 }

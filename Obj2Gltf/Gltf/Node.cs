@@ -21,11 +21,11 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// Optional user-defined name for this object.
         /// </summary>
         [JsonProperty("name")]
-        public String Name { get; set; }
+        public string Name { get; set; }
         /// <summary>
         /// The index of the mesh in this node.
         /// </summary>
         [JsonProperty("mesh")]
-        public Int32? Mesh { get; set; }
+        public int? Mesh { get; set; }
     }
 }

@@ -16,14 +16,14 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// <summary>
         /// A factor of 1.0 is fully opaque.
         /// </summary>
-        public Double Factor { get; set; }
+        public double Factor { get; set; }
         /// <summary>
         /// d -halo 0.0, will be fully dissolved at its center and will 
         /// appear gradually more opaque toward its edge.
         /// </summary>
-        public Boolean Halo { get; set; }
+        public bool Halo { get; set; }
 
-        public override String ToString()
+        public override string ToString()
         {
             if (!Halo)
             {

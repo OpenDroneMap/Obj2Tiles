@@ -13,7 +13,7 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// Optional user-defined name for this object.
         /// </summary>
         [JsonProperty("name")]
-        public String Name { get; set; }
+        public string Name { get; set; }
         /// <summary>
         /// The data type of components in the attribute.
         /// </summary>
@@ -24,19 +24,19 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// with the number of bytes in the buffer view.
         /// </summary>
         [JsonProperty("count")]
-        public Int32 Count { get; set; }
+        public int Count { get; set; }
         /// <summary>
         /// Minimum value of each component in this attribute.
         /// </summary>
         [JsonProperty("min")]
         [JsonConverter(typeof(SingleArrayJsonConverter))]
-        public Single[] Min { get; set; }
+        public float[] Min { get; set; }
         /// <summary>
         /// Maximum value of each component in this attribute.
         /// </summary>
         [JsonProperty("max")]
         [JsonConverter(typeof(SingleArrayJsonConverter))]
-        public Single[] Max { get; set; }
+        public float[] Max { get; set; }
         /// <summary>
         /// Specifies if the attribute is a scalar, vector, or matrix.
         /// </summary>
@@ -47,11 +47,11 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// The parent buffer view this accessor reads from.
         /// </summary>
         [JsonProperty("bufferView")]
-        public Int32 BufferView { get; set; }
+        public int BufferView { get; set; }
         /// <summary>
         /// The offset relative to the start of the parent `BufferView` in bytes.
         /// </summary>
         [JsonProperty("byteOffset")]
-        public Int64 ByteOffset { get; set; }
+        public long ByteOffset { get; set; }
     }
 }

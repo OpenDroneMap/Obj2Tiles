@@ -12,6 +12,6 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// The index of the texture.
         /// </summary>
         [JsonProperty("index")]
-        public Int32 Index { get; set; }
+        public int Index { get; set; }
     }
 }

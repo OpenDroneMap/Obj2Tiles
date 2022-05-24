@@ -9,19 +9,19 @@ namespace SilentWave.Obj2Gltf
     {
         public SingleRange()
         {
-            Min = Single.MaxValue;
-            Max = Single.MinValue;
+            Min = float.MaxValue;
+            Max = float.MinValue;
         }
-        public Single Min { get; set; }
+        public float Min { get; set; }
 
-        public Single Max { get; set; }
+        public float Max { get; set; }
 
-        public Boolean IsValid()
+        public bool IsValid()
         {
             return Min <= Max;
         }
 
-        public override String ToString()
+        public override string ToString()
         {
             return $"(Min: {Min}, Max: {Max})";
         }

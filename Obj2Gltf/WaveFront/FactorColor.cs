@@ -14,41 +14,41 @@ namespace SilentWave.Obj2Gltf.WaveFront
         {
 
         }
-        public FactorColor(Double v)
+        public FactorColor(double v)
         {
             Red = v;
             Green = v;
             Blue = v;
         }
 
-        public FactorColor(Double r, Double g, Double b)
+        public FactorColor(double r, double g, double b)
         {
             Red = r;
             Green = g;
             Blue = b;
         }
-        public Double Red { get; set; }
+        public double Red { get; set; }
 
-        public Double Green { get; set; }
+        public double Green { get; set; }
 
-        public Double Blue { get; set; }
+        public double Blue { get; set; }
 
-        public override String ToString()
+        public override string ToString()
         {
             return $"{Red:0.0000} {Green:0.0000} {Blue:0.0000}";
         }
 
-        public Double[] ToArray(Double? alpha = null)
+        public double[] ToArray(double? alpha = null)
         {
-            var max = new Double[] { Red, Green, Blue }.Max();
+            var max = new double[] { Red, Green, Blue }.Max();
             if (max > 1)
             {
                 Red /= max;
                 Green /= max;
                 Blue /= max;
             }
-            if (alpha == null) return new Double[] { Red, Green, Blue };
-            return new Double[] { Red, Green, Blue, alpha.Value };
+            if (alpha == null) return new double[] { Red, Green, Blue };
+            return new double[] { Red, Green, Blue, alpha.Value };
         }
     }
 }

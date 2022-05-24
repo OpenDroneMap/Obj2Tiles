@@ -12,11 +12,11 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// Tool that generated this glTF model.
         /// </summary>
         [JsonProperty("generator")]
-        public String Generator { get; set; }
+        public string Generator { get; set; }
         /// <summary>
         /// The glTF version of this asset.
         /// </summary>
         [JsonProperty("version")]
-        public String Version { get; set; }
+        public string Version { get; set; }
     }
 }

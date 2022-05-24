@@ -13,7 +13,7 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// The material's base color factor.
         /// </summary>
         [JsonProperty("baseColorFactor")]
-        public Double[] BaseColorFactor { get; set; } = new Double[] { 1, 1, 1, 1 };
+        public double[] BaseColorFactor { get; set; } = new double[] { 1, 1, 1, 1 };
         /// <summary>
         /// The base color texture.
         /// </summary>
@@ -23,12 +23,12 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// The metalness of the material.
         /// </summary>
         [JsonProperty("metallicFactor")]
-        public Double MetallicFactor { get; set; } = 0.0;
+        public double MetallicFactor { get; set; } = 0.0;
         /// The roughness of the material.
         ///
         /// * A value of 1.0 means the material is completely rough.
         /// * A value of 0.0 means the material is completely smooth.
         [JsonProperty("roughnessFactor")]
-        public Double RoughnessFactor { get; set; } = 0.9;
+        public double RoughnessFactor { get; set; } = 0.9;
     }
 }

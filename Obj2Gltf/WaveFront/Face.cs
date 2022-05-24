@@ -10,14 +10,14 @@ namespace SilentWave.Obj2Gltf.WaveFront
     /// </summary>
     public class Face
     {
-        public Face(String materialName = "default")
+        public Face(string materialName = "default")
         {
             MatName = materialName;
         }
         /// <summary>
         /// face used material name
         /// </summary>
-        public String MatName { get; }
+        public string MatName { get; }
         /// <summary>
         /// face meshes
         /// </summary>
@@ -30,7 +30,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
         {
             writer.WriteLine($"usemtl {MatName}");
 
-            var contents = String.Join(Environment.NewLine, Triangles);
+            var contents = string.Join(Environment.NewLine, Triangles);
             writer.WriteLine(contents);
         }
     }

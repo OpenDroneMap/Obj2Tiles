@@ -13,7 +13,7 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// Optional user-defined name for this object.
         /// </summary>
         [JsonProperty("name")]
-        public String Name { get; set; }
+        public string Name { get; set; }
         /// <summary>
         /// A set of parameter values that are used to define the metallic-roughness
         /// material model from Physically-Based Rendering (PBR) methodology. When not
@@ -25,7 +25,7 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// The emissive color of the material.
         /// </summary>
         [JsonProperty("emissiveFactor")]
-        public Double[] EmissiveFactor { get; set; }
+        public double[] EmissiveFactor { get; set; }
         /// <summary>
         /// The alpha rendering mode of the material.
         ///
@@ -59,9 +59,9 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// equation is evaluated.
         /// </summary>
         [JsonProperty("doubleSided")]
-        public Boolean DoubleSided { get; set; }
+        public bool DoubleSided { get; set; }
 
-        public override String ToString()
+        public override string ToString()
             => $"AM:{AlphaMode} DS:{(DoubleSided ? 1 : 0)} MRB:[{PbrMetallicRoughness.BaseColorFactor[0]}, {PbrMetallicRoughness.BaseColorFactor[1]}, {PbrMetallicRoughness.BaseColorFactor[2]}, {PbrMetallicRoughness.BaseColorFactor[3]}] E:[{EmissiveFactor[0]}, {EmissiveFactor[1]}, {EmissiveFactor[2]}] M:{PbrMetallicRoughness.MetallicFactor} R:{PbrMetallicRoughness.RoughnessFactor} T:{PbrMetallicRoughness.BaseColorTexture?.Index.ToString() ?? "<null>"} {Name}";
     }
 }

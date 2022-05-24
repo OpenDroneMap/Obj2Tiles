@@ -13,6 +13,6 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// The indices of each root node.
         /// </summary>
         [JsonProperty("nodes")]
-        public List<Int32> Nodes { get; set; } = new List<Int32>();
+        public List<int> Nodes { get; set; } = new List<int>();
     }
 }

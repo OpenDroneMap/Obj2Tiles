@@ -8,11 +8,11 @@ namespace SilentWave.Obj2Gltf.Geom
     // Cesium
     internal class Matrix3
     {
-        private readonly Single[] _arr = new Single[9];
+        private readonly float[] _arr = new float[9];
 
-        public Matrix3(Single column0Row0, Single column1Row0, Single column2Row0,
-                           Single column0Row1, Single column1Row1, Single column2Row1,
-                           Single column0Row2, Single column1Row2, Single column2Row2)
+        public Matrix3(float column0Row0, float column1Row0, float column2Row0,
+                           float column0Row1, float column1Row1, float column2Row1,
+                           float column0Row2, float column1Row2, float column2Row2)
         {
             _arr[0] = column0Row0;
             _arr[1] = column0Row1;
@@ -25,7 +25,7 @@ namespace SilentWave.Obj2Gltf.Geom
             _arr[8] = column2Row2;
         }
 
-        public SVec3 GetColumn(Int32 index)
+        public SVec3 GetColumn(int index)
         {
             switch(index)
             {
@@ -50,12 +50,12 @@ namespace SilentWave.Obj2Gltf.Geom
             return new Matrix3(_arr[0], _arr[1], _arr[2], _arr[3], _arr[4], _arr[5], _arr[6], _arr[7], _arr[8]);
         }
 
-        private Single ComputeFrobeniusNorm()
+        private float ComputeFrobeniusNorm()
         {
-            return (Single)Math.Sqrt(_arr.Select(c => c * c).Sum());
+            return (float)Math.Sqrt(_arr.Select(c => c * c).Sum());
         }
 
-        private static Int32 GetArrayIndex(Int32 row, Int32 col)
+        private static int GetArrayIndex(int row, int col)
         {
             return row + col * 3;
         }
@@ -76,7 +76,7 @@ namespace SilentWave.Obj2Gltf.Geom
             return new Matrix3(column0Row0, column0Row1, column0Row2, column1Row0, column1Row1, column1Row2, column2Row0, column2Row1, column2Row2);
         }
 
-        public Single this[Int32 row, Int32 col]
+        public float this[int row, int col]
         {
             get { return _arr[GetArrayIndex(row, col)]; }
             set
@@ -86,16 +86,16 @@ namespace SilentWave.Obj2Gltf.Geom
             }
         }
 
-        private Single OffDiagonalFrobeniusNorm()
+        private float OffDiagonalFrobeniusNorm()
         {
             var a = _arr[GetArrayIndex(0, 0)];
             var b = _arr[GetArrayIndex(1, 1)];
             var c = _arr[GetArrayIndex(2, 2)];
-            return (Single)Math.Sqrt(a * a + b * b + c * c);
+            return (float)Math.Sqrt(a * a + b * b + c * c);
         }
 
-        static Int32[] rowVal =  { 1, 0, 0 };
-        static Int32[] colVal = { 2, 2, 1 };
+        static int[] rowVal =  { 1, 0, 0 };
+        static int[] colVal = { 2, 2, 1 };
         /// <summary>
         /// This routine was created based upon Matrix Computations, 3rd ed., by Golub and Van Loan,
         // section 8.4.2 The 2by2 Symmetric Schur Decomposition.
@@ -134,17 +134,17 @@ namespace SilentWave.Obj2Gltf.Geom
                 var qp = this[p, q];
 
                 var tau = (qq - pp) / (2.0f * qp);
-                Single t;
+                float t;
                 if (tau < 0)
                 {
-                    t = -1.0f / (-tau + (Single)Math.Sqrt(1.0 + tau * tau));
+                    t = -1.0f / (-tau + (float)Math.Sqrt(1.0 + tau * tau));
                 }
                 else
                 {
-                    t = 1.0f / (tau + (Single)Math.Sqrt(1.0 + tau * tau));
+                    t = 1.0f / (tau + (float)Math.Sqrt(1.0 + tau * tau));
                 }
 
-                c = 1.0f / (Single)Math.Sqrt(1.0f + t * t);
+                c = 1.0f / (float)Math.Sqrt(1.0f + t * t);
                 s = t * c;
             }
 
@@ -156,7 +156,7 @@ namespace SilentWave.Obj2Gltf.Geom
             return result;
         }
 
-        public Single this[Int32 index]
+        public float this[int index]
         {
             get { return _arr[index]; }
         }
@@ -164,7 +164,7 @@ namespace SilentWave.Obj2Gltf.Geom
         public Matrix3 MultiplyByScale(SVec3 scale)
         {
             var matrix = _arr;
-            var result = new Single[9];
+            var result = new float[9];
 
             result[0] = matrix[0] * scale.X;
             result[1] = matrix[1] * scale.X;

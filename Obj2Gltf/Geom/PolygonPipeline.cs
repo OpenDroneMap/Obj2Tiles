@@ -9,33 +9,33 @@ namespace SilentWave.Obj2Gltf.Geom
     {
         class Node
         {
-            public Node(Int32 i, Single x, Single y)
+            public Node(int i, float x, float y)
             {
                 Index = i;
                 X = x;
                 Y = y;
             }
-            public Int32 Index { get; set; }
+            public int Index { get; set; }
 
-            public Single X { get; set; }
+            public float X { get; set; }
 
-            public Single Y { get; set; }
+            public float Y { get; set; }
 
             public Node Prev { get; set; }
 
             public Node Next { get; set; }
 
-            public Single? Z { get; set; }
+            public float? Z { get; set; }
 
             public Node PrevZ { get; set; }
 
             public Node NextZ { get; set; }
 
-            public Boolean Steiner { get; set; }
+            public bool Steiner { get; set; }
         }
-        public static Int32[] Triangulate(IList<SVec2> positions, Int32[] holes)
+        public static int[] Triangulate(IList<SVec2> positions, int[] holes)
         {
-            var arr = new Single[positions.Count * 2];
+            var arr = new float[positions.Count * 2];
             for (var i = 0; i < positions.Count; i++)
             {
                 var pa = positions[i].ToArray();
@@ -45,10 +45,10 @@ namespace SilentWave.Obj2Gltf.Geom
             return Earcut(arr, holes, 2).ToArray();
         }
 
-        private static Single SignedArea(Single[] data, Int32 start, Int32 end, Int32 dim)
+        private static float SignedArea(float[] data, int start, int end, int dim)
         {
-            Single sum = 0;
-            for (Int32 i = start, j = end - dim; i < end; i += dim)
+            float sum = 0;
+            for (int i = start, j = end - dim; i < end; i += dim)
             {
                 sum += (data[j] - data[i]) * (data[i + 1] + data[j + 1]);
                 j = i;
@@ -65,7 +65,7 @@ namespace SilentWave.Obj2Gltf.Geom
             if (p.NextZ != null) p.NextZ.PrevZ = p.PrevZ;
         }
 
-        private static Node InsertNode(Int32 index, Single x, Single y, Node last)
+        private static Node InsertNode(int index, float x, float y, Node last)
         {
             var p = new Node(index, x, y);
             if (last == null)
@@ -89,12 +89,12 @@ namespace SilentWave.Obj2Gltf.Geom
         /// <param name="p1"></param>
         /// <param name="p2"></param>
         /// <returns></returns>
-        private static Boolean Equal(Node p1, Node p2)
+        private static bool Equal(Node p1, Node p2)
         {
             return p1.X == p2.X && p1.Y == p2.Y;
         }
 
-        private static Boolean Intersects(Node p1, Node q1, Node p2, Node q2)
+        private static bool Intersects(Node p1, Node q1, Node p2, Node q2)
         {
             if ((Equal(p1, q1) && Equal(p2, q2)) || (Equal(p1, q2) && Equal(p2, q1)))
             {
@@ -110,7 +110,7 @@ namespace SilentWave.Obj2Gltf.Geom
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <returns></returns>
-        private static Boolean IntersectsPolygon(Node a, Node b)
+        private static bool IntersectsPolygon(Node a, Node b)
         {
             var p = a;
             do
@@ -128,14 +128,14 @@ namespace SilentWave.Obj2Gltf.Geom
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <returns></returns>
-        private static Boolean LocallyInside(Node a, Node b)
+        private static bool LocallyInside(Node a, Node b)
         {
             return Area(a.Prev, a, a.Next) < 0 ?
                 Area(a, b, a.Next) >= 0 && Area(a, a.Prev, b) >= 0 :
                 Area(a, b, a.Prev) < 0 || Area(a, a.Next, b) < 0;
         }
 
-        private static Boolean MiddleInside(Node a, Node b)
+        private static bool MiddleInside(Node a, Node b)
         {
             var p = a;
             var inside = false;
@@ -183,15 +183,15 @@ namespace SilentWave.Obj2Gltf.Geom
             return b2;
         }
 
-        private static Boolean PointInTriangle(Single ax, Single ay, Single bx, Single by,
-            Single cx, Single cy, Single px, Single py)
+        private static bool PointInTriangle(float ax, float ay, float bx, float by,
+            float cx, float cy, float px, float py)
         {
             return (cx - px) * (ay - py) - (ax - px) * (cy - py) >= 0 &&
            (ax - px) * (by - py) - (bx - px) * (ay - py) >= 0 &&
            (bx - px) * (cy - py) - (cx - px) * (by - py) >= 0;
         }
 
-        private static Node LinkedList(Single[] data, Int32 start, Int32 end, Int32 dim, Boolean clockWise)
+        private static Node LinkedList(float[] data, int start, int end, int dim, bool clockWise)
         {
             Node last = null;
             if (clockWise == (SignedArea(data, start, end, dim) > 0))
@@ -231,13 +231,13 @@ namespace SilentWave.Obj2Gltf.Geom
             return leftMost;
         }
         // TODO:
-        private static Node EliminateHoles(Single[] data, Int32[] holes, Node outerNode, Int32 dim)
+        private static Node EliminateHoles(float[] data, int[] holes, Node outerNode, int dim)
         {
             //return outerNode;
             throw new NotImplementedException();
         }
 
-        private static Boolean IsEarHashed(Node ear, Single minX, Single minY, Single size)
+        private static bool IsEarHashed(Node ear, float minX, float minY, float size)
         {
             var a = ear.Prev;
             var b = ear;
@@ -283,7 +283,7 @@ namespace SilentWave.Obj2Gltf.Geom
         /// </summary>
         /// <param name="ear"></param>
         /// <returns></returns>
-        private static Boolean IsEar(Node ear)
+        private static bool IsEar(Node ear)
         {
             var a = ear.Prev;
             var b = ear;
@@ -305,10 +305,10 @@ namespace SilentWave.Obj2Gltf.Geom
             return true;
         }
 
-        private static Int32 ZOrder(Single x0, Single y0, Single minX, Single minY, Single size)
+        private static int ZOrder(float x0, float y0, float minX, float minY, float size)
         {
-            var x = (Int32)(32767 * (x0 - minX) / size);
-            var y = (Int32)(32767 * (y0 - minY) / size);
+            var x = (int)(32767 * (x0 - minX) / size);
+            var y = (int)(32767 * (y0 - minY) / size);
 
             x = (x | (x << 8)) & 0x00FF00FF;
             x = (x | (x << 4)) & 0x0F0F0F0F;
@@ -323,7 +323,7 @@ namespace SilentWave.Obj2Gltf.Geom
             return x | (y << 1);
         }
 
-        private static Single Area(Node p, Node q, Node r)
+        private static float Area(Node p, Node q, Node r)
         {
             return (q.Y - p.Y) * (r.X - q.X) - (q.X - p.X) * (r.Y - q.Y);
         }
@@ -334,7 +334,7 @@ namespace SilentWave.Obj2Gltf.Geom
             if (end == null) end = start;
 
             var p = start;
-            Boolean again;
+            bool again;
             do
             {
                 again = false;
@@ -357,7 +357,7 @@ namespace SilentWave.Obj2Gltf.Geom
             return end;
         }
 
-        private static Node CureLocalIntersections(Node start, List<Int32> triangles, Int32 dim)
+        private static Node CureLocalIntersections(Node start, List<int> triangles, int dim)
         {
             var p = start;
             do
@@ -383,7 +383,7 @@ namespace SilentWave.Obj2Gltf.Geom
             return p;
         }
 
-        private static Boolean IsValidDiagonal(Node a, Node b)
+        private static bool IsValidDiagonal(Node a, Node b)
         {
             return a.Next.Index != b.Index && a.Prev.Index != b.Index && !IntersectsPolygon(a, b) &&
                 LocallyInside(a, b) && LocallyInside(b, a) && MiddleInside(a, b);
@@ -397,7 +397,7 @@ namespace SilentWave.Obj2Gltf.Geom
         /// <param name="minX"></param>
         /// <param name="minY"></param>
         /// <param name="size"></param>
-        private static void SplitEarcut(Node start, List<Int32> triangles, Int32 dim, Single minX, Single minY, Single size)
+        private static void SplitEarcut(Node start, List<int> triangles, int dim, float minX, float minY, float size)
         {
             // look for a valid diagonal that divides the polygon into two
             var a = start;
@@ -428,7 +428,7 @@ namespace SilentWave.Obj2Gltf.Geom
             } while (a != start);
         }
 
-        private static void IndexCurve(Node start, Single minX, Single minY, Single size)
+        private static void IndexCurve(Node start, float minX, float minY, float size)
         {
             var p = start;
             do
@@ -451,8 +451,8 @@ namespace SilentWave.Obj2Gltf.Geom
 
         private static Node SortLinked(Node list)
         {
-            Int32 inSize = 1;
-            Int32 numMerges;
+            int inSize = 1;
+            int numMerges;
             do
             {
                 var p = list;
@@ -529,8 +529,8 @@ namespace SilentWave.Obj2Gltf.Geom
         /// <param name="minY"></param>
         /// <param name="size"></param>
         /// <param name="pass"></param>
-        private static void EarcutLinked(Node ear, List<Int32> triangles,
-            Int32 dim, Single minX, Single minY, Single size, Int32 pass = 0)
+        private static void EarcutLinked(Node ear, List<int> triangles,
+            int dim, float minX, float minY, float size, int pass = 0)
         {
             if (ear == null) return;
 
@@ -591,13 +591,13 @@ namespace SilentWave.Obj2Gltf.Geom
 
         }
 
-        private static List<Int32> Earcut(Single[] data, Int32[] holes, Int32 dim)
+        private static List<int> Earcut(float[] data, int[] holes, int dim)
         {
             var hasHoles = holes != null && holes.Length > 0;
             var outerLen = hasHoles ? holes[0] * dim : data.Length;
             var outerNode = LinkedList(data, 0, outerLen, dim, true);
 
-            var triangles = new List<Int32>();
+            var triangles = new List<int>();
 
             if (outerNode == null) return triangles;
 
@@ -606,14 +606,14 @@ namespace SilentWave.Obj2Gltf.Geom
                 outerNode = EliminateHoles(data, holes, outerNode, dim);
             }
 
-            Single minX = 0, minY = 0, size = 0;
+            float minX = 0, minY = 0, size = 0;
 
             // if the shape is not too simple, we'll use z-order curve hash later; calculate polygon bbox
             if (data.Length > 80 * dim)
             {
-                Single maxX;
+                float maxX;
                 minX = maxX = data[0];
-                Single maxY;
+                float maxY;
                 minY = maxY = data[1];
 
                 for (var i = dim; i < outerLen; i += dim)

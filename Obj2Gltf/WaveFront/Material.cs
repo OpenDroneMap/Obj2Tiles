@@ -15,7 +15,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// <summary>
         ///  matname
         /// </summary>
-        public String Name { get; set; }
+        public string Name { get; set; }
         /// <summary>
         /// Ka: Ambient Color
         /// </summary>
@@ -27,11 +27,11 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// <summary>
         /// map_Kd: Diffuse texture file path
         /// </summary>
-        public String DiffuseTextureFile { get; set; }
+        public string DiffuseTextureFile { get; set; }
         /// <summary>
         /// map_Ka: Ambient texture file path
         /// </summary>
-        public String AmbientTextureFile { get; set; }
+        public string AmbientTextureFile { get; set; }
         /// <summary>
         /// Ks: specular reflectivity of the current material
         /// </summary>
@@ -48,7 +48,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// <summary>
         /// illum: illum_# 0 ~ 10
         /// </summary>
-        public Int32? Illumination { get; set; }
+        public int? Illumination { get; set; }
         /// <summary>
         /// d: the dissolve for the current material.
         /// </summary>
@@ -60,17 +60,17 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// <summary>
         /// Ns: specularShininess 0 ~ 1000
         /// </summary>
-        public Double SpecularExponent { get; set; }
+        public double SpecularExponent { get; set; }
         /// <summary>
         /// sharpness value 0 ~ 1000, The default is 60
         /// </summary>
-        public Int32? Sharpness { get; set; }
+        public int? Sharpness { get; set; }
         /// <summary>
         /// 0.001 ~ 10
         /// </summary>
-        public Double? OpticalDensity { get; set; }
+        public double? OpticalDensity { get; set; }
 
-        public Double GetAlpha()
+        public double GetAlpha()
         {
             if (Dissolve != null)
             {
@@ -83,7 +83,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
             return 1.0;
         }
 
-        public override String ToString()
+        public override string ToString()
         {
             var sb = new StringBuilder();
             sb.Append($"newmtl {Name}" + Environment.NewLine);
@@ -119,11 +119,11 @@ namespace SilentWave.Obj2Gltf.WaveFront
             {
                 sb.Append($"Tf {Filter}" + Environment.NewLine);
             }
-            if (!String.IsNullOrEmpty(AmbientTextureFile))
+            if (!string.IsNullOrEmpty(AmbientTextureFile))
             {
                 sb.Append($"map_Ka {DiffuseTextureFile}" + Environment.NewLine);
             }
-            if (!String.IsNullOrEmpty(DiffuseTextureFile))
+            if (!string.IsNullOrEmpty(DiffuseTextureFile))
             {
                 sb.Append($"map_Kd {DiffuseTextureFile}" + Environment.NewLine);
             }

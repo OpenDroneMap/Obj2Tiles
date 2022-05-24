@@ -12,7 +12,7 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// Optional user-defined name for this object.
         /// </summary>
         [JsonProperty("name")]
-        public String Name { get; set; }
+        public string Name { get; set; }
         /// <summary>
         /// Magnification filter.
         /// </summary>

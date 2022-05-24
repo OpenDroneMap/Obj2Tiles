@@ -7,9 +7,9 @@ namespace SilentWave.Obj2Gltf.WaveFront
 {
     public interface IMtlParser
     {
-        IEnumerable<Material> Parse(Stream stream, System.String searchPath, Encoding encoding = null);
-        Material[] Parse(System.String path, System.String searchPath = null, Encoding encoding = null);
-        Task<Material[]> ParseAsync(Stream stream, System.String searchPath, Encoding encoding = null);
-        Task<Material[]> ParseAsync(System.String path, System.String searchPath = null, Encoding encoding = null);
+        IEnumerable<Material> Parse(Stream stream, string searchPath, Encoding encoding = null);
+        Material[] Parse(string path, string searchPath = null, Encoding encoding = null);
+        Task<Material[]> ParseAsync(Stream stream, string searchPath, Encoding encoding = null);
+        Task<Material[]> ParseAsync(string path, string searchPath = null, Encoding encoding = null);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 
 namespace SilentWave.Obj2Gltf
@@ -8,29 +9,29 @@ namespace SilentWave.Obj2Gltf
     /// </summary>
     public struct SVec2
     {
-        public SVec2(Single u, Single v)
+        public SVec2(float u, float v)
         {
             U = u;
             V = v;
         }
 
-        public Single U;
+        public readonly float U;
 
-        public Single V;
+        public readonly float V;
 
-        public override String ToString() => $"{U}, {V}";
+        public override string ToString() => $"{U}, {V}";
 
-        public void WriteBytes(System.IO.BinaryWriter sw)
+        public void WriteBytes(BinaryWriter sw)
         {
             sw.Write(U);
             sw.Write(V);
         }
 
-        public Single[] ToArray() => new[] { U, V };
+        public float[] ToArray() => new[] { U, V };
 
-        public Single GetDistance(SVec2 p) => (Single)Math.Sqrt((U - p.U) * (U - p.U) + (V - p.V) * (V - p.V));
+        public float GetDistance(SVec2 p) => (float)Math.Sqrt((U - p.U) * (U - p.U) + (V - p.V) * (V - p.V));
 
-        public Single GetLength() => (Single)Math.Sqrt(U * U + V * V);
+        public float GetLength() => (float)Math.Sqrt(U * U + V * V);
 
         public SVec2 Normalize()
         {
@@ -38,7 +39,7 @@ namespace SilentWave.Obj2Gltf
             return new SVec2(U / len, V / len);
         }
 
-        public Single Dot(SVec2 v)
+        public float Dot(SVec2 v)
         {
             return U * v.U + V * v.V;
         }

@@ -7,7 +7,7 @@ namespace SilentWave.Obj2Gltf.Geom
     public class PolygonUtil
     {
         // 
-        private static Boolean IsIntersect(SVec2 ln1Start, SVec2 ln1End, SVec2 ln2Start, SVec2 ln2End)
+        private static bool IsIntersect(SVec2 ln1Start, SVec2 ln1End, SVec2 ln2Start, SVec2 ln2End)
         {
             //https://ideone.com/PnPJgb
             var A = ln1Start;
@@ -64,11 +64,11 @@ namespace SilentWave.Obj2Gltf.Geom
             //return u >= 0.0 && u <= 1.0;
         }
 
-        public static PolygonPointRes CrossTest(SVec2 p, IList<SVec2> polygon, Single tol)
+        public static PolygonPointRes CrossTest(SVec2 p, IList<SVec2> polygon, float tol)
         {
 
-            Single minX = Single.MaxValue, minY = Single.MaxValue, maxX = Single.MinValue, maxY = Single.MinValue;
-            var angleVs = new List<Single>();
+            float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+            var angleVs = new List<float>();
             var vecX = new SVec2(1.0f, 0);
             foreach (var v in polygon)
             {
@@ -79,10 +79,10 @@ namespace SilentWave.Obj2Gltf.Geom
                 if (maxX < v.U) maxX = v.U;
                 if (maxY < v.V) maxY = v.V;
                 var vector = new SVec2(v.U - p.U, v.V - p.V).Normalize();
-                var an = (Single)Math.Acos(vecX.Dot(vector));
+                var an = (float)Math.Acos(vecX.Dot(vector));
                 if (vector.V < 0)
                 {
-                    an = 2 * (Single)Math.PI - an;
+                    an = 2 * (float)Math.PI - an;
                 }
                 angleVs.Add(an);
             }
@@ -126,7 +126,7 @@ namespace SilentWave.Obj2Gltf.Geom
             }
             var angle = angleVs[startIndex] + diff / 2.0;
             var len = box.Max.GetDistance(box.Min);
-            var p2 = new SVec2(len * (Single)Math.Cos(angle), len * (Single)Math.Sin(angle));
+            var p2 = new SVec2(len * (float)Math.Cos(angle), len * (float)Math.Sin(angle));
 
             var intersectCount = 0;
             for (var i = 0; i < polygon.Count; i++)
@@ -151,7 +151,7 @@ namespace SilentWave.Obj2Gltf.Geom
             return PolygonPointRes.Outside;
         }
 
-        private static Single GetRayLength(SVec2 p, IList<SVec2> polygon)
+        private static float GetRayLength(SVec2 p, IList<SVec2> polygon)
         {
             throw new NotImplementedException();
         }

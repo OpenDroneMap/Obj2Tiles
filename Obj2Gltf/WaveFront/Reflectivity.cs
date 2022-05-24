@@ -33,14 +33,14 @@ namespace SilentWave.Obj2Gltf.WaveFront
             XYZ = xyz;
         }
 
-        public override String ToString()
+        public override string ToString()
         {
             switch (AmbientType)
             {
                 case ReflectivityType.Color:
                     return Color.ToString();
                 default: // TODO:
-                    return String.Empty;
+                    return string.Empty;
             }
         }
     }

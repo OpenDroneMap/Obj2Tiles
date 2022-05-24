@@ -9,19 +9,19 @@ namespace SilentWave.Obj2Gltf
 {
     internal class BufferState : IDisposable
     {
-        private Boolean disposedValue = false; // To detect redundant calls
+        private bool disposedValue = false; // To detect redundant calls
         private readonly GltfModel _model;
-        private readonly String _gltfFileNameNoExt;
-        private readonly String _gltfFolder;
-        private readonly Boolean _u32IndicesEnabled;
+        private readonly string _gltfFileNameNoExt;
+        private readonly string _gltfFolder;
+        private readonly bool _u32IndicesEnabled;
 
         /// <summary>
         /// This assumes the model is not already populated by buffers
         /// </summary>
-        public BufferState(GltfModel model, String gltfPath, Boolean u32IndicesEnabled)
+        public BufferState(GltfModel model, string gltfPath, bool u32IndicesEnabled)
         {
             _model = model ?? throw new ArgumentNullException(nameof(model));
-            if (String.IsNullOrWhiteSpace(gltfPath)) throw new ArgumentNullException(nameof(gltfPath));
+            if (string.IsNullOrWhiteSpace(gltfPath)) throw new ArgumentNullException(nameof(gltfPath));
             _gltfFileNameNoExt = Path.GetFileNameWithoutExtension(gltfPath);
             _gltfFolder = System.IO.Path.GetDirectoryName(gltfPath);
             _u32IndicesEnabled = u32IndicesEnabled;
@@ -30,25 +30,25 @@ namespace SilentWave.Obj2Gltf
         public BinaryWriter PositionsStream { get; private set; }
         public GltfBuffer PositionsBuffer { get; private set; }
         public BufferView PositionsBufferView { get; private set; }
-        public Int32? PositionsBufferViewIndex { get; private set; }
+        public int? PositionsBufferViewIndex { get; private set; }
         public Accessor CurrentPositionsAccessor { get; private set; }
 
         public BinaryWriter NormalsStream { get; private set; }
         public GltfBuffer NormalsBuffer { get; private set; }
         public BufferView NormalsBufferView { get; private set; }
-        public Int32? NormalsBufferViewIndex { get; private set; }
+        public int? NormalsBufferViewIndex { get; private set; }
         public Accessor CurrentNormalsAccessor { get; private set; }
 
         public BinaryWriter UvsStream { get; private set; }
         public GltfBuffer UvsBuffer { get; private set; }
         public BufferView UvsBufferView { get; private set; }
-        public Int32? UvsBufferViewIndex { get; private set; }
+        public int? UvsBufferViewIndex { get; private set; }
         public Accessor CurrentUvsAccessor { get; private set; }
 
         public BinaryWriter IndicesStream { get; private set; }
         public GltfBuffer IndicesBuffer { get; private set; }
         public BufferView IndicesBufferView { get; private set; }
-        public Int32? IndicesBufferViewIndex { get; private set; }
+        public int? IndicesBufferViewIndex { get; private set; }
         public Accessor CurrentIndicesAccessor { get; private set; }
 
         public void AddPosition(SVec3 position)
@@ -72,13 +72,13 @@ namespace SilentWave.Obj2Gltf
         {
             AddTobuffer(uv, UvsStream, UvsBuffer, UvsBufferView, CurrentUvsAccessor);
         }
-        internal void AddIndex(Int32 index)
+        internal void AddIndex(int index)
         {
             var accessor = CurrentIndicesAccessor;
             if (_u32IndicesEnabled)
             {
                 AddTobuffer(
-                    (UInt32)index,
+                    (uint)index,
                     IndicesStream,
                     IndicesBuffer,
                     IndicesBufferView,
@@ -87,7 +87,7 @@ namespace SilentWave.Obj2Gltf
             else
             {
                 AddTobuffer(
-                    (UInt16)index,
+                    (ushort)index,
                     IndicesStream,
                     IndicesBuffer,
                     IndicesBufferView,
@@ -114,7 +114,7 @@ namespace SilentWave.Obj2Gltf
             accessor.Count++;
         }
 
-        private void AddTobuffer(UInt16 value, BinaryWriter sw, GltfBuffer buffer, BufferView bufferview, Accessor accessor)
+        private void AddTobuffer(ushort value, BinaryWriter sw, GltfBuffer buffer, BufferView bufferview, Accessor accessor)
         {
             sw.Write(value);
             buffer.ByteLength += 2;
@@ -122,7 +122,7 @@ namespace SilentWave.Obj2Gltf
             accessor.Count++;
         }
 
-        private void AddTobuffer(UInt32 value, BinaryWriter sw, GltfBuffer buffer, BufferView bufferview, Accessor accessor)
+        private void AddTobuffer(uint value, BinaryWriter sw, GltfBuffer buffer, BufferView bufferview, Accessor accessor)
         {
             sw.Write(value);
             buffer.ByteLength += 4;
@@ -130,7 +130,7 @@ namespace SilentWave.Obj2Gltf
             accessor.Count++;
         }
 
-        internal Int32 MakePositionAccessor(String name)
+        internal int MakePositionAccessor(string name)
         {
             if (PositionsBufferView == null)
             {
@@ -150,8 +150,8 @@ namespace SilentWave.Obj2Gltf
             CurrentPositionsAccessor = new Accessor
             {
                 Name = name,
-                Min = new Single[] { Single.MaxValue, Single.MaxValue, Single.MaxValue },   // any number must be smaller
-                Max = new Single[] { Single.MinValue, Single.MinValue, Single.MinValue },   // any number must be bigger
+                Min = new float[] { float.MaxValue, float.MaxValue, float.MaxValue },   // any number must be smaller
+                Max = new float[] { float.MinValue, float.MinValue, float.MinValue },   // any number must be bigger
                 Type = AccessorType.VEC3,
                 ComponentType = ComponentType.F32,
                 BufferView = PositionsBufferViewIndex.Value,
@@ -160,7 +160,7 @@ namespace SilentWave.Obj2Gltf
             return _model.AddAccessor(CurrentPositionsAccessor);
         }
 
-        public Int32 MakeNormalAccessors(String name)
+        public int MakeNormalAccessors(string name)
         {
             if (NormalsBufferView == null)
             {
@@ -190,7 +190,7 @@ namespace SilentWave.Obj2Gltf
             return _model.AddAccessor(CurrentNormalsAccessor);
         }
 
-        internal Int32 MakeUvAccessor(String name)
+        internal int MakeUvAccessor(string name)
         {
             if (UvsBufferView == null)
             {
@@ -220,7 +220,7 @@ namespace SilentWave.Obj2Gltf
             return _model.AddAccessor(CurrentUvsAccessor);
         }
 
-        internal Int32 MakeIndicesAccessor(String name)
+        internal int MakeIndicesAccessor(string name)
         {
             if (IndicesBufferView == null)
             {
@@ -251,7 +251,7 @@ namespace SilentWave.Obj2Gltf
             return _model.AddAccessor(CurrentIndicesAccessor);
         }
 
-        protected virtual void Dispose(Boolean disposing)
+        protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

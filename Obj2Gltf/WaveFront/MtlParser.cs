@@ -9,26 +9,26 @@ namespace SilentWave.Obj2Gltf.WaveFront
 {
     public class MtlParser : IMtlParser
     {
-        private const String newmtlPrefix = "newmtl";
-        private const String KaPrefix = "Ka";
-        private const String KdPrefix = "Kd";
-        private const String KsPrefix = "Ks";
-        private const String KePrefix = "Ke";
-        private const String dPrefix = "d";
-        private const String TrPrefix = "Tr";
-        private const String NsPrefix = "Ns";
-        private const String map_kaPrefix = "map_Ka";
-        private const String map_KdPrefix = "map_Kd";
+        private const string newmtlPrefix = "newmtl";
+        private const string KaPrefix = "Ka";
+        private const string KdPrefix = "Kd";
+        private const string KsPrefix = "Ks";
+        private const string KePrefix = "Ke";
+        private const string dPrefix = "d";
+        private const string TrPrefix = "Tr";
+        private const string NsPrefix = "Ns";
+        private const string map_kaPrefix = "map_Ka";
+        private const string map_KdPrefix = "map_Kd";
 
-        private static Reflectivity GetReflectivity(String val)
+        private static Reflectivity GetReflectivity(string val)
         {
-            if (String.IsNullOrEmpty(val)) return null;
-            var strs = val.Split(new Char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (string.IsNullOrEmpty(val)) return null;
+            var strs = val.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (strs.Length == 3)
             {
-                var r = Double.Parse(strs[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
-                var g = Double.Parse(strs[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
-                var b = Double.Parse(strs[2], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
+                var r = double.Parse(strs[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
+                var g = double.Parse(strs[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
+                var b = double.Parse(strs[2], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
 
                 return new Reflectivity(new FactorColor(r, g, b));
             }
@@ -37,9 +37,9 @@ namespace SilentWave.Obj2Gltf.WaveFront
             return null;
         }
 
-        private static Transparency GetTransparency(String str)
+        private static Transparency GetTransparency(string str)
         {
-            var ok = Double.TryParse(
+            var ok = double.TryParse(
                 str,
                 System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture.NumberFormat,
@@ -51,10 +51,10 @@ namespace SilentWave.Obj2Gltf.WaveFront
             return null;
         }
 
-        private static Dissolve GetDissolve(String str)
+        private static Dissolve GetDissolve(string str)
         {
-            var strs = str.Split(new Char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            var ok = Double.TryParse(
+            var strs = str.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            var ok = double.TryParse(
                 strs[strs.Length - 1],
                 System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture.NumberFormat,
@@ -72,7 +72,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
             return d;
         }
 
-        public Task<Material[]> ParseAsync(String path, String searchPath = null, Encoding encoding = null)
+        public Task<Material[]> ParseAsync(string path, string searchPath = null, Encoding encoding = null)
         {
             if (searchPath == null) searchPath = Path.GetDirectoryName(path);
             return Task.Run(() =>
@@ -84,10 +84,10 @@ namespace SilentWave.Obj2Gltf.WaveFront
             });
         }
 
-        public Task<Material[]> ParseAsync(Stream stream, String searchPath, Encoding encoding = null)
+        public Task<Material[]> ParseAsync(Stream stream, string searchPath, Encoding encoding = null)
             => Task.Run(() => Parse(stream, searchPath, encoding).ToArray());
 
-        public Material[] Parse(String path, String searchPath = null, Encoding encoding = null)
+        public Material[] Parse(string path, string searchPath = null, Encoding encoding = null)
         {
             using (var file = File.OpenRead(path))
             {
@@ -96,7 +96,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
             }
         }
 
-        public IEnumerable<Material> Parse(Stream stream, String searchPath, Encoding encoding = null)
+        public IEnumerable<Material> Parse(Stream stream, string searchPath, Encoding encoding = null)
         {
             if (stream.Position != 0)
             {
@@ -171,12 +171,12 @@ namespace SilentWave.Obj2Gltf.WaveFront
                         var ns = line.Substring(NsPrefix.Length).Trim();
                         if (ns.Contains("."))
                         {
-                            var d = Single.Parse(ns, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
-                            currentMaterial.SpecularExponent = (Int32)Math.Round(d);
+                            var d = float.Parse(ns, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
+                            currentMaterial.SpecularExponent = (int)Math.Round(d);
                         }
                         else
                         {
-                            currentMaterial.SpecularExponent = Int32.Parse(ns, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
+                            currentMaterial.SpecularExponent = int.Parse(ns, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture.NumberFormat);
                         }
                     }
                     else if (line.StartsWith(map_kaPrefix))

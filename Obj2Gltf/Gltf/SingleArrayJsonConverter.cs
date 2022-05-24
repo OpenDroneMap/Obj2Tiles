@@ -7,17 +7,17 @@ namespace SilentWave.Obj2Gltf.Gltf
     /// <summary>
     /// Convert to int[] when all values are equals integers
     /// </summary>
-    public class SingleArrayJsonConverter : JsonConverter<Single[]>
+    public class SingleArrayJsonConverter : JsonConverter<float[]>
     {
-        public override Single[] ReadJson(JsonReader reader,
+        public override float[] ReadJson(JsonReader reader,
                                           Type objectType,
-                                          Single[] existingValue,
-                                          Boolean hasExistingValue,
+                                          float[] existingValue,
+                                          bool hasExistingValue,
                                           JsonSerializer serializer)
         {
-            var values = new List<Single>();
-            Single? val;
-            while ((val = (Single?)reader.ReadAsDouble()) != null)
+            var values = new List<float>();
+            float? val;
+            while ((val = (float?)reader.ReadAsDouble()) != null)
             {
                 values.Add(val.Value);
             }
@@ -28,7 +28,7 @@ namespace SilentWave.Obj2Gltf.Gltf
             return existingValue;
         }
 
-        public override void WriteJson(JsonWriter writer, Single[] value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, float[] value, JsonSerializer serializer)
         {
             if (value != null)
             {
@@ -37,7 +37,7 @@ namespace SilentWave.Obj2Gltf.Gltf
                 {
                     var c = n;
                     if (Math.Round(c) - c == 0)
-                        writer.WriteValue((Int32)c);
+                        writer.WriteValue((int)c);
                     else writer.WriteValue(c);
                 }
                 writer.WriteEndArray();

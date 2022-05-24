@@ -15,44 +15,44 @@ namespace SilentWave.Obj2Gltf.WaveFront
     {
         private static class Statements
         {
-            public const String Comment = "#";
-            public const String MtlLib = "mtllib";
-            public const String Vertex = "v";
-            public const String VectorNormal = "vn";
-            public const String VectorTexture = "vt";
-            public const String Group = "g";
-            public const String UseMaterial = "usemtl";
-            public const String Face = "f";
+            public const string Comment = "#";
+            public const string MtlLib = "mtllib";
+            public const string Vertex = "v";
+            public const string VectorNormal = "vn";
+            public const string VectorTexture = "vt";
+            public const string Group = "g";
+            public const string UseMaterial = "usemtl";
+            public const string Face = "f";
         }
 
 
-        private static FaceVertex GetVertex(String vStr)
+        private static FaceVertex GetVertex(string vStr)
         {
             var v1Str = vStr.Split('/');
             if (v1Str.Length >= 3)
             {
-                var v = Int32.Parse(v1Str[0]);
+                var v = int.Parse(v1Str[0]);
                 var t = 0;
-                if (!String.IsNullOrEmpty(v1Str[1]))
+                if (!string.IsNullOrEmpty(v1Str[1]))
                 {
-                    t = Int32.Parse(v1Str[1]);
+                    t = int.Parse(v1Str[1]);
                 }
-                var n = Int32.Parse(v1Str[2]);
+                var n = int.Parse(v1Str[2]);
                 return new FaceVertex(v, t, n);
             }
             else if (v1Str.Length >= 2)
             {
-                return new FaceVertex(Int32.Parse(v1Str[0]), Int32.Parse(v1Str[1]), 0);
+                return new FaceVertex(int.Parse(v1Str[0]), int.Parse(v1Str[1]), 0);
             }
-            return new FaceVertex(Int32.Parse(v1Str[0]));
+            return new FaceVertex(int.Parse(v1Str[0]));
         }
 
-        private static String[] SplitLine(String line)
+        private static string[] SplitLine(string line)
         {
-            return line.Split(new Char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            return line.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        private static Boolean StartWith(String line, String str)
+        private static bool StartWith(string line, string str)
         {
             return line.StartsWith(str) && (line[str.Length] == ' ' || line[str.Length] == '\t');
         }
@@ -60,9 +60,9 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// get parsed obj model
         /// </summary>
         /// <returns></returns>
-        public ObjModel Parse(String objFilePath, Boolean removeDegenerateFaces = false, Encoding encoding = null)
+        public ObjModel Parse(string objFilePath, bool removeDegenerateFaces = false, Encoding encoding = null)
         {
-            if (String.IsNullOrEmpty(objFilePath)) throw new ArgumentNullException(nameof(objFilePath));
+            if (string.IsNullOrEmpty(objFilePath)) throw new ArgumentNullException(nameof(objFilePath));
 
             var model = new ObjModel
             {
@@ -82,7 +82,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
                 while (!_reader.EndOfStream)
                 {
                     var line = _reader.ReadLine().Trim();
-                    if (String.IsNullOrEmpty(line)) continue;
+                    if (string.IsNullOrEmpty(line)) continue;
                     if (line.StartsWith(Statements.Comment)) continue;
                     if (StartWith(line, Statements.MtlLib))
                     {
@@ -93,9 +93,9 @@ namespace SilentWave.Obj2Gltf.WaveFront
                         var vStr = line.Substring(2).Trim();
                         var strs = SplitLine(vStr);
                         var v = new SVec3(
-                            Single.Parse(strs[0], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
-                            Single.Parse(strs[1], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
-                            Single.Parse(strs[2], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat));
+                            float.Parse(strs[0], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
+                            float.Parse(strs[1], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
+                            float.Parse(strs[2], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat));
                         model.Vertices.Add(v);
                     }
                     else if (StartWith(line, Statements.VectorNormal))
@@ -103,9 +103,9 @@ namespace SilentWave.Obj2Gltf.WaveFront
                         var vnStr = line.Substring(3).Trim();
                         var strs = SplitLine(vnStr);
                         var vn = new SVec3(
-                            Single.Parse(strs[0], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
-                            Single.Parse(strs[1], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
-                            Single.Parse(strs[2], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat));
+                            float.Parse(strs[0], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
+                            float.Parse(strs[1], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
+                            float.Parse(strs[2], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat));
                         model.Normals.Add(vn);
                     }
                     else if (StartWith(line, Statements.VectorTexture))
@@ -113,8 +113,8 @@ namespace SilentWave.Obj2Gltf.WaveFront
                         var vtStr = line.Substring(3).Trim();
                         var strs = SplitLine(vtStr);
                         var vt = new SVec2(
-                            Single.Parse(strs[0], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
-                            Single.Parse(strs[1], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat));
+                            float.Parse(strs[0], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
+                            float.Parse(strs[1], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat));
                         model.Uvs.Add(vt);
                     }
                     else if (StartWith(line, Statements.Group))
@@ -209,7 +209,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
                                 var a = model.Vertices[triangle.V1.V - 1];
                                 var b = model.Vertices[triangle.V2.V - 1];
                                 var c = model.Vertices[triangle.V3.V - 1];
-                                var sideLengths = new List<Single>() {
+                                var sideLengths = new List<float>() {
                                     (a - b).GetLength(),
                                     (b - c).GetLength(),
                                     (c - a).GetLength()

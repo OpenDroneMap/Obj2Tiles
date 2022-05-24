@@ -35,35 +35,35 @@ namespace SilentWave.Obj2Gltf
             return new SVec3(x, y, z);
         }
 
-        public static Single Dot(SVec3 v1, SVec3 v2)
+        public static float Dot(SVec3 v1, SVec3 v2)
             => v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z;
 
         public static SVec3 operator -(SVec3 left, SVec3 right) => Subtract(left, right);
 
         public static SVec3 operator +(SVec3 left, SVec3 right) => Sum(left, right);
 
-        public SVec3(Single xyz) : this(xyz, xyz, xyz) { }
+        public SVec3(float xyz) : this(xyz, xyz, xyz) { }
 
-        public SVec3(Single x, Single y) : this(x, y, 0.0f) { }
+        public SVec3(float x, float y) : this(x, y, 0.0f) { }
 
-        public SVec3(Single x, Single y, Single z)
+        public SVec3(float x, float y, float z)
         {
             X = x;
             Y = y;
             Z = z;
         }
 
-        public Single X;
+        public readonly float X;
 
-        public Single Y;
+        public readonly float Y;
 
-        public Single Z;
+        public readonly float Z;
 
-        public override String ToString()
+        public override string ToString()
             => $"{X:F}, {Y:F}, {Z:F}";
 
-        public Single GetLength()
-            => (Single)Math.Sqrt(X * X + Y * Y + Z * Z);
+        public float GetLength()
+            => (float)Math.Sqrt(X * X + Y * Y + Z * Z);
 
         public SVec3 Normalize()
         {
@@ -73,9 +73,9 @@ namespace SilentWave.Obj2Gltf
 
         public SVec3 Substract(SVec3 p) => Subtract(this, p);
 
-        public SVec3 MultiplyBy(Single val) => new SVec3(X * val, Y * val, Z * val);
+        public SVec3 MultiplyBy(float val) => new SVec3(X * val, Y * val, Z * val);
 
-        public SVec3 DividedBy(Single val) => new SVec3(X / val, Y / val, Z / val);
+        public SVec3 DividedBy(float val) => new SVec3(X / val, Y / val, Z / val);
 
         public void WriteBytes(System.IO.BinaryWriter sw)
         {

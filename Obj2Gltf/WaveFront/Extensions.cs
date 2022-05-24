@@ -6,6 +6,6 @@ namespace SilentWave.Obj2Gltf.WaveFront
 {
     static class Extensions
     {
-        public static Boolean RequiresUint32Indices(this ObjModel objModel) => objModel.Vertices.Count > 65534;
+        public static bool RequiresUint32Indices(this ObjModel objModel) => objModel.Vertices.Count > 65534;
     }
 }

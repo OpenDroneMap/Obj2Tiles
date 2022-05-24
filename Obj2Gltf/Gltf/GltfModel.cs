@@ -30,7 +30,7 @@ namespace SilentWave.Obj2Gltf.Gltf
         [JsonProperty("samplers")]
         public List<TextureSampler> Samplers { get; } = new List<TextureSampler>();
         [JsonProperty("scene")]
-        public Int32 Scene { get; set; }
+        public int Scene { get; set; }
         [JsonProperty("scenes")]
         public List<Scene> Scenes { get; } = new List<Scene>();
         [JsonProperty("textures")]
@@ -41,7 +41,7 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// </summary>
         /// <param name="filePath">gltf file path</param>
         /// <returns></returns>
-        public static GltfModel LoadFromJsonFile(String filePath)
+        public static GltfModel LoadFromJsonFile(string filePath)
         {
             var s = System.IO.File.ReadAllText(filePath, Encoding.UTF8);
             return JsonConvert.DeserializeObject<GltfModel>(s);

@@ -10,10 +10,10 @@ namespace SilentWave.Obj2Gltf
 {
     public class Gltf2GlbConverter
     {
-        private const Byte SpaceCharASCII = 0x20;
+        private const byte SpaceCharASCII = 0x20;
 
         public static Gltf2GlbConverter Factory() => new Gltf2GlbConverter();
-        static String GetMimeTypeFromFileName(String fileName)
+        static string GetMimeTypeFromFileName(string fileName)
         {
             var ext = Path.GetExtension(fileName).ToUpper();
             switch (ext)
@@ -126,12 +126,12 @@ namespace SilentWave.Obj2Gltf
                 }
                 bw.Flush();
                 glbStream.Seek(12, SeekOrigin.Begin);
-                bw.Write((UInt32)(jsonFile.Length + paddingCount));
+                bw.Write((uint)(jsonFile.Length + paddingCount));
                 glbStream.Seek(0, SeekOrigin.End);
                 // Write Binary Chunk header (length, type)
 
                 paddingCount = GetTrailingCount(concatBufferLegth);
-                bw.Write((UInt32)(concatBufferLegth + paddingCount));
+                bw.Write((uint)(concatBufferLegth + paddingCount));
                 bw.Write(0x004E4942u);
                 bw.Flush();
                 // Write Binary chunk
@@ -147,11 +147,11 @@ namespace SilentWave.Obj2Gltf
                 paddingCount = GetTrailingCount(glbStream.Position);
                 for (var byteWritten = 0; byteWritten < paddingCount; byteWritten++)
                 {
-                    bw.Write(Byte.MinValue);
+                    bw.Write(byte.MinValue);
                 }
                 glbStream.Flush();
                 bw.Seek(8, SeekOrigin.Begin);
-                bw.Write((UInt32)glbStream.Length);
+                bw.Write((uint)glbStream.Length);
             }
 
             if (isCurrentInputFileATempFile) File.Delete(currentInputFile);
@@ -163,10 +163,10 @@ namespace SilentWave.Obj2Gltf
             }
         }
 
-        private Byte GetTrailingCount(Int64 length, Byte boundary = 4)
+        private byte GetTrailingCount(long length, byte boundary = 4)
         {
-            var remainder = (Byte)length % boundary;
-            return remainder == Byte.MinValue ? Byte.MinValue : (Byte)(boundary - remainder);
+            var remainder = (byte)length % boundary;
+            return remainder == byte.MinValue ? byte.MinValue : (byte)(boundary - remainder);
         }
 
     }

@@ -11,16 +11,16 @@ namespace SilentWave.Obj2Gltf.WaveFront
     /// </summary>
     public class Geometry
     {
-        public Geometry(String id)
+        public Geometry(string id)
         {
-            if (String.IsNullOrWhiteSpace(id))
+            if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentNullException(nameof(id));
             Id = id;
         }
         /// <summary>
         /// group name
         /// </summary>
-        public String Id { get; }
+        public string Id { get; }
         /// <summary>
         /// meshes
         /// </summary>

@@ -32,7 +32,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// </summary>
         public FaceVertex V3;
 
-        public override String ToString()
+        public override string ToString()
         {
             return $"f {V1} {V2} {V3}";
         }

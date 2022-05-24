@@ -14,17 +14,17 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// corresponding attribute data.
         /// </summary>
         [JsonProperty("attributes")]
-        public Dictionary<String, Int32> Attributes { get; set; }
+        public Dictionary<string, int> Attributes { get; set; }
         /// <summary>
         /// The index of the accessor that contains the indices.
         /// </summary>
         [JsonProperty("indices")]
-        public Int32 Indices { get; set; }
+        public int Indices { get; set; }
         /// <summary>
         /// The index of the material to apply to this primitive when rendering
         /// </summary>
         [JsonProperty("material")]
-        public Int32 Material { get; set; }
+        public int Material { get; set; }
         /// <summary>
         /// The type of primitives to render.
         /// </summary>

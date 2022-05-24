@@ -6,6 +6,6 @@ namespace SilentWave.Obj2Gltf.WaveFront
 {
     public class Transparency
     {
-        public Double Factor { get; set; }
+        public double Factor { get; set; }
     }
 }

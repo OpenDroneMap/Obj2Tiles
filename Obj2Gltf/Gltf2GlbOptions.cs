@@ -4,18 +4,18 @@ namespace SilentWave.Obj2Gltf
 {
     public class Gltf2GlbOptions
     {
-        public Gltf2GlbOptions(String inputPath, String outputPath = null)
+        public Gltf2GlbOptions(string inputPath, string outputPath = null)
         {
             InputPath = inputPath ?? throw new ArgumentNullException();
             OutPutPath = outputPath ?? System.IO.Path.Combine(System.IO.Path.GetDirectoryName(inputPath), System.IO.Path.GetFileNameWithoutExtension(inputPath) + ".glb");
         }
 
-        public String InputPath { get; }
+        public string InputPath { get; }
         
         /// <summary>
         /// Default is true
         /// </summary>
-        public Boolean MinifyJson { get; set; } = true;
+        public bool MinifyJson { get; set; } = true;
 
         // TODO: make this optional ?
         //public Boolean EmbedBuffers { get; set; } = true;
@@ -24,7 +24,7 @@ namespace SilentWave.Obj2Gltf
         /// <summary>
         /// Default is false
         /// </summary>
-        public Boolean DeleteOriginal { get; set; } = false;
-        public String OutPutPath { get; }
+        public bool DeleteOriginal { get; set; } = false;
+        public string OutPutPath { get; }
     }
 }

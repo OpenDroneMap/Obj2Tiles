@@ -13,11 +13,11 @@ namespace SilentWave.Obj2Gltf
         /// <summary>
         /// Default is false
         /// </summary>
-        public Boolean RemoveDegenerateFaces { get; set; } = false;
+        public bool RemoveDegenerateFaces { get; set; } = false;
         
         /// <summary>
         /// Default is false
         /// </summary>
-        public Boolean DeleteOriginals { get; set; } = false;
+        public bool DeleteOriginals { get; set; } = false;
     }
 }

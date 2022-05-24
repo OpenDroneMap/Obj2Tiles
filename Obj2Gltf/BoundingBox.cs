@@ -11,19 +11,19 @@ namespace SilentWave.Obj2Gltf
 
         public SingleRange Z { get; set; } = new SingleRange();
 
-        public Boolean IsIn(SVec3 p)
+        public bool IsIn(SVec3 p)
         {
             return p.X >= X.Min && p.X <= X.Max &&
                 p.Y >= Y.Min && p.Y <= Y.Max &&
                 p.Z >= Z.Min && p.Z <= Z.Max;
         }
 
-        public override String ToString()
+        public override string ToString()
         {
             return $"X: {X}; Y: {Y}; Z: {Z}";
         }
 
-        public List<BoundingBox> Split(Int32 level)
+        public List<BoundingBox> Split(int level)
         {
             if (level <= 1) return new List<BoundingBox> { this };
             var boxes = new List<BoundingBox>();
