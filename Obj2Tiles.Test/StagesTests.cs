@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using Obj2Tiles.Common;
 using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Stages;
 using Obj2Tiles.Stages.Model;
@@ -61,6 +62,8 @@ public class StagesTests
         };
 
         var transform = gpsCoords.ToEcefTransform();
+        
+        Console.WriteLine(JsonConvert.SerializeObject(transform, Formatting.Indented));
 
     }
     
@@ -77,6 +80,15 @@ public class StagesTests
         var transform = gpsCoords.ToEcefTransform();
         
         Console.WriteLine(JsonConvert.SerializeObject(transform, Formatting.Indented));
+
+    }
+
+    [Test]
+    public void TilingStage_ConvertTest()
+    {
+        var testPath = GetTestOutputPath(nameof(TilingStage_ConvertTest));
+        
+        Utils.ConvertB3dm("TestData/Tile2/Mesh-XL-YR-XR-YL.obj", Path.Combine(testPath, "out.b3dm"));
 
     }
 }

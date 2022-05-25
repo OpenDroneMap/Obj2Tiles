@@ -16,6 +16,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\MeshDecimatorCore\MeshDecimatorCore.csproj" />
+      <ProjectReference Include="..\Obj2Tiles.Common\Obj2Tiles.Common.csproj" />
       <ProjectReference Include="..\Obj2Tiles.Library\Obj2Tiles.Library.csproj" />
       <ProjectReference Include="..\Obj2Tiles\Obj2Tiles.csproj" />
     </ItemGroup>
@@ -121,6 +122,36 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Update="TestData\Tile1\LOD-0\Mesh-XR-YR-texture-material0004.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL.mtl">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL.obj">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0000.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0001.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0001-1.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0002.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0003.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0003-1.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0004.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0005.png">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>

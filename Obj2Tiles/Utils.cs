@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Stages.Model;
+using Obj2Tiles.Tiles;
+using SilentWave.Obj2Gltf;
 
 namespace Obj2Tiles;
 
@@ -138,5 +140,25 @@ public static class Utils
 
             Console.WriteLine($" -> Copied {dependency}");
         }
+    }
+    
+    public static void ConvertB3dm(string objPath, string destPath)
+    {
+        var dir = Path.GetDirectoryName(objPath);
+        var name = Path.GetFileNameWithoutExtension(objPath);
+
+        var converter = Converter.MakeDefault();
+        var outputFile = dir != null ? Path.Combine(dir, $"{name}.gltf") : $"{name}.gltf";
+
+        converter.Convert(objPath, outputFile);
+
+        var glbConv = new Gltf2GlbConverter();
+        glbConv.Convert(new Gltf2GlbOptions(outputFile));
+
+        var glbFile = Path.ChangeExtension(outputFile, ".glb");
+
+        var b3dm = new B3dm(File.ReadAllBytes(glbFile));
+
+        File.WriteAllBytes(destPath, b3dm.ToBytes());
     }
 }

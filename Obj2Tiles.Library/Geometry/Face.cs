@@ -3,9 +3,9 @@ namespace Obj2Tiles.Library.Geometry;
 public class Face
 {
 
-    public readonly int IndexA;
-    public readonly int IndexB;
-    public readonly int IndexC;
+    public int IndexA;
+    public int IndexB;
+    public int IndexC;
 
     public override string ToString()
     {

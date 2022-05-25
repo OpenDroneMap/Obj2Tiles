@@ -847,7 +847,7 @@ public class MeshT : IMesh
         double x = 0;
         double y = 0;
         double z = 0;
-        
+
         for (var index = 0; index < _faces.Count; index++)
         {
             var f = _faces[index];
@@ -856,13 +856,12 @@ public class MeshT : IMesh
             var v3 = _vertices[f.IndexC];
 
             var orientation = Common.Orientation(v1, v2, v3);
-            
+
             x += orientation.X;
             y += orientation.Y;
             z += orientation.Z;
-
         }
-        
+
         x /= _faces.Count;
         y /= _faces.Count;
         z /= _faces.Count;
@@ -871,9 +870,8 @@ public class MeshT : IMesh
         var xAngle = Math.Atan2(y, z);
         var yAngle = Math.Atan2(x, z);
         var zAngle = Math.Atan2(y, x);
-        
-        return new Vertex3(xAngle, yAngle, zAngle);
 
+        return new Vertex3(xAngle, yAngle, zAngle);
     }
 
     public Vertex3 GetVertexBaricenter()
@@ -897,16 +895,110 @@ public class MeshT : IMesh
         return new Vertex3(x, y, z);
     }
 
-    public void WriteObj(string path)
+    public void WriteObj(string path, bool removeUnused = true)
     {
         if (!_materials.Any() || !_textureVertices.Any())
-            _WriteObjWithoutTexture(path);
+            _WriteObjWithoutTexture(path, removeUnused);
         else
-            _WriteObjWithTexture(path);
+            _WriteObjWithTexture(path, removeUnused);
+    }
+    
+    private void RemoveUnusedVertices()
+    {
+
+        var newVertexes = new Dictionary<Vertex3, int>(_vertices.Count);
+
+        for (var f = 0; f < _faces.Count; f++)
+        {
+            var face = _faces[f];
+
+            var vA = _vertices[face.IndexA];
+            var vB = _vertices[face.IndexB];
+            var vC = _vertices[face.IndexC];
+
+            if (!newVertexes.TryGetValue(vA, out var newVA))
+                newVA = newVertexes.AddIndex(vA);
+            
+            face.IndexA = newVA;
+            
+            if (!newVertexes.TryGetValue(vB, out var newVB))
+                newVB = newVertexes.AddIndex(vB);
+            
+            face.IndexB = newVB;
+            
+            if (!newVertexes.TryGetValue(vC, out var newVC))
+                newVC = newVertexes.AddIndex(vC);
+            
+            face.IndexC = newVC;
+            
+        }
+
+        _vertices = newVertexes.Keys.ToList();
+
+    }
+    
+    private void RemoveUnusedVerticesAndUvs()
+    {
+
+        var newVertexes = new Dictionary<Vertex3, int>(_vertices.Count);
+        var newUvs = new Dictionary<Vertex2, int>(_textureVertices.Count);
+
+        for (var f = 0; f < _faces.Count; f++)
+        {
+            var face = _faces[f];
+
+            var vA = _vertices[face.IndexA];
+            var vB = _vertices[face.IndexB];
+            var vC = _vertices[face.IndexC];
+
+            if (!newVertexes.TryGetValue(vA, out var newVA))
+                newVA = newVertexes.AddIndex(vA);
+            
+            face.IndexA = newVA;
+            
+            if (!newVertexes.TryGetValue(vB, out var newVB))
+                newVB = newVertexes.AddIndex(vB);
+            
+            face.IndexB = newVB;
+            
+            if (!newVertexes.TryGetValue(vC, out var newVC))
+                newVC = newVertexes.AddIndex(vC);
+            
+            face.IndexC = newVC;
+            
+            var uvA = _textureVertices[face.TextureIndexA];
+            var uvB = _textureVertices[face.TextureIndexB];
+            var uvC = _textureVertices[face.TextureIndexC];
+            
+            if (!newUvs.TryGetValue(uvA, out var newUvA))
+                newUvA = newUvs.AddIndex(uvA);
+            
+            face.TextureIndexA = newUvA;
+            
+            if (!newUvs.TryGetValue(uvB, out var newUvB))
+                newUvB = newUvs.AddIndex(uvB);
+            
+            face.TextureIndexB = newUvB;
+            
+            if (!newUvs.TryGetValue(uvC, out var newUvC))
+                newUvC = newUvs.AddIndex(uvC);
+            
+            face.TextureIndexC = newUvC;
+            
+        }
+
+        _vertices = newVertexes.Keys.ToList();
+        _textureVertices = newUvs.Keys.ToList();
+
     }
 
-    private void _WriteObjWithTexture(string path)
+
+    private void _WriteObjWithTexture(string path, bool removeUnused = true)
     {
+        
+        if (removeUnused)
+            RemoveUnusedVerticesAndUvs();
+        
         var materialsPath = Path.ChangeExtension(path, "mtl");
 
         if (TexturesStrategy != TexturesStrategy.KeepOriginal)
@@ -981,8 +1073,12 @@ public class MeshT : IMesh
         }
     }
 
-    private void _WriteObjWithoutTexture(string path)
+    private void _WriteObjWithoutTexture(string path, bool removeUnused = true)
     {
+        
+        if (removeUnused)
+            RemoveUnusedVertices();
+        
         using var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture);
 
         writer.Write("o ");

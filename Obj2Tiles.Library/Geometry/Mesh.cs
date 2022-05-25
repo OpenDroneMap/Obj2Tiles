@@ -8,7 +8,7 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class Mesh : IMesh
 {
-    private readonly List<Vertex3> _vertices;
+    private List<Vertex3> _vertices;
     private readonly List<Face> _faces;
 
     public IReadOnlyList<Vertex3> Vertices => _vertices;
@@ -284,8 +284,11 @@ public class Mesh : IMesh
         return new Vertex3(x, y, z);
     }
 
-    public void WriteObj(string path)
+    public void WriteObj(string path, bool removeUnused = true)
     {
+
+        if (removeUnused) RemoveUnusedVertices();
+        
         using var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture);
         
         writer.Write("o ");
@@ -307,6 +310,40 @@ public class Mesh : IMesh
             var face = _faces[index];
             writer.WriteLine(face.ToObj());
         }
+    }
+
+    private void RemoveUnusedVertices()
+    {
+
+        var newVertexes = new Dictionary<Vertex3, int>(_vertices.Count);
+
+        for (var f = 0; f < _faces.Count; f++)
+        {
+            var face = _faces[f];
+
+            var vA = _vertices[face.IndexA];
+            var vB = _vertices[face.IndexB];
+            var vC = _vertices[face.IndexC];
+
+            if (!newVertexes.TryGetValue(vA, out var newVA))
+                newVA = newVertexes.AddIndex(vA);
+            
+            face.IndexA = newVA;
+            
+            if (!newVertexes.TryGetValue(vB, out var newVB))
+                newVB = newVertexes.AddIndex(vB);
+            
+            face.IndexB = newVB;
+            
+            if (!newVertexes.TryGetValue(vC, out var newVC))
+                newVC = newVertexes.AddIndex(vC);
+            
+            face.IndexC = newVC;
+            
+        }
+
+        _vertices = newVertexes.Keys.ToList();
+
     }
 
     public int FacesCount => _faces.Count;

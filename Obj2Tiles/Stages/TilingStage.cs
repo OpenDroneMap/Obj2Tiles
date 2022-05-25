@@ -141,7 +141,7 @@ public static partial class StagesFacade
         Parallel.ForEach(filesToConvert, (file) =>
         {
             Console.WriteLine($" -> Converting to b3dm '{file.Item1}'");
-            ConvertB3dm(file.Item1, file.Item2);
+            Utils.ConvertB3dm(file.Item1, file.Item2);
         });
     }
 
@@ -153,23 +153,4 @@ public static partial class StagesFacade
         Longitude = 9.190277486808588
     };
 
-    private static void ConvertB3dm(string objPath, string destPath)
-    {
-        var dir = Path.GetDirectoryName(objPath);
-        var name = Path.GetFileNameWithoutExtension(objPath);
-
-        var converter = Converter.MakeDefault();
-        var outputFile = dir != null ? Path.Combine(dir, $"{name}.gltf") : $"{name}.gltf";
-
-        converter.Convert(objPath, outputFile);
-
-        var glbConv = new Gltf2GlbConverter();
-        glbConv.Convert(new Gltf2GlbOptions(outputFile));
-
-        var glbFile = Path.ChangeExtension(outputFile, ".glb");
-
-        var b3dm = new B3dm(File.ReadAllBytes(glbFile));
-
-        File.WriteAllBytes(destPath, b3dm.ToBytes());
-    }
 }

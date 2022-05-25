@@ -40,6 +40,16 @@ public class Mesh3Tests
     private static readonly IVertexUtils zutils = new VertexUtilsZ();
 
     [Test]
+    public void WriteObj_Square_RemoveUnused()
+    {
+        var testPath = GetTestOutputPath(nameof(WriteObj_Square_RemoveUnused));
+
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "square-unused.obj"));
+        
+        mesh.WriteObj(Path.Combine(testPath, "square.obj"));
+    }
+    
+    [Test]
     public void WriteObj_Cube2_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_Repacking));
