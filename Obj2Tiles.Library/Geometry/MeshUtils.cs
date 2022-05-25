@@ -60,7 +60,8 @@ public class MeshUtils
                     var second = segs[2].Split('/');
                     var third = segs[3].Split('/');
 
-                    var hasTexture = first[1].Length > 0 && second[1].Length > 0 && third[1].Length > 0;
+                    var hasTexture = first.Length > 1 && first[1].Length > 0 && second.Length > 1 &&
+                                     second[1].Length > 0 && third.Length > 1 && third[1].Length > 0;
 
                     // We ignore this
                     // var hasNormals = vertexIndices[0][2] != null && vertexIndices[1][2] != null && vertexIndices[2][2] != null;
