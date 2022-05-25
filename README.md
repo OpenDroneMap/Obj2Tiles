@@ -16,26 +16,28 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
 ## Command line parameters
 
 ```
--i, --input            Required. Input OBJ file.
--o, --output           Required. Output folder.
 
--s, --stage            (Default: Tiling) Stage to stop at (Decimation, Splitting, Tiling)
+  Input (pos. 0)         Required. Input OBJ file.
+  Output (pos. 1)        Required. Output folder.
+  
+  -s, --stage            (Default: Tiling) Stage to stop at (Decimation, Splitting, Tiling)
+  
+  -l, --lods             (Default: 3) How many levels of details
 
--l, --lods             (Default: 3) How many levels of details
+  -d, --divisions        (Default: 2) How many tiles divisions
+  -z, --zsplit           (Default: false) Splits along z-axis too
+  -k, --keeptextures     (Default: false) Keeps original textures
+  
+  --lat                  Latitude of the mesh
+  --lon                  Longitude of the mesh
+  --alt                  (Default: 0) Altitude of the mesh (meters)
+  
+  --use-system-temp      (Default: false) Uses the system temp folder
+  --keep-intermediate    (Default: false) Keeps the intermediate files (do not cleanup)
+  
+  --help                 Display this help screen.
+  --version              Display version information.
 
--d, --divisions        (Default: 2) How many tiles divisions
--z, --zsplit           (Default: false) Splits along z-axis too
--k, --keeptextures     (Default: false) Keeps original textures
-
---lat                  Latitude of the mesh
---lon                  Longitude of the mesh
---alt                  Altitude of the mesh (meters)
-
---use-system-temp      (Default: false) Uses the system temp folder
---keep-intermediate    (Default: false) Keeps the intermediate files (do not cleanup)
-
---help                 Display this help screen.
---version              Display version information.
 ```
 
 The pipeline is composed of the following steps:
@@ -89,7 +91,7 @@ The Brighton Beach textured model generated using [OpenDroneMap](https://github.
 It runs all the pipeline stages and generates the `tileset.json` file in the output folder.
 
 ```
-Obj2Tiles -i model.obj -o output
+Obj2Tiles model.obj ./output
 ```
 
 ### Decimation
@@ -97,7 +99,7 @@ Obj2Tiles -i model.obj -o output
 Stop the pipeline at the decimation stage and generate 8 LODs
 
 ```
-Obj2Tiles --stage Decimation --lods 8 -i model.obj -o output
+Obj2Tiles --stage Decimation --lods 8 model.obj -o ./output
 ```
 
 ### Splitting
@@ -105,7 +107,7 @@ Obj2Tiles --stage Decimation --lods 8 -i model.obj -o output
 Stop the pipeline at the splitting stage and generate 3 divisions per axis
 
 ```
-Obj2Tiles --stage Splitting --divisions 3 -i model.obj -o output
+Obj2Tiles --stage Splitting --divisions 3 model.obj ./output
 ```
 
 ### Full pipeline
@@ -113,7 +115,7 @@ Obj2Tiles --stage Splitting --divisions 3 -i model.obj -o output
 Run all the pipeline stages and generate the `tileset.json` file in the output folder.
 
 ```
-Obj2Tiles --lods 8 --divisions 3 --lat 40.689434025350025 --lon -74.0444987716782 --alt 120 -i model.obj -o output
+Obj2Tiles --lods 8 --divisions 3 --lat 40.689434025350025 --lon -74.0444987716782 --alt 120 model.obj ./output
 ```
 
 ## Rotating the model
@@ -151,8 +153,9 @@ You can use the `--use-system-temp` flag to use the system temp folder instead o
 
 ## Gallery
 
+![cesium](https://user-images.githubusercontent.com/7868983/170308702-14b32953-c3fd-4eb5-8b86-b40688dc354e.png)
+
 ![split-brighton](https://user-images.githubusercontent.com/7868983/169304507-5ccd970d-9fd2-4d09-81a1-e7f701cb913a.png)
 
 ![z-split](https://user-images.githubusercontent.com/7868983/169304532-7b46712a-7bb7-4c2e-a799-12df6c227ee9.png)
-
 
