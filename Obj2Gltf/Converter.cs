@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using SilentWave.Obj2Gltf.WaveFront;
@@ -351,17 +352,14 @@ namespace SilentWave.Obj2Gltf
             {
                 var matName = fg.Key;
                 var f = new Face(matName);
+                
                 foreach (var ff in fg)
-                {
                     f.Triangles.AddRange(ff.Triangles);
-                }
+                
                 if (f.Triangles.Count > 0)
-                {
                     faces.Add(f);
-                }
+                
             }
-
-            var hasPositions = faces.Count > 0;
 
             // Vertex attributes are shared by all primitives in the mesh
             var name0 = mesh.Id;
@@ -373,7 +371,7 @@ namespace SilentWave.Obj2Gltf
                 var faceName = name0;
                 if (index > 0)
                 {
-                    faceName = name0 + "_" + index;
+                    faceName = $"{name0}_{index}";
                 }
 
                 var hasUvs = f.Triangles.Any(d => d.V1.T > 0);
@@ -383,13 +381,9 @@ namespace SilentWave.Obj2Gltf
                 var material = materialIndex < objModel.Materials.Count ? objModel.Materials[materialIndex] : null;
                 var materialHasTexture = material?.DiffuseTextureFile != null;
 
-
-                // every primitive need their own vertex indices(v,t,n)
+                // every primitive needs their own vertex indices(v,t,n)
                 var faceVertexCache = new Dictionary<string, int>();
                 var faceVertexCount = 0;
-
-                //List<int[]> indiceList = new List<int[]>(faces.Count * 2);
-                //var matIndexList = new List<int>(faces.Count * 2);
 
                 var atts = new Dictionary<string, int>();
                 var indicesAccessorIndex = bufferState.MakeIndicesAccessor(faceName + "_indices");
@@ -429,8 +423,11 @@ namespace SilentWave.Obj2Gltf
                     var v1 = objModel.Vertices[v1Index];
                     var v2 = objModel.Vertices[v2Index];
                     var v3 = objModel.Vertices[v3Index];
-
-                    SVec3 n1 = new SVec3(), n2 = new SVec3(), n3 = new SVec3();
+                   
+                    var n1 = new SVec3();
+                    var n2 = new SVec3();
+                    var n3 = new SVec3();
+                    
                     if (triangle.V1.N > 0) // hasNormals
                     {
                         var n1Index = triangle.V1.N - 1;
@@ -441,7 +438,10 @@ namespace SilentWave.Obj2Gltf
                         n3 = objModel.Normals[n3Index];
                     }
 
-                    SVec2 t1 = new SVec2(), t2 = new SVec2(), t3 = new SVec2();
+                    var t1 = new SVec2();
+                    var t2 = new SVec2();
+                    var t3 = new SVec2();
+                    
                     if (materialHasTexture)
                     {
                         if (triangle.V1.T > 0) // hasUvs
@@ -490,7 +490,6 @@ namespace SilentWave.Obj2Gltf
                         {
                             if (triangle.V2.T > 0) // hasUvs
                             {
-
                                 var uv = new SVec2(t2.U, 1 - t2.V);
                                 bufferState.AddUv(uv);
                             }
@@ -578,7 +577,7 @@ namespace SilentWave.Obj2Gltf
                     else
                     {
 #if DEBUG
-                        System.Diagnostics.Debugger.Break();
+                        Debugger.Break();
 #endif
                     }
                 }
@@ -597,15 +596,7 @@ namespace SilentWave.Obj2Gltf
             var node = new Node { Name = name, Mesh = meshIndex };
             var nodeIndex = gltfModel.Nodes.Count;
             gltfModel.Nodes.Add(node);
-            //if (parentIndex != null)
-            //{
-            //    var pNode = _model.Nodes[parentIndex.Value];
-            //    //TODO:
-            //}
-            //else
-            //{
 
-            //}
             gltfModel.Scenes[gltfModel.Scene].Nodes.Add(nodeIndex);
 
             return nodeIndex;

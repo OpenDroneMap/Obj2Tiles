@@ -45,22 +45,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
 
         public override string ToString()
         {
-            if (N > 0)
-            {
-                if (T > 0)
-                {
-                    return $"{V}/{T}/{N}";
-                }
-                else
-                {
-                    return $"{V}//{N}";
-                }
-            }
-            if (T > 0)
-            {
-                return $"{V}/{T}";
-            }
-            return $"{V}";
+            return N > 0 ? T > 0 ? $"{V}/{T}/{N}" : $"{V}//{N}" : T > 0 ? $"{V}/{T}" : $"{V}";
         }
 
         public bool Equals(FaceVertex other)
