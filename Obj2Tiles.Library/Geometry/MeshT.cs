@@ -942,11 +942,14 @@ public class MeshT : IMesh
 
         var newVertexes = new Dictionary<Vertex3, int>(_vertices.Count);
         var newUvs = new Dictionary<Vertex2, int>(_textureVertices.Count);
+        var newMaterials = new Dictionary<Material, int>(_materials.Count);
 
         for (var f = 0; f < _faces.Count; f++)
         {
             var face = _faces[f];
 
+            // Vertices
+            
             var vA = _vertices[face.IndexA];
             var vB = _vertices[face.IndexB];
             var vC = _vertices[face.IndexC];
@@ -965,6 +968,8 @@ public class MeshT : IMesh
                 newVC = newVertexes.AddIndex(vC);
             
             face.IndexC = newVC;
+            
+            // Texture vertices
             
             var uvA = _textureVertices[face.TextureIndexA];
             var uvB = _textureVertices[face.TextureIndexB];
@@ -985,10 +990,20 @@ public class MeshT : IMesh
             
             face.TextureIndexC = newUvC;
             
+            // Materials
+            
+            var material = _materials[face.MaterialIndex];
+            
+            if (!newMaterials.TryGetValue(material, out var newMaterial))
+                newMaterial = newMaterials.AddIndex(material);
+            
+            face.MaterialIndex = newMaterial;
+            
         }
 
         _vertices = newVertexes.Keys.ToList();
         _textureVertices = newUvs.Keys.ToList();
+        _materials = newMaterials.Keys.ToList();
 
     }
 
