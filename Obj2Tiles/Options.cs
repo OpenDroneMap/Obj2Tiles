@@ -5,10 +5,10 @@ namespace Obj2Tiles;
 
 public class Options
 {
-    [Option('i', "input", Required = true, HelpText = "Input OBJ file.")]
+    [Value(0, Required = true, HelpText = "Input OBJ file.")]
     public string Input { get; set; }
 
-    [Option('o', "output", Required = true, HelpText = "Output folder.")]
+    [Value(1, Required = true, HelpText = "Output folder.")]
     public string Output { get; set; }
 
     [Option('s', "stage", Required = false, HelpText = "Stage to stop at (Decimation, Splitting, Tiling)", Default = Stage.Tiling)]
