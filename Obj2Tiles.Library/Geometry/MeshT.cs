@@ -14,7 +14,7 @@ public class MeshT : IMesh
 {
     private List<Vertex3> _vertices;
     private List<Vertex2> _textureVertices;
-    private List<FaceT> _faces;
+    private readonly List<FaceT> _faces;
     private List<Material> _materials;
 
     public IReadOnlyList<Vertex3> Vertices => _vertices;
@@ -599,9 +599,10 @@ public class MeshT : IMesh
                 case TexturesStrategy.Repack:
                     tx.Save(newPath);
                     break;
+                case TexturesStrategy.Compress:
                 case TexturesStrategy.KeepOriginal:
                     throw new InvalidOperationException(
-                        "TexturesStrategy.KeepOriginal is meaningless here, we are repacking!");
+                        "KeepOriginal or Compress are meaningless here, we are repacking!");
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -902,10 +903,9 @@ public class MeshT : IMesh
         else
             _WriteObjWithTexture(path, removeUnused);
     }
-    
+
     private void RemoveUnusedVertices()
     {
-
         var newVertexes = new Dictionary<Vertex3, int>(_vertices.Count);
 
         for (var f = 0; f < _faces.Count; f++)
@@ -918,28 +918,25 @@ public class MeshT : IMesh
 
             if (!newVertexes.TryGetValue(vA, out var newVA))
                 newVA = newVertexes.AddIndex(vA);
-            
+
             face.IndexA = newVA;
-            
+
             if (!newVertexes.TryGetValue(vB, out var newVB))
                 newVB = newVertexes.AddIndex(vB);
-            
+
             face.IndexB = newVB;
-            
+
             if (!newVertexes.TryGetValue(vC, out var newVC))
                 newVC = newVertexes.AddIndex(vC);
-            
+
             face.IndexC = newVC;
-            
         }
 
         _vertices = newVertexes.Keys.ToList();
-
     }
-    
+
     private void RemoveUnusedVerticesAndUvs()
     {
-
         var newVertexes = new Dictionary<Vertex3, int>(_vertices.Count);
         var newUvs = new Dictionary<Vertex2, int>(_textureVertices.Count);
         var newMaterials = new Dictionary<Material, int>(_materials.Count);
@@ -949,74 +946,71 @@ public class MeshT : IMesh
             var face = _faces[f];
 
             // Vertices
-            
+
             var vA = _vertices[face.IndexA];
             var vB = _vertices[face.IndexB];
             var vC = _vertices[face.IndexC];
 
             if (!newVertexes.TryGetValue(vA, out var newVA))
                 newVA = newVertexes.AddIndex(vA);
-            
+
             face.IndexA = newVA;
-            
+
             if (!newVertexes.TryGetValue(vB, out var newVB))
                 newVB = newVertexes.AddIndex(vB);
-            
+
             face.IndexB = newVB;
-            
+
             if (!newVertexes.TryGetValue(vC, out var newVC))
                 newVC = newVertexes.AddIndex(vC);
-            
+
             face.IndexC = newVC;
-            
+
             // Texture vertices
-            
+
             var uvA = _textureVertices[face.TextureIndexA];
             var uvB = _textureVertices[face.TextureIndexB];
             var uvC = _textureVertices[face.TextureIndexC];
-            
+
             if (!newUvs.TryGetValue(uvA, out var newUvA))
                 newUvA = newUvs.AddIndex(uvA);
-            
+
             face.TextureIndexA = newUvA;
-            
+
             if (!newUvs.TryGetValue(uvB, out var newUvB))
                 newUvB = newUvs.AddIndex(uvB);
-            
+
             face.TextureIndexB = newUvB;
-            
+
             if (!newUvs.TryGetValue(uvC, out var newUvC))
                 newUvC = newUvs.AddIndex(uvC);
-            
+
             face.TextureIndexC = newUvC;
-            
+
             // Materials
-            
+
             var material = _materials[face.MaterialIndex];
-            
+
             if (!newMaterials.TryGetValue(material, out var newMaterial))
                 newMaterial = newMaterials.AddIndex(material);
-            
+
             face.MaterialIndex = newMaterial;
-            
         }
 
         _vertices = newVertexes.Keys.ToList();
         _textureVertices = newUvs.Keys.ToList();
         _materials = newMaterials.Keys.ToList();
-
     }
 
 
     private void _WriteObjWithTexture(string path, bool removeUnused = true)
     {
-        
         if (removeUnused)
             RemoveUnusedVerticesAndUvs();
-        
+
         var materialsPath = Path.ChangeExtension(path, "mtl");
 
-        if (TexturesStrategy != TexturesStrategy.KeepOriginal)
+        if (TexturesStrategy == TexturesStrategy.Repack || TexturesStrategy == TexturesStrategy.RepackCompressed)
             TrimTextures(Path.GetDirectoryName(path));
 
         using (var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture))
@@ -1067,20 +1061,46 @@ public class MeshT : IMesh
             {
                 var material = _materials[index];
 
-                if (material.Texture != null && TexturesStrategy == TexturesStrategy.KeepOriginal)
+                if (material.Texture != null)
                 {
-                    var folder = Path.GetDirectoryName(path);
+                    if (TexturesStrategy == TexturesStrategy.KeepOriginal)
+                    {
+                        var folder = Path.GetDirectoryName(path);
 
-                    var textureFileName =
-                        $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}{Path.GetExtension(material.Texture)}";
+                        var textureFileName =
+                            $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}{Path.GetExtension(material.Texture)}";
 
-                    var newTexturePath =
-                        folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
+                        var newTexturePath =
+                            folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
 
-                    if (!File.Exists(newTexturePath))
-                        File.Copy(material.Texture, newTexturePath, true);
+                        if (!File.Exists(newTexturePath))
+                            File.Copy(material.Texture, newTexturePath, true);
 
-                    material.Texture = textureFileName;
+                        material.Texture = textureFileName;
+                    }
+                    else if (TexturesStrategy == TexturesStrategy.Compress)
+                    {
+                        var folder = Path.GetDirectoryName(path);
+
+                        var textureFileName =
+                            $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}.jpg";
+
+                        var newTexturePath =
+                            folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
+
+                        if (File.Exists(newTexturePath))
+
+                            File.Delete(newTexturePath);
+
+                        Console.WriteLine($" -> Compressing texture '{material.Texture}'");
+                        
+                        using (var image = Image.Load(material.Texture))
+                        {
+                            image.SaveAsJpeg(newTexturePath, encoder);
+                        }
+
+                        material.Texture = textureFileName;
+                    }
                 }
 
                 writer.WriteLine(material.ToMtl());
@@ -1090,10 +1110,9 @@ public class MeshT : IMesh
 
     private void _WriteObjWithoutTexture(string path, bool removeUnused = true)
     {
-        
         if (removeUnused)
             RemoveUnusedVertices();
-        
+
         using var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture);
 
         writer.Write("o ");
@@ -1126,6 +1145,7 @@ public class MeshT : IMesh
 public enum TexturesStrategy
 {
     KeepOriginal,
+    Compress,
     Repack,
     RepackCompressed
 }

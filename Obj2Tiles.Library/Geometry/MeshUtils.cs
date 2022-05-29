@@ -9,6 +9,11 @@ public class MeshUtils
 {
     public static IMesh LoadMesh(string fileName)
     {
+        return LoadMesh(fileName, out _);
+    }
+    
+    public static IMesh LoadMesh(string fileName, out string[] dependencies)
+    {
         using var reader = new StreamReader(fileName);
 
         var vertices = new List<Vertex3>();
@@ -18,6 +23,7 @@ public class MeshUtils
         var materials = new List<Material>();
         var materialsDict = new Dictionary<string, int>();
         var currentMaterial = string.Empty;
+        var deps = new List<string>();
 
         while (true)
         {
@@ -103,9 +109,12 @@ public class MeshUtils
                 {
                     var mtlFileName = segs[1];
                     var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
+                    
+                    var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps);
 
-                    var mats = Material.ReadMtl(mtlFilePath);
-
+                    deps.AddRange(mtlDeps);
+                    deps.Add(mtlFilePath);
+                    
                     foreach (var mat in mats)
                     {
                         materials.Add(mat);
@@ -121,6 +130,8 @@ public class MeshUtils
             }
         }
 
+        dependencies = deps.ToArray();
+        
         return textureVertices.Any()
             ? new MeshT(vertices, textureVertices, facesT, materials)
             : new Mesh(vertices, faces);

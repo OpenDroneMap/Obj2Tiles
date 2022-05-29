@@ -6,7 +6,7 @@ namespace Obj2Tiles.Library.Materials;
 
 public class Material : ICloneable
 {
-    public string Name;
+    public readonly string Name;
     public string? Texture;
 
     /// <summary>
@@ -50,10 +50,11 @@ public class Material : ICloneable
         IlluminationModel = illuminationModel;
     }
 
-    public static Material[] ReadMtl(string path)
+    public static Material[] ReadMtl(string path, out string[] dependencies)
     {
         var lines = File.ReadAllLines(path);
         var materials = new List<Material>();
+        var deps = new List<string>();
 
         var texture = string.Empty;
         var name = string.Empty;
@@ -81,7 +82,10 @@ public class Material : ICloneable
                 case "map_Kd":
                     texture = Path.IsPathRooted(parts[1])
                         ? parts[1]
-                        : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path), parts[1]));
+                        : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, parts[1]));
+                    
+                    deps.Add(texture);
+                    
                     break;
                 case "Ka":
                     ambientColor = new RGB(
@@ -122,6 +126,8 @@ public class Material : ICloneable
         materials.Add(new Material(name, texture, ambientColor, diffuseColor, specularColor, specularExponent, dissolve,
             illuminationModel));
 
+        dependencies = deps.ToArray();
+        
         return materials.ToArray();
     }
 
