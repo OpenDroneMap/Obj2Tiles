@@ -6,8 +6,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
-        <AssemblyVersion>1.0.6</AssemblyVersion>
-        <FileVersion>1.0.6</FileVersion>
+        <AssemblyVersion>1.0.7</AssemblyVersion>
+        <FileVersion>1.0.7</FileVersion>
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
 
