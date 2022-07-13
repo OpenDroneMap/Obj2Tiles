@@ -528,8 +528,8 @@ public class MeshT : IMesh
             Debug.WriteLine("Found place for cluster at " + newTextureClusterRect);
 
             // Too long to explain this here, but it works
-            var adjustedSourceY = texture.Height - (clusterY + clusterHeight);
-            var adjustedDestY = edgeLength - (newTextureClusterRect.Y + clusterHeight);
+            var adjustedSourceY = Math.Max(texture.Height - (clusterY + clusterHeight), 0);
+            var adjustedDestY = Math.Max(edgeLength - (newTextureClusterRect.Y + clusterHeight), 0);
 
             Common.CopyImage(texture, newTexture, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
                 newTextureClusterRect.X, adjustedDestY);
