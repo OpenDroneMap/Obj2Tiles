@@ -32,6 +32,9 @@ namespace Obj2Tiles
 
             if (!CheckOptions(opts)) return;
 
+            opts.Output = Path.GetFullPath(opts.Output);
+            opts.Input = Path.GetFullPath(opts.Input);
+            
             Directory.CreateDirectory(opts.Output);
 
             var pipelineId = Guid.NewGuid().ToString();
