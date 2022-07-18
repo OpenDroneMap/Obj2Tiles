@@ -4,7 +4,8 @@
 ![license](https://img.shields.io/github/license/HeDo88TH/Obj2Tiles) 
 ![commits](https://img.shields.io/github/commit-activity/m/HeDo88TH/Obj2Tiles) 
 ![languages](https://img.shields.io/github/languages/top/HeDo88TH/Obj2Tiles)
-[![Build & Test](https://github.com/HeDo88TH/Obj2Tiles/actions/workflows/build-test.yml/badge.svg)](https://github.com/HeDo88TH/Obj2Tiles/actions/workflows/build-test.yml)
+[![Build & Test](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml)
+[![Publish](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml)
 
 Obj2Tiles is a fully fledged tool to convert OBJ files to 3D Tiles format. 
 It creates multiple LODs, splits the mesh and repacks the textures.
