@@ -431,13 +431,17 @@ public class MeshT : IMesh
 
     private void LoadTexturesCache()
     {
-        Parallel.ForEach(_materials, material => TexturesCache.GetTexture(material.Texture));
+        Parallel.ForEach(_materials, material =>
+        {
+            if (!string.IsNullOrEmpty(material.Texture))
+                TexturesCache.GetTexture(material.Texture);
+        });
     }
 
     private static readonly JpegEncoder encoder = new JpegEncoder { Quality = 75 };
 
     private void BinPackTextures(string targetFolder, int materialIndex, IReadOnlyList<List<int>> clusters,
-        IDictionary<Vertex2, int> newTextureVertices, List<Task> tasks)
+        IDictionary<Vertex2, int> newTextureVertices, ICollection<Task> tasks)
     {
         var material = _materials[materialIndex];
 
@@ -528,8 +532,8 @@ public class MeshT : IMesh
             Debug.WriteLine("Found place for cluster at " + newTextureClusterRect);
 
             // Too long to explain this here, but it works
-            var adjustedSourceY = texture.Height - (clusterY + clusterHeight);
-            var adjustedDestY = edgeLength - (newTextureClusterRect.Y + clusterHeight);
+            var adjustedSourceY = Math.Max(texture.Height - (clusterY + clusterHeight), 0);
+            var adjustedDestY = Math.Max(edgeLength - (newTextureClusterRect.Y + clusterHeight), 0);
 
             Common.CopyImage(texture, newTexture, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
                 newTextureClusterRect.X, adjustedDestY);
@@ -1093,7 +1097,7 @@ public class MeshT : IMesh
                             File.Delete(newTexturePath);
 
                         Console.WriteLine($" -> Compressing texture '{material.Texture}'");
-                        
+
                         using (var image = Image.Load(material.Texture))
                         {
                             image.SaveAsJpeg(newTexturePath, encoder);
