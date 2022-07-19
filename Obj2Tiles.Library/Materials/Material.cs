@@ -56,7 +56,7 @@ public class Material : ICloneable
         var materials = new List<Material>();
         var deps = new List<string>();
 
-        var texture = string.Empty;
+        string texture = null;
         var name = string.Empty;
         RGB? ambientColor = null, diffuseColor = null, specularColor = null;
         double? specularExponent = null, dissolve = null;
