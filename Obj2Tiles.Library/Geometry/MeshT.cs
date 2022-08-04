@@ -535,7 +535,7 @@ public class MeshT : IMesh
             var adjustedSourceY = Math.Max(texture.Height - (clusterY + clusterHeight), 0);
             var adjustedDestY = Math.Max(edgeLength - (newTextureClusterRect.Y + clusterHeight), 0);
 
-            Common.CopyImage(texture, newTexture, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
+            Common.CopyImage(texture, newTexture, Math.Max(clusterX, 0), adjustedSourceY, clusterWidth, clusterHeight,
                 newTextureClusterRect.X, adjustedDestY);
 
             var textureScaleX = (double)textureWidth / edgeLength;
@@ -1043,9 +1043,9 @@ public class MeshT : IMesh
             }
 
             var materialFaces = from face in _faces
-                group face by face.MaterialIndex
+                                group face by face.MaterialIndex
                 into g
-                select g;
+                                select g;
 
             // NOTE: If there are groups of faces without materials, they must be placed at the beginning
             foreach (var grp in materialFaces.OrderBy(item => item.Key))
