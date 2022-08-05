@@ -45,9 +45,15 @@ public class MeshUtils
                         double.Parse(segs[3], CultureInfo.InvariantCulture)));
                     break;
                 case "vt" when segs.Length >= 3:
-                    textureVertices.Add(new Vertex2(
+
+                    var vtx = new Vertex2(
                         double.Parse(segs[1], CultureInfo.InvariantCulture),
-                        double.Parse(segs[2], CultureInfo.InvariantCulture)));
+                        double.Parse(segs[2], CultureInfo.InvariantCulture));
+                    
+                    if (vtx.X < 0 || vtx.Y < 0 || vtx.X > 1 || vtx.Y > 1)
+                        throw new Exception("Invalid texture coordinates: " + vtx);
+                    
+                    textureVertices.Add(vtx);
                     break;
                 case "vn" when segs.Length == 3:
                     // Skipping normals
