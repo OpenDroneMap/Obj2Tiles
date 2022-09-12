@@ -254,9 +254,9 @@ public class Mesh : IMesh
                 minY = minY < v.Y ? minY : v.Y;
                 minZ = minZ < v.Z ? minZ : v.Z;
 
-                maxX = v.X > maxX ? maxX : v.X;
-                maxY = v.Y > maxY ? maxY : v.Y;
-                maxZ = v.Z > maxZ ? maxZ : v.Z;
+                maxX = v.X < maxX ? maxX : v.X;
+                maxY = v.Y < maxY ? maxY : v.Y;
+                maxZ = v.Z < maxZ ? maxZ : v.Z;
             }
 
             return new Box3(minX, minY, minZ, maxX, maxY, maxZ);
