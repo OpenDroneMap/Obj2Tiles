@@ -79,7 +79,7 @@ public static partial class StagesFacade
         var currentTriangleCount = 0;
         for (var i = 0; i < sourceSubMeshIndices.Length; i++)
         {
-            currentTriangleCount += (sourceSubMeshIndices[i].Length / 3);
+            currentTriangleCount += sourceSubMeshIndices[i].Length / 3;
         }
 
         var targetTriangleCount = (int)Math.Ceiling(currentTriangleCount * quality);
