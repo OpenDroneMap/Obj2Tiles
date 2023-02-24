@@ -68,6 +68,7 @@ public class Material : ICloneable
                 continue;
 
             var parts = line.Split(' ');
+            // Console.WriteLine("Parts", parts[0]);
             switch (parts[0])
             {
                 case "newmtl":
@@ -83,9 +84,9 @@ public class Material : ICloneable
                     texture = Path.IsPathRooted(parts[1])
                         ? parts[1]
                         : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, parts[1]));
-                    
+
                     deps.Add(texture);
-                    
+
                     break;
                 case "Ka":
                     ambientColor = new RGB(
@@ -127,7 +128,7 @@ public class Material : ICloneable
             illuminationModel));
 
         dependencies = deps.ToArray();
-        
+
         return materials.ToArray();
     }
 

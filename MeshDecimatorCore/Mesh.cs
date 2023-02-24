@@ -371,7 +371,7 @@ namespace MeshDecimatorCore
                 return;
 
             int vertexCount = vertices.Length;
-            
+
             var tangents = new Vector4[vertexCount];
             var tan1 = new Vector3[vertexCount];
             var tan2 = new Vector3[vertexCount];
@@ -429,7 +429,7 @@ namespace MeshDecimatorCore
                         t1 = w1.y - w0.y;
                         t2 = w2.y - w0.y;
                     }
-                    
+
 
                     float x1 = (float)(v1.x - v0.x);
                     float x2 = (float)(v2.x - v0.x);

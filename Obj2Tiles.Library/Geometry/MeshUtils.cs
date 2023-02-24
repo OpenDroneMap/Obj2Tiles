@@ -11,7 +11,7 @@ public class MeshUtils
     {
         return LoadMesh(fileName, out _);
     }
-    
+
     public static IMesh LoadMesh(string fileName, out string[] dependencies)
     {
         using var reader = new StreamReader(fileName);
@@ -20,6 +20,7 @@ public class MeshUtils
         var textureVertices = new List<Vertex2>();
         var facesT = new List<FaceT>();
         var faces = new List<Face>();
+        var facesB = new List<FaceB>();
         var materials = new List<Material>();
         var materialsDict = new Dictionary<string, int>();
         var currentMaterial = string.Empty;
@@ -49,86 +50,86 @@ public class MeshUtils
                     var vtx = new Vertex2(
                         double.Parse(segs[1], CultureInfo.InvariantCulture),
                         double.Parse(segs[2], CultureInfo.InvariantCulture));
-                    
+
                     if (vtx.X < 0 || vtx.Y < 0 || vtx.X > 1 || vtx.Y > 1)
                         throw new Exception("Invalid texture coordinates: " + vtx);
-                    
+
                     textureVertices.Add(vtx);
                     break;
                 case "vn" when segs.Length == 3:
                     // Skipping normals
                     break;
                 case "usemtl" when segs.Length == 2:
-                {
-                    if (!materialsDict.ContainsKey(segs[1]))
-                        throw new Exception($"Material {segs[1]} not found");
-
-                    currentMaterial = segs[1];
-                    break;
-                }
+                    {
+                        if (!materialsDict.ContainsKey(segs[1]))
+                            throw new Exception($"Material {segs[1]} not found");
+                        currentMaterial = segs[1];
+                        break;
+                    }
                 case "f" when segs.Length == 4:
-                {
-                    var first = segs[1].Split('/');
-                    var second = segs[2].Split('/');
-                    var third = segs[3].Split('/');
-
-                    var hasTexture = first.Length > 1 && first[1].Length > 0 && second.Length > 1 &&
-                                     second[1].Length > 0 && third.Length > 1 && third[1].Length > 0;
-
-                    // We ignore this
-                    // var hasNormals = vertexIndices[0][2] != null && vertexIndices[1][2] != null && vertexIndices[2][2] != null;
-
-                    var v1 = int.Parse(first[0]);
-                    var v2 = int.Parse(second[0]);
-                    var v3 = int.Parse(third[0]);
-
-                    if (hasTexture)
                     {
-                        var vt1 = int.Parse(first[1]);
-                        var vt2 = int.Parse(second[1]);
-                        var vt3 = int.Parse(third[1]);
+                        var first = segs[1].Split('/');
+                        var second = segs[2].Split('/');
+                        var third = segs[3].Split('/');
 
-                        var faceT = new FaceT(
-                            v1 - 1,
-                            v2 - 1,
-                            v3 - 1,
-                            vt1 - 1,
-                            vt2 - 1,
-                            vt3 - 1,
-                            materialsDict[currentMaterial]);
+                        var hasTexture = first.Length > 1 && first[1].Length > 0 && second.Length > 1 &&
+                                         second[1].Length > 0 && third.Length > 1 && third[1].Length > 0;
 
-                        facesT.Add(faceT);
+                        // We ignore this
+                        // var hasNormals = vertexIndices[0][2] != null && vertexIndices[1][2] != null && vertexIndices[2][2] != null;
+
+                        var v1 = int.Parse(first[0]);
+                        var v2 = int.Parse(second[0]);
+                        var v3 = int.Parse(third[0]);
+
+                        if (hasTexture)
+                        {
+
+                            var vt1 = int.Parse(first[1]);
+                            var vt2 = int.Parse(second[1]);
+                            var vt3 = int.Parse(third[1]);
+                            var faceT = new FaceT(
+                                v1 - 1,
+                                v2 - 1,
+                                v3 - 1,
+                                vt1 - 1,
+                                vt2 - 1,
+                                vt3 - 1,
+                                materialsDict[currentMaterial]);
+
+                            facesT.Add(faceT);
+                        }
+                        else
+                        {
+                            var faceT = new FaceB(
+                                v1 - 1,
+                                v2 - 1,
+                                v3 - 1,
+                                materialsDict[currentMaterial]);
+
+                            facesB.Add(faceT);
+                        }
+
+                        break;
                     }
-                    else
-                    {
-                        var face = new Face(
-                            v1 - 1,
-                            v2 - 1,
-                            v3 - 1);
-
-                        faces.Add(face);
-                    }
-
-                    break;
-                }
                 case "mtllib" when segs.Length == 2:
-                {
-                    var mtlFileName = segs[1];
-                    var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
-                    
-                    var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps);
-
-                    deps.AddRange(mtlDeps);
-                    deps.Add(mtlFilePath);
-                    
-                    foreach (var mat in mats)
                     {
-                        materials.Add(mat);
-                        materialsDict.Add(mat.Name, materials.Count - 1);
-                    }
+                        var mtlFileName = segs[1];
+                        var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
 
-                    break;
-                }
+                        var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps);
+
+                        deps.AddRange(mtlDeps);
+                        deps.Add(mtlFilePath);
+
+                        foreach (var mat in mats)
+                        {
+                            materials.Add(mat);
+                            materialsDict.Add(mat.Name, materials.Count - 1);
+                        }
+
+                        break;
+                    }
                 case "l" or "cstype" or "deg" or "bmat" or "step" or "curv" or "curv2" or "surf" or "parm" or "trim"
                     or "end" or "hole" or "scrv" or "sp" or "con":
 
@@ -137,10 +138,12 @@ public class MeshUtils
         }
 
         dependencies = deps.ToArray();
-        
-        return textureVertices.Any()
-            ? new MeshT(vertices, textureVertices, facesT, materials)
-            : new Mesh(vertices, faces);
+        Console.WriteLine($" -> facesB-------------------------\"{facesB}\"");
+        // return new Mesh(vertices, facesB, materials);
+        return new MeshT(vertices, facesB, materials);
+        // return textureVertices.Any()
+        //     ? new MeshT(vertices, textureVertices, facesT, materials)
+        //     : new Mesh(vertices, facesB, materials);
     }
 
     #region Splitters
