@@ -9,7 +9,7 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
-        bool zsplit, Box3 bounds, bool keepOriginalTextures = false)
+        bool zsplit, Box3 bounds, string objFilePath, bool keepOriginalTextures = false)
     {
 
         var tasks = new List<Task<Dictionary<string, Box3>>>();
@@ -23,7 +23,7 @@ public static partial class StagesFacade
             var textureStrategy = keepOriginalTextures ? TexturesStrategy.KeepOriginal :
                 index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed;
 
-            var splitTask = Split(file, dest, divisions, zsplit, bounds, textureStrategy);
+            var splitTask = Split(file, dest, divisions, objFilePath, zsplit, bounds, textureStrategy);
 
             tasks.Add(splitTask);
         }
@@ -34,6 +34,7 @@ public static partial class StagesFacade
     }
 
     public static async Task<Dictionary<string, Box3>> Split(string sourcePath, string destPath, int divisions,
+        string objFilePath,
         bool zSplit = false,
         Box3? bounds = null,
         TexturesStrategy textureStrategy = TexturesStrategy.Repack,
@@ -47,7 +48,7 @@ public static partial class StagesFacade
         Console.WriteLine($" -> Loading OBJ file \"{sourcePath}\"");
 
         sw.Start();
-        var mesh = MeshUtils.LoadMesh(sourcePath, out var deps);
+        var mesh = MeshUtils.LoadMesh(sourcePath, objFilePath, out var deps);
 
         Console.WriteLine(
             $" ?> Loaded {mesh.VertexCount} vertices, {mesh.FacesCount} faces in {sw.ElapsedMilliseconds}ms");
@@ -74,7 +75,6 @@ public static partial class StagesFacade
 
         int count;
 
-        Console.WriteLine($"bounds===================={bounds}");
         if (bounds != null)
         {
             count = zSplit

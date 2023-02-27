@@ -44,17 +44,17 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Square_RemoveUnused));
 
-        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "square-unused.obj"));
-        
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "square-unused.obj"), "");
+
         mesh.WriteObj(Path.Combine(testPath, "square.obj"));
     }
-    
+
     [Test]
     public void WriteObj_Cube2_Repacking()
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_Repacking));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"), "");
 
         mesh.TexturesStrategy = TexturesStrategy.Repack;
 
@@ -66,7 +66,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube2_PreserveOriginalTextures));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"), "");
         mesh.TexturesStrategy = TexturesStrategy.KeepOriginal;
 
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
@@ -77,7 +77,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube_Repacking));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"), "");
 
         mesh.TexturesStrategy = TexturesStrategy.Repack;
 
@@ -89,7 +89,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Cube_PreserveOriginalTextures));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"), "");
         mesh.TexturesStrategy = TexturesStrategy.KeepOriginal;
 
         mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
@@ -100,7 +100,7 @@ public class Mesh3Tests
     {
         using var fs = new TestFS(BrightonTexturingTestUrl, nameof(Mesh3Tests));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(fs.TestFolder, "odm_textured_model_geo.obj"));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(fs.TestFolder, "odm_textured_model_geo.obj"), "");
 
         mesh.TexturesStrategy = TexturesStrategy.Repack;
         var outputPath = Path.Combine(fs.TestFolder, "output");
@@ -116,7 +116,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Canyon_Repacking));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\canyon\odm_texturing\odm_textured_model_geo.obj");
+        var mesh = (MeshT)MeshUtils.LoadMesh(@"C:\datasets\canyon\odm_texturing\odm_textured_model_geo.obj", "");
 
         mesh.TexturesStrategy = TexturesStrategy.Repack;
 
@@ -128,7 +128,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube_PreserveOriginalTextures));
 
-        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"), "");
 
         var center = mesh.GetVertexBaricenter();
 
@@ -146,7 +146,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_SplittedX_Cube_Repacking));
 
-        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"), "");
 
         var center = mesh.GetVertexBaricenter();
 
@@ -164,7 +164,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_SplittedX_Cube_PreserveOriginalTextures));
 
-        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"));
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube/cube.obj"), "");
 
         var center = mesh.GetVertexBaricenter();
 
@@ -182,7 +182,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube2_PreserveOriginalTextures));
 
-        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"), "");
 
         var center = mesh.GetVertexBaricenter();
 
@@ -200,7 +200,7 @@ public class Mesh3Tests
     {
         var testPath = GetTestOutputPath(nameof(WriteObj_Splitted_Cube2_Repacking));
 
-        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"), "");
 
         var center = mesh.GetVertexBaricenter();
 
@@ -259,22 +259,22 @@ public class Mesh3Tests
         var v1 = new Vertex3(0, 0, 0);
         var v2 = new Vertex3(1, 0, 0);
         var v3 = new Vertex3(0, 1, 0);
-        
+
         var o = Common.Orientation(v1, v2, v3);
 
         o.Z.Should().Be(1);
         o.X.Should().Be(0);
         o.Y.Should().Be(0);
     }
-    
-    
+
+
     [Test]
     public void Orientation_TestZero()
     {
         var v1 = new Vertex3(0, 0, 0);
         var v2 = new Vertex3(0, 0, 0);
         var v3 = new Vertex3(0, 0, 0);
-        
+
         var o = Common.Orientation(v1, v2, v3);
 
         o.Z.Should().Be(0);
@@ -285,7 +285,7 @@ public class Mesh3Tests
     [Test]
     public void Orientation_TestCubeMesh()
     {
-        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube2/cube.obj"), "");
 
         var orientation = mesh.GetAverageOrientation();
 
@@ -293,14 +293,14 @@ public class Mesh3Tests
         orientation.Y.Should().Be(0);
         orientation.Z.Should().Be(0);
     }
-    
+
     [Test]
     public void Orientation_TestBrighton()
     {
-        
+
         using var fs = new TestFS(BrightonTexturingTestUrl, nameof(Mesh3Tests));
 
-        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(fs.TestFolder, "odm_textured_model_geo.obj"));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(fs.TestFolder, "odm_textured_model_geo.obj"), "");
 
         var orientation = mesh.GetAverageOrientation();
 

@@ -7,12 +7,12 @@ namespace Obj2Tiles.Library.Geometry;
 
 public class MeshUtils
 {
-    public static IMesh LoadMesh(string fileName)
+    public static IMesh LoadMesh(string fileName, string objFilePath)
     {
-        return LoadMesh(fileName, out _);
+        return LoadMesh(fileName, objFilePath, out _);
     }
 
-    public static IMesh LoadMesh(string fileName, out string[] dependencies)
+    public static IMesh LoadMesh(string fileName, string objFilePath, out string[] dependencies)
     {
         using var reader = new StreamReader(fileName);
 
@@ -25,6 +25,20 @@ public class MeshUtils
         var materialsDict = new Dictionary<string, int>();
         var currentMaterial = string.Empty;
         var deps = new List<string>();
+
+        var mtlFileName = objFilePath.Replace(".obj", ".mtl");
+        var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
+
+        var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps);
+
+        deps.AddRange(mtlDeps);
+        deps.Add(mtlFilePath);
+
+        foreach (var mat in mats)
+        {
+            materials.Add(mat);
+            materialsDict.Add(mat.Name, materials.Count - 1);
+        }
 
         while (true)
         {
@@ -101,35 +115,35 @@ public class MeshUtils
                         }
                         else
                         {
-                            var faceT = new FaceB(
+                            var face = new FaceB(
                                 v1 - 1,
                                 v2 - 1,
                                 v3 - 1,
                                 materialsDict[currentMaterial]);
 
-                            facesB.Add(faceT);
+                            facesB.Add(face);
                         }
 
                         break;
                     }
-                case "mtllib" when segs.Length == 2:
-                    {
-                        var mtlFileName = segs[1];
-                        var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
+                // case "mtllib" when segs.Length == 2:
+                //     {
+                //         var mtlFileName = segs[1];
+                //         var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
 
-                        var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps);
+                //         var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps);
 
-                        deps.AddRange(mtlDeps);
-                        deps.Add(mtlFilePath);
+                //         deps.AddRange(mtlDeps);
+                //         deps.Add(mtlFilePath);
 
-                        foreach (var mat in mats)
-                        {
-                            materials.Add(mat);
-                            materialsDict.Add(mat.Name, materials.Count - 1);
-                        }
+                //         foreach (var mat in mats)
+                //         {
+                //             materials.Add(mat);
+                //             materialsDict.Add(mat.Name, materials.Count - 1);
+                //         }
 
-                        break;
-                    }
+                //         break;
+                //     }
                 case "l" or "cstype" or "deg" or "bmat" or "step" or "curv" or "curv2" or "surf" or "parm" or "trim"
                     or "end" or "hole" or "scrv" or "sp" or "con":
 
@@ -138,9 +152,9 @@ public class MeshUtils
         }
 
         dependencies = deps.ToArray();
-        Console.WriteLine($" -> facesB-------------------------\"{facesB}\"");
         // return new Mesh(vertices, facesB, materials);
-        return new MeshT(vertices, facesB, materials);
+        return materials.Any() ? new MeshT(vertices, facesB, materials) : new Mesh(vertices, faces);
+        // return new MeshT(vertices, facesB, materials);
         // return textureVertices.Any()
         //     ? new MeshT(vertices, textureVertices, facesT, materials)
         //     : new Mesh(vertices, facesB, materials);

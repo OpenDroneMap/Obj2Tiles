@@ -68,7 +68,6 @@ public class Material : ICloneable
                 continue;
 
             var parts = line.Split(' ');
-            // Console.WriteLine("Parts", parts[0]);
             switch (parts[0])
             {
                 case "newmtl":
