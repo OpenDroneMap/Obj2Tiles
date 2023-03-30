@@ -7,6 +7,7 @@
 */
 
 using Obj2Tiles.Library.Algos.Model;
+using Rectangle = Obj2Tiles.Library.Algos.Model.Rectangle;
 
 namespace Obj2Tiles.Library.Algos
 {
