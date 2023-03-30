@@ -704,8 +704,11 @@ public class MeshT : IMesh
         var clusters = new List<List<int>>();
         var remainingFacesIndexes = new List<int>(facesIndexes);
 
-        var currentCluster = new List<int> { remainingFacesIndexes.First() };
+        var currentCluster = new List<int> { remainingFacesIndexes[0] };
+        var currentClusterCache = new HashSet<int> { remainingFacesIndexes[0] };
         remainingFacesIndexes.RemoveAt(0);
+
+        var lastRemainingFacesCount = remainingFacesIndexes.Count;
 
         while (remainingFacesIndexes.Count > 0)
         {
@@ -721,9 +724,11 @@ public class MeshT : IMesh
                 for (var i = 0; i < connectedFaces.Count; i++)
                 {
                     var connectedFace = connectedFaces[i];
-                    if (currentCluster.Contains(connectedFace)) continue;
-
+                    //if (currentCluster.Contains(connectedFace)) continue;
+                    if (currentClusterCache.Contains(connectedFace)) continue;
+                    
                     currentCluster.Add(connectedFace);
+                    currentClusterCache.Add(connectedFace);
                     remainingFacesIndexes.Remove(connectedFace);
                 }
             }
@@ -734,13 +739,24 @@ public class MeshT : IMesh
                 // Add the cluster
                 clusters.Add(currentCluster);
 
+                Debug.WriteLine("Added cluster with " + currentCluster.Count + " faces.");
+                Debug.WriteLine("Remaining faces count: " + remainingFacesIndexes.Count + "");
                 // If no more faces, exit
                 if (remainingFacesIndexes.Count == 0) break;
 
                 // Let's continue with the next cluster
-                currentCluster = new List<int> { remainingFacesIndexes.First() };
+                currentCluster = new List<int> { remainingFacesIndexes[0] };
+                currentClusterCache = new HashSet<int> { remainingFacesIndexes[0] };
                 remainingFacesIndexes.RemoveAt(0);
             }
+            
+            if (lastRemainingFacesCount == remainingFacesIndexes.Count)
+            {
+                Debug.WriteLine("Discarding " + remainingFacesIndexes.Count + " faces.");
+                break;
+            }
+
+            lastRemainingFacesCount = remainingFacesIndexes.Count;
         }
 
         // Add the cluster
