@@ -157,6 +157,19 @@
       <None Update="TestData\Tile2\Mesh-XL-YR-XR-YL-texture-material0005.png">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\Tile3\Mesh-XR-YR.obj">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile3\Mesh-XR-YR.mtl">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Tile3\Mesh-XR-YR-texture-material0000.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="TestData\Tile3" />
     </ItemGroup>
 
 </Project>
