@@ -91,4 +91,5 @@ public class StagesTests
         Utils.ConvertB3dm("TestData/Tile2/Mesh-XL-YR-XR-YL.obj", Path.Combine(testPath, "out.b3dm"));
 
     }
+
 }

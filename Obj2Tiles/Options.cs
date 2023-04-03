@@ -3,7 +3,7 @@ using CommandLine;
 
 namespace Obj2Tiles;
 
-public class Options
+public sealed class Options
 {
     [Value(0, MetaName = "Input", Required = true, HelpText = "Input OBJ file.")]
     public string Input { get; set; }
