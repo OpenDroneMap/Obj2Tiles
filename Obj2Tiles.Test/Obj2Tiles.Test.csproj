@@ -168,8 +168,4 @@
       </None>
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="TestData\Tile3" />
-    </ItemGroup>
-
 </Project>
