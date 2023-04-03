@@ -699,7 +699,6 @@ public class MeshT : IMesh
     private static List<List<int>> GetFacesClusters(IEnumerable<int> facesIndexes,
         IReadOnlyDictionary<int, List<int>> facesMapper)
     {
-        Debug.Assert(facesIndexes.Any(), "No faces in this cluster");
 
         var clusters = new List<List<int>>();
         var remainingFacesIndexes = new List<int>(facesIndexes);
@@ -724,7 +723,6 @@ public class MeshT : IMesh
                 for (var i = 0; i < connectedFaces.Count; i++)
                 {
                     var connectedFace = connectedFaces[i];
-                    //if (currentCluster.Contains(connectedFace)) continue;
                     if (currentClusterCache.Contains(connectedFace)) continue;
                     
                     currentCluster.Add(connectedFace);
@@ -739,8 +737,6 @@ public class MeshT : IMesh
                 // Add the cluster
                 clusters.Add(currentCluster);
 
-                Debug.WriteLine("Added cluster with " + currentCluster.Count + " faces.");
-                Debug.WriteLine("Remaining faces count: " + remainingFacesIndexes.Count + "");
                 // If no more faces, exit
                 if (remainingFacesIndexes.Count == 0) break;
 
