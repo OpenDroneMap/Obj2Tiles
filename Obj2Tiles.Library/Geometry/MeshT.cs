@@ -435,6 +435,8 @@ public class MeshT : IMesh
         {
             if (!string.IsNullOrEmpty(material.Texture))
                 TexturesCache.GetTexture(material.Texture);
+            if (!string.IsNullOrEmpty(material.NormalMap))
+                TexturesCache.GetTexture(material.NormalMap);
         });
     }
 
@@ -443,15 +445,17 @@ public class MeshT : IMesh
     private void BinPackTextures(string targetFolder, int materialIndex, IReadOnlyList<List<int>> clusters,
         IDictionary<Vertex2, int> newTextureVertices, ICollection<Task> tasks)
     {
+
         var material = _materials[materialIndex];
 
-        if (material.Texture == null)
+        if (material.Texture == null && material.NormalMap == null)
             return;
 
-        var texture = TexturesCache.GetTexture(material.Texture);
+        var texture =!(material.Texture == null) ? TexturesCache.GetTexture(material.Texture) : null;
+        var normalMap = !(material.NormalMap == null) ? TexturesCache.GetTexture(material.NormalMap) : null;
 
-        var textureWidth = texture.Width;
-        var textureHeight = texture.Height;
+        var textureWidth = !(material.Texture == null) ? texture.Width : normalMap.Width;
+        var textureHeight = !(material.Texture == null) ? texture.Height : normalMap.Height;
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
         CalculateMaxMinAreaRect(clustersRects, textureWidth, textureHeight, out var maxWidth, out var maxHeight,
@@ -472,9 +476,10 @@ public class MeshT : IMesh
         // NOTE: We could enable rotations but it would be a bit more complex
         var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
 
-        var newTexture = new Image<Rgba32>(edgeLength, edgeLength);
+        var newTexture = !(material.Texture == null) ? new Image<Rgba32>(edgeLength, edgeLength) : null;
+        var newNormalMap = !(material.NormalMap == null) ? new Image<Rgba32>(edgeLength, edgeLength) : null;
 
-        string? textureFileName, newPath;
+        string? textureFileName = null, normalMapFileName = null, newPathTexture = null, newPathNormalMap = null;
         var count = 0;
 
         for (var i = 0; i < clusters.Count; i++)
@@ -498,22 +503,36 @@ public class MeshT : IMesh
                 FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
 
             if (newTextureClusterRect.Width == 0)
-            {
+            {   
                 Debug.WriteLine("Somehow we could not pack everything in the texture, splitting it in two");
 
-                textureFileName = $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}";
-                newPath = Path.Combine(targetFolder, textureFileName);
-                newTexture.Save(newPath);
-                newTexture.Dispose();
+                textureFileName = !(material.Texture == null) ? $"{Name}-texture-diffuse-{material.Name}{Path.GetExtension(material.Texture)}" : null;
+                normalMapFileName = !(material.NormalMap == null) ? $"{Name}-texture-normal-{material.Name}{Path.GetExtension(material.NormalMap)}" : null;
+                if(!(material.Texture == null))
+                {
+                    newPathTexture = Path.Combine(targetFolder, textureFileName);
+                    newTexture.Save(newPathTexture);
+                    newTexture.Dispose();
+                }
+                if(!(material.NormalMap == null))
+                {
+                    newPathNormalMap = Path.Combine(targetFolder, normalMapFileName);
+                    newNormalMap.Save(newPathNormalMap);
+                    newNormalMap.Dispose();
+                }
+                
 
-                newTexture = new Image<Rgba32>(edgeLength, edgeLength);
+
+                newTexture = !(material.Texture == null) ? new Image<Rgba32>(edgeLength, edgeLength) : null;
+                newNormalMap = !(material.NormalMap == null) ? new Image<Rgba32>(edgeLength, edgeLength) : null;
                 binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
                 material.Texture = textureFileName;
-
+                material.NormalMap = normalMapFileName;
+                
                 // Avoid texture name collision
                 count++;
 
-                material = new Material(material.Name + "-" + count, textureFileName, material.AmbientColor,
+                material = new Material(material.Name + "-" + count, textureFileName, normalMapFileName, material.AmbientColor,
                     material.DiffuseColor,
                     material.SpecularColor, material.SpecularExponent, material.Dissolve, material.IlluminationModel);
 
@@ -532,12 +551,23 @@ public class MeshT : IMesh
             Debug.WriteLine("Found place for cluster at " + newTextureClusterRect);
 
             // Too long to explain this here, but it works
-            var adjustedSourceY = Math.Max(texture.Height - (clusterY + clusterHeight), 0);
+            var adjustedSourceY = !(material.Texture == null) 
+            ? Math.Max(texture.Height - (clusterY + clusterHeight), 0) 
+            : Math.Max(normalMap.Height - (clusterY + clusterHeight), 0);
             var adjustedDestY = Math.Max(edgeLength - (newTextureClusterRect.Y + clusterHeight), 0);
 
-            Common.CopyImage(texture, newTexture, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
-                newTextureClusterRect.X, adjustedDestY);
+            if (!(material.Texture == null))
+            {
+                Common.CopyImage(texture, newTexture, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
+                 newTextureClusterRect.X, adjustedDestY);
+            }
 
+            if (!(material.NormalMap == null))
+            {
+                Common.CopyImage(normalMap, newNormalMap, clusterX, adjustedSourceY, clusterWidth, clusterHeight,
+                newTextureClusterRect.X, adjustedDestY);
+            }
+            
             var textureScaleX = (double)textureWidth / edgeLength;
             var textureScaleY = (double)textureHeight / edgeLength;
 
@@ -585,23 +615,33 @@ public class MeshT : IMesh
             }
         }
 
-        textureFileName = TexturesStrategy == TexturesStrategy.Repack
-            ? $"{Name}-texture-{material.Name}{Path.GetExtension(material.Texture)}"
-            : $"{Name}-texture-{material.Name}.jpg";
+        if (!(material.Texture == null))
+        {
+            textureFileName = TexturesStrategy == TexturesStrategy.Repack
+            ? $"{Name}-texture-diffuse-{material.Name}{Path.GetExtension(material.Texture)}"
+            : $"{Name}-texture-diffuse-{material.Name}.jpg";
+            newPathTexture = Path.Combine(targetFolder, textureFileName);
+        }
 
-        newPath = Path.Combine(targetFolder, textureFileName);
+        if (!(material.NormalMap == null))
+        {
+            normalMapFileName = TexturesStrategy == TexturesStrategy.Repack
+            ? $"{Name}-texture-normal-{material.Name}{Path.GetExtension(material.NormalMap)}"
+            : $"{Name}-texture-normal-{material.Name}.jpg";
+            newPathNormalMap = Path.Combine(targetFolder, normalMapFileName);
+        }
 
-        var saveTask = new Task(t =>
+        var saveTaskTexture = new Task(t =>
         {
             var tx = t as Image<Rgba32>;
 
             switch (TexturesStrategy)
             {
                 case TexturesStrategy.RepackCompressed:
-                    tx.SaveAsJpeg(newPath, encoder);
+                    tx.SaveAsJpeg(newPathTexture, encoder);
                     break;
                 case TexturesStrategy.Repack:
-                    tx.Save(newPath);
+                    tx.Save(newPathTexture);
                     break;
                 case TexturesStrategy.Compress:
                 case TexturesStrategy.KeepOriginal:
@@ -611,14 +651,48 @@ public class MeshT : IMesh
                     throw new ArgumentOutOfRangeException();
             }
 
-            Debug.WriteLine("Saved texture to " + newPath);
+            Debug.WriteLine("Saved texture to " + newPathTexture);
             tx.Dispose();
         }, newTexture, TaskCreationOptions.LongRunning);
 
-        tasks.Add(saveTask);
-        saveTask.Start();
+        var saveTaskNormalMap = new Task(t =>
+        {
+            var tx = t as Image<Rgba32>;
 
-        material.Texture = textureFileName;
+            switch (TexturesStrategy)
+            {
+                case TexturesStrategy.RepackCompressed:
+                    tx.SaveAsJpeg(newPathNormalMap, encoder);
+                    break;
+                case TexturesStrategy.Repack:
+                    tx.Save(newPathNormalMap);
+                    break;
+                case TexturesStrategy.Compress:
+                case TexturesStrategy.KeepOriginal:
+                    throw new InvalidOperationException(
+                        "KeepOriginal or Compress are meaningless here, we are repacking!");
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            Debug.WriteLine("Saved texture to " + newNormalMap);
+            tx.Dispose();
+        }, newNormalMap, TaskCreationOptions.LongRunning);
+
+
+        if (!(material.Texture == null))
+        {
+            tasks.Add(saveTaskTexture);
+            saveTaskTexture.Start();
+            material.Texture = textureFileName;
+        }
+
+        if (!(material.NormalMap == null))
+        {
+            tasks.Add(saveTaskNormalMap);
+            saveTaskNormalMap.Start();
+            material.NormalMap = normalMapFileName;
+        }
     }
 
     private void CalculateMaxMinAreaRect(RectangleF[] clustersRects, int textureWidth, int textureHeight,

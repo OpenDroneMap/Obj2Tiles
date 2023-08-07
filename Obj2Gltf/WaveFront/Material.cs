@@ -33,6 +33,10 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// </summary>
         public string AmbientTextureFile { get; set; }
         /// <summary>
+        /// norm: Normal texture file path
+        /// </summary>
+        public string NormalTextureFile { get; set; }
+        /// <summary>
         /// Ks: specular reflectivity of the current material
         /// </summary>
         public Reflectivity Specular { get; set; } = new Reflectivity(new FactorColor());

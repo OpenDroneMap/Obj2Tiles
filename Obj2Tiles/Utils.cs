@@ -52,6 +52,13 @@ public static class Utils
                 continue;
             }
 
+            if (line.StartsWith("norm"))
+            {
+                dependencies.Add(line[5..].Trim());
+
+                continue;
+            }
+
             if (line.StartsWith("map_Ks"))
             {
                 dependencies.Add(line[7..].Trim());

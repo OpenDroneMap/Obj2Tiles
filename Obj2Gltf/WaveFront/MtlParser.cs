@@ -19,6 +19,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
         private const string NsPrefix = "Ns";
         private const string map_kaPrefix = "map_Ka";
         private const string map_KdPrefix = "map_Kd";
+        private const string normPrefix = "norm";
 
         private static Reflectivity GetReflectivity(string val)
         {
@@ -193,6 +194,14 @@ namespace SilentWave.Obj2Gltf.WaveFront
                         if (File.Exists(Path.Combine(searchPath, md)))
                         {
                             currentMaterial.DiffuseTextureFile = md;
+                        }
+                    }
+                    else if (line.StartsWith(normPrefix))
+                    {
+                        var mn = line.Substring(normPrefix.Length).Trim();
+                        if (File.Exists(Path.Combine(searchPath, mn)))
+                        {
+                            currentMaterial.NormalTextureFile = mn;
                         }
                     }
                 }

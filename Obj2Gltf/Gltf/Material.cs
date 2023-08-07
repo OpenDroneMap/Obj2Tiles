@@ -61,6 +61,12 @@ namespace SilentWave.Obj2Gltf.Gltf
         [JsonProperty("doubleSided")]
         public bool DoubleSided { get; set; }
 
+        /// <summary>
+        /// The normal texture.
+        /// </summary>
+        [JsonProperty("normalTexture")]
+        public TextureReferenceInfo normalTexture { get; set; }
+
         public override string ToString()
             => $"AM:{AlphaMode} DS:{(DoubleSided ? 1 : 0)} MRB:[{PbrMetallicRoughness.BaseColorFactor[0]}, {PbrMetallicRoughness.BaseColorFactor[1]}, {PbrMetallicRoughness.BaseColorFactor[2]}, {PbrMetallicRoughness.BaseColorFactor[3]}] E:[{EmissiveFactor[0]}, {EmissiveFactor[1]}, {EmissiveFactor[2]}] M:{PbrMetallicRoughness.MetallicFactor} R:{PbrMetallicRoughness.RoughnessFactor} T:{PbrMetallicRoughness.BaseColorTexture?.Index.ToString() ?? "<null>"} {Name}";
     }
