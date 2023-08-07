@@ -8,6 +8,7 @@ public class Material : ICloneable
 {
     public readonly string Name;
     public string? Texture;
+    public string? Texture2;
 
     /// <summary>
     /// Ka - Ambient
@@ -36,12 +37,13 @@ public class Material : ICloneable
 
     public readonly IlluminationModel? IlluminationModel;
 
-    public Material(string name, string? texture = null, RGB? ambientColor = null, RGB? diffuseColor = null,
+    public Material(string name, string? texture = null, string? texture2 = null, RGB? ambientColor = null, RGB? diffuseColor = null,
         RGB? specularColor = null, double? specularExponent = null, double? dissolve = null,
         IlluminationModel? illuminationModel = null)
     {
         Name = name;
         Texture = texture;
+        Texture2 = texture2;
         AmbientColor = ambientColor;
         DiffuseColor = diffuseColor;
         SpecularColor = specularColor;
@@ -57,6 +59,8 @@ public class Material : ICloneable
         var deps = new List<string>();
 
         string texture = null;
+        string texture2 = null;
+
         var name = string.Empty;
         RGB? ambientColor = null, diffuseColor = null, specularColor = null;
         double? specularExponent = null, dissolve = null;
@@ -73,7 +77,7 @@ public class Material : ICloneable
                 case "newmtl":
 
                     if (name.Length > 0)
-                        materials.Add(new Material(name, texture, ambientColor, diffuseColor, specularColor,
+                        materials.Add(new Material(name, texture, texture2, ambientColor, diffuseColor, specularColor,
                             specularExponent, dissolve, illuminationModel));
 
                     name = parts[1];
@@ -86,6 +90,14 @@ public class Material : ICloneable
                     
                     deps.Add(texture);
                     
+                    break;
+                case "map_Ka":
+                    texture2 = Path.IsPathRooted(parts[1])
+                        ? parts[1]
+                        : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, parts[1]));
+
+                    deps.Add(texture2);
+
                     break;
                 case "Ka":
                     ambientColor = new RGB(
@@ -123,7 +135,7 @@ public class Material : ICloneable
             }
         }
 
-        materials.Add(new Material(name, texture, ambientColor, diffuseColor, specularColor, specularExponent, dissolve,
+        materials.Add(new Material(name, texture, texture2, ambientColor, diffuseColor, specularColor, specularExponent, dissolve,
             illuminationModel));
 
         dependencies = deps.ToArray();
@@ -142,6 +154,11 @@ public class Material : ICloneable
         {
             builder.Append("map_Kd ");
             builder.AppendLine(Texture.Replace('\\', '/'));
+        }
+        if (Texture2 != null)
+        {
+            builder.Append("map_Ka ");
+            builder.AppendLine(Texture2.Replace('\\', '/'));
         }
 
         if (AmbientColor != null)
@@ -188,6 +205,7 @@ public class Material : ICloneable
         return new Material(
             Name,
             Texture,
+            Texture2,
             AmbientColor,
             DiffuseColor,
             SpecularColor,

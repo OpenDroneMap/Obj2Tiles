@@ -15,6 +15,7 @@ public static partial class StagesFacade
 
         for (var index = 0; index < sourceFiles.Length; index++)
         {
+            Console.WriteLine("SUP GUYS");
             var file = sourceFiles[index];
             var dest = Path.Combine(destFolder, "LOD-" + index);
             

@@ -296,6 +296,16 @@ namespace SilentWave.Obj2Gltf
                 };
             }
 
+            var hasTexture2 = !string.IsNullOrEmpty(mat.AmbientTextureFile);
+            if (hasTexture2)
+            {
+                var index = getOrAddTextureFunction(mat.AmbientTextureFile);
+                gMat.normalTexture = new TextureReferenceInfo
+                {
+                    Index = index
+                };
+            }
+
             if (mat.Emissive != null && mat.Emissive.Color != null)
             {
                 gMat.EmissiveFactor = mat.Emissive.Color.ToArray();
