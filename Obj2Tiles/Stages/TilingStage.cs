@@ -11,7 +11,7 @@ namespace Obj2Tiles.Stages;
 
 public static partial class StagesFacade
 {
-    public static void Tile(string sourcePath, string destPath, int lods, Dictionary<string, Box3>[] boundsMapper,
+    public static void Tile(string sourcePath, string destPath, int lods, double baseError, Dictionary<string, Box3>[] boundsMapper,
         GpsCoords? coords = null)
     {
 
@@ -29,7 +29,7 @@ public static partial class StagesFacade
        
         // Don't ask me why 100, I have no idea but it works
         // https://github.com/CesiumGS/3d-tiles/issues/162
-        const int baseError = 100;
+        //const int baseError = 100;
 
         // Generate tileset.json
         var tileset = new Tileset
