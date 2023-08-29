@@ -72,7 +72,7 @@ public class GpsCoords
             s, 0, 0, 0,
             0, s, 0, 0,
             0, 0, s, 0,
-            0, 0, 0, s
+            0, 0, 0, 1
         };
 
         var mult = MultiplyMatrix(res, rot);
