@@ -69,8 +69,9 @@ public class Material : ICloneable
         {
             if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line))
                 continue;
-
-            var parts = line.Split(' ');
+            
+            var lineTrimmed = line.Trim();
+            var parts = lineTrimmed.Split(' ');
             switch (parts[0])
             {
                 case "newmtl":
