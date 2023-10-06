@@ -34,6 +34,12 @@ public sealed class Options
     
     [Option("alt", Required = false, HelpText = "Altitude of the mesh (meters)", Default = 0)]
     public double Altitude { get; set; }
+
+    [Option("scale", Required = false, HelpText = "Scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)", Default = 1.0)]
+    public double Scale { get; set; }
+
+    [Option('e',"error", Required = false, HelpText = "Base error for root node", Default = 100.0)]
+    public double BaseError { get; set; }
     
     [Option("use-system-temp", Required = false, HelpText = "Uses the system temp folder", Default = false)]
     public bool UseSystemTempFolder { get; set; }

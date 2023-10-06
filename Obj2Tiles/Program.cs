@@ -82,15 +82,20 @@ namespace Obj2Tiles
                     return;
 
                 var gpsCoords = opts.Latitude != null && opts.Longitude != null
-                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude)
+                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude, opts.Scale)
                     : null;
 
                 Console.WriteLine();
                 Console.WriteLine($" => Tiling stage {(gpsCoords != null ? $"with GPS coords {gpsCoords}" : "")}");
 
+                var baseError = opts.BaseError;
+
+                Console.WriteLine();
+                Console.WriteLine($" => Tiling stage with baseError {baseError}");
+
                 sw.Restart();
 
-                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, boundsMapper, gpsCoords);
+                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, opts.BaseError, boundsMapper, gpsCoords);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
             }

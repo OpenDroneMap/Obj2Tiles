@@ -5,12 +5,14 @@ public class GpsCoords
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double Altitude { get; set; }
+    public double Scale { get; set; }
 
-    public GpsCoords(double latitude, double longitude, double altitude)
+    public GpsCoords(double latitude, double longitude, double altitude, double scale)
     {
         Latitude = latitude;
         Longitude = longitude;
         Altitude = altitude;
+        Scale = scale;
     }
 
     public GpsCoords()
@@ -18,19 +20,21 @@ public class GpsCoords
         Latitude = 0;
         Longitude = 0;
         Altitude = 0;
+        Scale = 1;
     }
 
     public double[] ToEcefTransform()
     {
+        var s = Scale;
         var lat = Latitude * Math.PI / 180;
         var lon = Longitude * Math.PI / 180;
         var alt = Altitude;
 
-        const double a = 6378137;
-        const double b = 6356752.3142;
-        const double f = (a - b) / a;
+        var a = 6378137.0/s;
+        var b = 6356752.3142/s;
+        var f = (a - b) / a;
 
-        const double eSq = 2 * f - f * f;
+        var eSq = 2 * f - f * f;
 
         var sinLat = Math.Sin(lat);
         var cosLat = Math.Cos(lat);
@@ -63,9 +67,17 @@ public class GpsCoords
             0, 0, 0, 1
         };
 
+        var scale = new double[]
+        {
+            s, 0, 0, 0,
+            0, s, 0, 0,
+            0, 0, s, 0,
+            0, 0, 0, 1
+        };
+
         var mult = MultiplyMatrix(res, rot);
 
-        return ConvertToColumnMajorOrder(mult);
+        return MultiplyMatrix(ConvertToColumnMajorOrder(mult), scale);
     }
 
     public static readonly double[] rot = {
@@ -112,6 +124,6 @@ public class GpsCoords
 
     public override string ToString()
     {
-        return $"{Latitude}, {Longitude}, {Altitude}";
+        return $"{Latitude}, {Longitude}, {Altitude}, {Scale}";
     }
 }
