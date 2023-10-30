@@ -32,6 +32,8 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
   --lat                  Latitude of the mesh
   --lon                  Longitude of the mesh
   --alt                  (Default: 0) Altitude of the mesh (meters)
+  -e, --error            (Default: 100), baseError value for root node
+  --scale                (Default: 1), scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)  
   
   --use-system-temp      (Default: false) Uses the system temp folder
   --keep-intermediate    (Default: false) Keeps the intermediate files (do not cleanup)

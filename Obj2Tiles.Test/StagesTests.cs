@@ -47,7 +47,7 @@ public class StagesTests
                 Name = Path.GetFileNameWithoutExtension(file)
             }).ToDictionary(item => item.Name, item => item.Bounds);
     
-        StagesFacade.Tile("TestData/Tile1", testPath, 1, new[] { boundsMapper });
+        StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, new[] { boundsMapper });
         
     }
 
