@@ -34,74 +34,76 @@ public static class Utils
         var mtlFile = File.ReadAllLines(mtlPath);
 
         var dependencies = new List<string>();
-
         
         foreach (var line in mtlFile)
         {
-            if (line.Trim().StartsWith("map_Kd"))
+            
+            var trimmedLine = line.Trim();
+            
+            if (trimmedLine.StartsWith("map_Kd"))
             {
                 dependencies.Add(line[7..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("map_Ka"))
+            if (trimmedLine.StartsWith("map_Ka"))
             {
                 dependencies.Add(line[7..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("norm"))
+            if (trimmedLine.StartsWith("norm"))
             {
                 dependencies.Add(line[5..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("map_Ks"))
+            if (trimmedLine.StartsWith("map_Ks"))
             {
                 dependencies.Add(line[7..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("map_Bump"))
+            if (trimmedLine.StartsWith("map_Bump"))
             {
                 dependencies.Add(line[8..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("map_d"))
+            if (trimmedLine.StartsWith("map_d"))
             {
                 dependencies.Add(line[6..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("map_Ns"))
+            if (trimmedLine.StartsWith("map_Ns"))
             {
                 dependencies.Add(line[7..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("bump"))
+            if (trimmedLine.StartsWith("bump"))
             {
                 dependencies.Add(line[5..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("disp"))
+            if (trimmedLine.StartsWith("disp"))
             {
                 dependencies.Add(line[5..].Trim());
 
                 continue;
             }
 
-            if (line.Trim().StartsWith("decal"))
+            if (trimmedLine.StartsWith("decal"))
             {
                 dependencies.Add(line[6..].Trim());
 
