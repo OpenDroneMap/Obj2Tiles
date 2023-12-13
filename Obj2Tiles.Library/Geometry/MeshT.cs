@@ -491,8 +491,8 @@ public class MeshT : IMesh
 
             Debug.WriteLine("Cluster boundary (percentage): " + clusterBoundary);
 
-            var clusterX = (int)Math.Floor(clusterBoundary.Left * textureWidth);
-            var clusterY = (int)Math.Floor(clusterBoundary.Top * textureHeight);
+            var clusterX = (int)Math.Floor(clusterBoundary.Left * (textureWidth - 1));
+            var clusterY = (int)Math.Floor(clusterBoundary.Top * (textureHeight - 1));
             var clusterWidth = (int)Math.Max(Math.Ceiling(clusterBoundary.Width * textureWidth), 1);
             var clusterHeight = (int)Math.Max(Math.Ceiling(clusterBoundary.Height * textureHeight), 1);
 
