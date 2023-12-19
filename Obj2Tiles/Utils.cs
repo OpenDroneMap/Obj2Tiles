@@ -86,7 +86,7 @@ public static class Utils
 
             if (trimmedLine.StartsWith("map_Ns"))
             {
-                dependencies.Add(trimmedLine[7..]);
+                dependencies.Add(trimmedLine[7..].Trim());
 
                 continue;
             }
