@@ -82,7 +82,7 @@ namespace Obj2Tiles
                     return;
 
                 var gpsCoords = opts.Latitude != null && opts.Longitude != null
-                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude, opts.Scale, opts.YUpToZUp)
+                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude, opts.Scale, opts.YUpToZUp == true)
                     : null;
 
                 Console.WriteLine();
