@@ -551,9 +551,12 @@ public class MeshT : IMesh
             Debug.WriteLine("Found place for cluster at " + newTextureClusterRect);
 
             // Too long to explain this here, but it works
-            var adjustedSourceY = !(material.Texture == null) 
-            ? Math.Max(texture.Height - (clusterY + clusterHeight), 0) 
-            : Math.Max(normalMap.Height - (clusterY + clusterHeight), 0);
+            var height = material.Texture != null ? texture.Height : normalMap.Height;
+            var adjustedSourceY = height - (clusterY + clusterHeight);
+            if (adjustedSourceY < 0)
+            {
+                adjustedSourceY = (int)Math.Ceiling((double)(clusterY + clusterHeight) / (double)height) * height - (clusterY + clusterHeight);
+            }
             var adjustedDestY = Math.Max(edgeLength - (newTextureClusterRect.Y + clusterHeight), 0);
 
             if (!(material.Texture == null))
