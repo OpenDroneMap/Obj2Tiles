@@ -6,13 +6,14 @@ public class GpsCoords
     public double Longitude { get; set; }
     public double Altitude { get; set; }
     public double Scale { get; set; }
-
-    public GpsCoords(double latitude, double longitude, double altitude, double scale)
+    public bool YUpToZUp { get; set; }
+    public GpsCoords(double latitude, double longitude, double altitude, double scale, bool yUpToZUp)
     {
         Latitude = latitude;
         Longitude = longitude;
         Altitude = altitude;
         Scale = scale;
+        YUpToZUp = yUpToZUp;
     }
 
     public GpsCoords()
@@ -21,6 +22,7 @@ public class GpsCoords
         Longitude = 0;
         Altitude = 0;
         Scale = 1;
+        YUpToZUp = true;
     }
 
     public double[] ToEcefTransform()
@@ -30,8 +32,8 @@ public class GpsCoords
         var lon = Longitude * Math.PI / 180;
         var alt = Altitude;
 
-        var a = 6378137.0/s;
-        var b = 6356752.3142/s;
+        var a = 6378137.0 / s;
+        var b = 6356752.3142 / s;
         var f = (a - b) / a;
 
         var eSq = 2 * f - f * f;
@@ -75,8 +77,11 @@ public class GpsCoords
             0, 0, 0, 1
         };
 
-        var mult = MultiplyMatrix(res, rot);
-
+        var mult = res;
+        if (YUpToZUp)
+        {
+            mult = MultiplyMatrix(res, rot);
+        }
         return MultiplyMatrix(ConvertToColumnMajorOrder(mult), scale);
     }
 
@@ -86,7 +91,7 @@ public class GpsCoords
         0, -1, 0, 0,
         0, 0, 0, 1
     };
-    
+
     public static double[] ConvertToColumnMajorOrder(double[] m)
     {
         var res = new double[16];
