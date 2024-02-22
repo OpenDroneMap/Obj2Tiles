@@ -46,6 +46,9 @@ public sealed class Options
     
     [Option("keep-intermediate", Required = false, HelpText = "Keeps the intermediate files (do not cleanup)", Default = false)]
     public bool KeepIntermediateFiles { get; set; }
+
+    [Option('t',"yuptozup", Required = false, HelpText = "Convert the upward Y-axis to the upward Z-axis, which is used in some situations where the upward axis may be the Y-axis or the Z-axis after the obj is exported.", Default = true)]
+    public bool YUpToZUp { get; set; }
 }
 
 public enum Stage

@@ -34,13 +34,13 @@ namespace Obj2Tiles
 
             opts.Output = Path.GetFullPath(opts.Output);
             opts.Input = Path.GetFullPath(opts.Input);
-            
+
             Directory.CreateDirectory(opts.Output);
 
             var pipelineId = Guid.NewGuid().ToString();
             var sw = new Stopwatch();
             var swg = Stopwatch.StartNew();
-            
+
             Func<string, string> createTempFolder = opts.UseSystemTempFolder
                 ? s => CreateTempFolder(s, Path.GetTempPath())
                 : s => CreateTempFolder(s, Path.Combine(opts.Output, ".temp"));
@@ -50,7 +50,7 @@ namespace Obj2Tiles
 
             try
             {
-               
+
                 destFolderDecimation = opts.StopAt == Stage.Decimation
                     ? opts.Output
                     : createTempFolder($"{pipelineId}-obj2tiles-decimation");
@@ -82,7 +82,7 @@ namespace Obj2Tiles
                     return;
 
                 var gpsCoords = opts.Latitude != null && opts.Longitude != null
-                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude, opts.Scale)
+                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude, opts.Scale, opts.YUpToZUp)
                     : null;
 
                 Console.WriteLine();
@@ -114,7 +114,7 @@ namespace Obj2Tiles
                 {
                     Console.WriteLine(
                         $" ?> Skipping cleanup, intermediate files are in '{tmpFolder}' with pipeline id '{pipelineId}'");
-                    
+
                     Console.WriteLine(" ?> You should delete this folder manually, it is only for debugging purposes");
                 }
                 else
@@ -137,38 +137,38 @@ namespace Obj2Tiles
         }
 
         private static bool CheckOptions(Options opts)
-       {
+        {
 
             if (string.IsNullOrWhiteSpace(opts.Input))
             {
                 Console.WriteLine(" !> Input file is required");
                 return false;
             }
-            
+
             if (!File.Exists(opts.Input))
             {
                 Console.WriteLine(" !> Input file does not exist");
                 return false;
             }
-            
+
             if (string.IsNullOrWhiteSpace(opts.Output))
             {
                 Console.WriteLine(" !> Output folder is required");
                 return false;
             }
-            
+
             if (opts.LODs < 1)
             {
                 Console.WriteLine(" !> LODs must be at least 1");
                 return false;
             }
-            
+
             if (opts.Divisions < 0)
             {
                 Console.WriteLine(" !> Divisions must be non-negative");
                 return false;
             }
-            
+
             return true;
         }
 
