@@ -6,29 +6,26 @@ namespace Obj2Tiles.Library;
 
 public static class TexturesCache
 {
-    private static readonly ConcurrentDictionary<string, Image<Rgba32>> _textures = new();
+    private static readonly ConcurrentDictionary<string, Image<Rgba32>> Textures = new();
     
     public static Image<Rgba32> GetTexture(string textureName)
     {
-        if (!_textures.ContainsKey(textureName))
-        {
-            var texture = Image.Load<Rgba32>(textureName);
-            
-            _textures.TryAdd(textureName, texture);
-            
-            return texture;
-            
-        }
-        
-        return _textures[textureName];
+        if (Textures.TryGetValue(textureName, out var txout))
+            return txout;
+
+        var texture = Image.Load<Rgba32>(textureName);
+        Textures.TryAdd(textureName, texture);
+
+        return texture;
+
     }
     
     public static void Clear()
     {
-        foreach(var texture in _textures)
+        foreach(var texture in Textures)
         {
             texture.Value.Dispose();
         }
-        _textures.Clear();
+        Textures.Clear();
     }
 }

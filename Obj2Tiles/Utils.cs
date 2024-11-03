@@ -29,7 +29,7 @@ public static class Utils
         return dependencies;
     }
 
-    private static IEnumerable<string> GetMtlDependencies(string mtlPath)
+    private static IList<string> GetMtlDependencies(string mtlPath)
     {
         var mtlFile = File.ReadAllLines(mtlPath);
 
@@ -119,13 +119,18 @@ public static class Utils
     {
         return new BoundingVolume
         {
-            Box = new[] { box.Center.X, -box.Center.Z, box.Center.Y, box.Width / 2, 0, 0, 0, -box.Depth / 2, 0, 0, 0, box.Height / 2 }
+            Box = [
+                box.Center.X, -box.Center.Z, box.Center.Y,
+                box.Width / 2, 0, 0,
+                0, -box.Depth / 2, 0,
+                0, 0, box.Height / 2
+            ]
         };
     }
     
     public static void CopyObjDependencies(string input, string output)
     {
-        var dependencies = Utils.GetObjDependencies(input);
+        var dependencies = GetObjDependencies(input);
 
         foreach (var dependency in dependencies)
         {
@@ -141,11 +146,11 @@ public static class Utils
             if (destFolder != null) Directory.CreateDirectory(destFolder);
 
             if (File.Exists(dependencyDestPath))
-            {
                 continue;
-            }
 
-            File.Copy(Path.Combine(Path.GetDirectoryName(input), dependency), dependencyDestPath, true);
+            var directoryName = Path.GetDirectoryName(input) ?? string.Empty;
+
+            File.Copy(Path.Combine(directoryName, dependency), dependencyDestPath, true);
 
             Console.WriteLine($" -> Copied {dependency}");
         }

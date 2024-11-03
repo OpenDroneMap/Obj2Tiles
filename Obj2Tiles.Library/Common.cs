@@ -7,7 +7,7 @@ namespace Obj2Tiles.Library;
 
 public static class Common
 {
-    public static double Epsilon = double.Epsilon * 10;
+    public static readonly double Epsilon = double.Epsilon * 10;
     
     public static void CopyImage(Image<Rgba32> sourceImage, Image<Rgba32> dest, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int destX, int destY)
     {
