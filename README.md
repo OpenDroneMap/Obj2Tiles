@@ -17,7 +17,6 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
 ## Command line parameters
 
 ```
-
   Input (pos. 0)         Required. Input OBJ file.
   Output (pos. 1)        Required. Output folder.
   
@@ -35,12 +34,13 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
   -e, --error            (Default: 100), baseError value for root node
   --scale                (Default: 1), scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)  
   
+  --y-up-to-z-up         (Default: false) Converts Y-up to Z-up
+  
   --use-system-temp      (Default: false) Uses the system temp folder
   --keep-intermediate    (Default: false) Keeps the intermediate files (do not cleanup)
-  
+      
   --help                 Display this help screen.
   --version              Display version information.
-
 ```
 
 The pipeline is composed of the following steps:
@@ -73,7 +73,7 @@ See the [Remarks](#Remarks) section to find out how to rotate the model.
 
 ## Running
 
-Obj2Tiles is built using [.NET Core 6.0](https://dotnet.microsoft.com/en-us/download/dotnet/6.0). Releases are available on [GitHub](https://github.com/OpenDroneMap/Obj2Tiles/releases) for a multitude of platforms (win / linux / mac).
+Obj2Tiles is built using [.NET Core 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0). Releases are available on [GitHub](https://github.com/OpenDroneMap/Obj2Tiles/releases) for a multitude of platforms (win / linux / mac).
 You can download the [latest release](https://github.com/OpenDroneMap/Obj2Tiles/releases/latest) or compile it yourself using the following commands:
 
 ```
