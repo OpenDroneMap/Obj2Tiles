@@ -50,7 +50,7 @@ public class MeshUtils
                         double.Parse(segs[1], CultureInfo.InvariantCulture),
                         double.Parse(segs[2], CultureInfo.InvariantCulture));
                     
-                    if (vtx.X < 0 || vtx.Y < 0 || vtx.X > 1 || vtx.Y > 1)
+                    if (vtx.X < 0 || vtx.Y < 0)
                         throw new Exception("Invalid texture coordinates: " + vtx);
                     
                     textureVertices.Add(vtx);
