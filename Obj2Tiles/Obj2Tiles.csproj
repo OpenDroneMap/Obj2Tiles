@@ -6,9 +6,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
-        <AssemblyVersion>1.0.12</AssemblyVersion>
-        <FileVersion>1.0.12</FileVersion>
+        <AssemblyVersion>1.0.13</AssemblyVersion>
+        <FileVersion>1.0.13</FileVersion>
         <InvariantGlobalization>true</InvariantGlobalization>
+        <Version>1.0.13</Version>
     </PropertyGroup>
 
     <ItemGroup>
