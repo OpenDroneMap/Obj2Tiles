@@ -34,11 +34,7 @@ namespace Obj2Tiles.Tiles
             BatchTableBinaryByteLength = (int)reader.ReadUInt32();
         }
 
-        public int Length {
-            get {
-                return 28 + FeatureTableJsonByteLength + FeatureTableBinaryByteLength + BatchTableJsonByteLength + BatchTableBinaryByteLength;
-            }
-        }
+        public int Length => 28 + FeatureTableJsonByteLength + FeatureTableBinaryByteLength + BatchTableJsonByteLength + BatchTableBinaryByteLength;
 
         public byte[] AsBinary()
         {
@@ -64,7 +60,7 @@ namespace Obj2Tiles.Tiles
         {
             var res = new List<string>();
 
-            var headerByteLength = AsBinary().Count();
+            var headerByteLength = AsBinary().Length;
             var featureTableJsonByteOffset = headerByteLength;
             var featureTableBinaryByteOffset = featureTableJsonByteOffset + FeatureTableJsonByteLength;
             var batchTableJsonByteOffset = featureTableBinaryByteOffset + FeatureTableBinaryByteLength;

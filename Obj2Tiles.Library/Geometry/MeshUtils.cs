@@ -138,7 +138,7 @@ public class MeshUtils
 
         dependencies = deps.ToArray();
         
-        return textureVertices.Any()
+        return textureVertices.Count != 0
             ? new MeshT(vertices, textureVertices, facesT, materials)
             : new Mesh(vertices, faces);
     }

@@ -28,14 +28,14 @@ namespace Obj2Tiles.Tiles
 
         public byte[] ToBytes()
         {
-            var header_length = 28;
+            const int headerLength = 28;
 
-            var featureTableJson = BufferPadding.AddPadding(FeatureTableJson, header_length);
+            var featureTableJson = BufferPadding.AddPadding(FeatureTableJson, headerLength);
             var batchTableJson = BufferPadding.AddPadding(BatchTableJson);
             var featureTableBinary = BufferPadding.AddPadding(FeatureTableBinary);
             var batchTableBinary = BufferPadding.AddPadding(BatchTableBinary);
 
-            B3dmHeader.ByteLength = GlbData.Length + header_length + featureTableJson.Length + Encoding.UTF8.GetByteCount(batchTableJson) + batchTableBinary.Length + FeatureTableBinary.Length;
+            B3dmHeader.ByteLength = GlbData.Length + headerLength + featureTableJson.Length + Encoding.UTF8.GetByteCount(batchTableJson) + batchTableBinary.Length + FeatureTableBinary.Length;
 
             B3dmHeader.FeatureTableJsonByteLength = featureTableJson.Length;
             B3dmHeader.BatchTableJsonByteLength = Encoding.UTF8.GetByteCount(batchTableJson);

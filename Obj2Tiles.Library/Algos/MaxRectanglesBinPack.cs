@@ -26,8 +26,8 @@ namespace Obj2Tiles.Library.Algos
         public int binHeight = 0;
         public bool allowRotations;
 
-        public readonly List<Rectangle> usedRectangles = new();
-        public readonly List<Rectangle> freeRectangles = new();
+        public readonly List<Rectangle> usedRectangles = [];
+        public readonly List<Rectangle> freeRectangles = [];
 
 
         public MaxRectanglesBinPack(int width, int height, bool rotations = true)
@@ -311,7 +311,6 @@ namespace Obj2Tiles.Library.Algos
             ref int bestShortSideFit)
         {
             var bestNode = new Rectangle();
-            //memset(&bestNode, 0, sizeof(Rectangle));
 
             bestAreaFit = int.MaxValue;
 
@@ -391,7 +390,6 @@ namespace Obj2Tiles.Library.Algos
         private Rectangle FindPositionForNewNodeContactPoint(int width, int height, out int bestContactScore)
         {
             var bestNode = new Rectangle();
-            //memset(&bestNode, 0, sizeof(Rectangle));
 
             bestContactScore = -1;
 

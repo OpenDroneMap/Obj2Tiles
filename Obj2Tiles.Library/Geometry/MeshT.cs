@@ -31,10 +31,10 @@ public class MeshT : IMesh
     public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
         IEnumerable<FaceT> faces, IEnumerable<Material> materials)
     {
-        _vertices = new List<Vertex3>(vertices);
-        _textureVertices = new List<Vertex2>(textureVertices);
-        _faces = new List<FaceT>(faces);
-        _materials = new List<Material>(materials);
+        _vertices = [..vertices];
+        _textureVertices = [..textureVertices];
+        _faces = [..faces];
+        _materials = [..materials];
     }
 
     public int Split(IVertexUtils utils, double q, out IMesh left,
@@ -818,8 +818,8 @@ public class MeshT : IMesh
                 if (remainingFacesIndexes.Count == 0) break;
 
                 // Let's continue with the next cluster
-                currentCluster = new List<int> { remainingFacesIndexes[0] };
-                currentClusterCache = new HashSet<int> { remainingFacesIndexes[0] };
+                currentCluster = [remainingFacesIndexes[0]];
+                currentClusterCache = [remainingFacesIndexes[0]];
                 remainingFacesIndexes.RemoveAt(0);
             }
             
@@ -847,7 +847,7 @@ public class MeshT : IMesh
             {
                 var faceIndex = edge.Value[i];
                 if (!facesMapper.ContainsKey(faceIndex))
-                    facesMapper.Add(faceIndex, new List<int>());
+                    facesMapper.Add(faceIndex, []);
 
                 for (var index = 0; index < edge.Value.Count; index++)
                 {
@@ -876,13 +876,13 @@ public class MeshT : IMesh
             var e3 = new Edge(f.TextureIndexA, f.TextureIndexC);
 
             if (!edgesMapper.ContainsKey(e1))
-                edgesMapper.Add(e1, new List<int>());
+                edgesMapper.Add(e1, []);
 
             if (!edgesMapper.ContainsKey(e2))
-                edgesMapper.Add(e2, new List<int>());
+                edgesMapper.Add(e2, []);
 
             if (!edgesMapper.ContainsKey(e3))
-                edgesMapper.Add(e3, new List<int>());
+                edgesMapper.Add(e3, []);
 
             edgesMapper[e1].Add(faceIndex);
             edgesMapper[e2].Add(faceIndex);
@@ -991,7 +991,7 @@ public class MeshT : IMesh
 
     public void WriteObj(string path, bool removeUnused = true)
     {
-        if (!_materials.Any() || !_textureVertices.Any())
+        if (_materials.Count == 0 || _textureVertices.Count == 0)
             _WriteObjWithoutTexture(path, removeUnused);
         else
             _WriteObjWithTexture(path, removeUnused);
@@ -1103,8 +1103,10 @@ public class MeshT : IMesh
 
         var materialsPath = Path.ChangeExtension(path, "mtl");
 
+        var folderPath = Path.GetDirectoryName(path) ?? string.Empty;
+
         if (TexturesStrategy == TexturesStrategy.Repack || TexturesStrategy == TexturesStrategy.RepackCompressed)
-            TrimTextures(Path.GetDirectoryName(path));
+            TrimTextures(folderPath);
 
         using (var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture))
         {
@@ -1156,43 +1158,48 @@ public class MeshT : IMesh
 
                 if (material.Texture != null)
                 {
-                    if (TexturesStrategy == TexturesStrategy.KeepOriginal)
+                    switch (TexturesStrategy)
                     {
-                        var folder = Path.GetDirectoryName(path);
-
-                        var textureFileName =
-                            $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}{Path.GetExtension(material.Texture)}";
-
-                        var newTexturePath =
-                            folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
-
-                        if (!File.Exists(newTexturePath))
-                            File.Copy(material.Texture, newTexturePath, true);
-
-                        material.Texture = textureFileName;
-                    }
-                    else if (TexturesStrategy == TexturesStrategy.Compress)
-                    {
-                        var folder = Path.GetDirectoryName(path);
-
-                        var textureFileName =
-                            $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}.jpg";
-
-                        var newTexturePath =
-                            folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
-
-                        if (File.Exists(newTexturePath))
-
-                            File.Delete(newTexturePath);
-
-                        Console.WriteLine($" -> Compressing texture '{material.Texture}'");
-
-                        using (var image = Image.Load(material.Texture))
+                        case TexturesStrategy.KeepOriginal:
                         {
-                            image.SaveAsJpeg(newTexturePath, encoder);
-                        }
+                            var folder = Path.GetDirectoryName(path);
 
-                        material.Texture = textureFileName;
+                            var textureFileName =
+                                $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}{Path.GetExtension(material.Texture)}";
+
+                            var newTexturePath =
+                                folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
+
+                            if (!File.Exists(newTexturePath))
+                                File.Copy(material.Texture, newTexturePath, true);
+
+                            material.Texture = textureFileName;
+                            break;
+                        }
+                        case TexturesStrategy.Compress:
+                        {
+                            var folder = Path.GetDirectoryName(path);
+
+                            var textureFileName =
+                                $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}.jpg";
+
+                            var newTexturePath =
+                                folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
+
+                            if (File.Exists(newTexturePath))
+
+                                File.Delete(newTexturePath);
+
+                            Console.WriteLine($" -> Compressing texture '{material.Texture}'");
+
+                            using (var image = Image.Load(material.Texture))
+                            {
+                                image.SaveAsJpeg(newTexturePath, encoder);
+                            }
+
+                            material.Texture = textureFileName;
+                            break;
+                        }
                     }
                 }
 
