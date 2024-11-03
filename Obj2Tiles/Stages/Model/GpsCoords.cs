@@ -22,7 +22,7 @@ public class GpsCoords
         Longitude = 0;
         Altitude = 0;
         Scale = 1;
-        YUpToZUp = true;
+        YUpToZUp = false;
     }
 
     public double[] ToEcefTransform()
@@ -69,7 +69,7 @@ public class GpsCoords
             0, 0, 0, 1
         };
 
-        var scale = new double[]
+        var scale = new[]
         {
             s, 0, 0, 0,
             0, s, 0, 0,
@@ -80,17 +80,18 @@ public class GpsCoords
         var mult = res;
         if (YUpToZUp)
         {
-            mult = MultiplyMatrix(res, rot);
+            mult = MultiplyMatrix(res, Rot);
         }
         return MultiplyMatrix(ConvertToColumnMajorOrder(mult), scale);
     }
 
-    public static readonly double[] rot = {
+    public static readonly double[] Rot =
+    [
         1, 0, 0, 0,
         0, 0, 1, 0,
         0, -1, 0, 0,
         0, 0, 0, 1
-    };
+    ];
 
     public static double[] ConvertToColumnMajorOrder(double[] m)
     {
