@@ -26,8 +26,8 @@ jobs:
       run: dotnet publish -p:PublishProfile=win-arm64.pubxml Obj2Tiles
     - name: Publish linux-x64
       run: dotnet publish -p:PublishProfile=linux-x64.pubxml Obj2Tiles
-    - name: Publish linux-arm
-      run: dotnet publish -p:PublishProfile=linux-arm.pubxml Obj2Tiles
+    - name: Publish linux-arm64
+      run: dotnet publish -p:PublishProfile=linux-arm64.pubxml Obj2Tiles
     - name: Publish osx-x64
       run: dotnet publish -p:PublishProfile=osx-x64.pubxml Obj2Tiles  
 
@@ -37,8 +37,8 @@ jobs:
       run: cd Obj2Tiles/bin/Release/net8.0/publish/win-arm64/ && zip -r ../../../../../../Obj2Tiles-WinArm64.zip *
     - name: Zip linux-x64
       run: cd Obj2Tiles/bin/Release/net8.0/publish/linux-x64/ && zip -r ../../../../../../Obj2Tiles-Linux64.zip *
-    - name: Zip linux-arm
-      run: cd Obj2Tiles/bin/Release/net8.0/publish/linux-arm/ && zip -r ../../../../../../Obj2Tiles-LinuxArm.zip *
+    - name: Zip linux-arm64
+      run: cd Obj2Tiles/bin/Release/net8.0/publish/linux-arm64/ && zip -r ../../../../../../Obj2Tiles-LinuxArm64.zip *
     - name: Zip osx-x64
       run: cd Obj2Tiles/bin/Release/net8.0/publish/osx-x64/ && zip -r ../../../../../../Obj2Tiles-Osx64.zip *
       
@@ -52,5 +52,5 @@ jobs:
           Obj2Tiles-Win64.zip
           Obj2Tiles-WinArm64.zip
           Obj2Tiles-Linux64.zip
-          Obj2Tiles-LinuxArm.zip
+          Obj2Tiles-LinuxArm64.zip
           Obj2Tiles-Osx64.zip   
