@@ -63,40 +63,41 @@ public static partial class StagesFacade
 
             for (var lod = lods - 1; lod >= 0; lod--)
             {
-                var box3 = boundsMapper[lod][descriptor];
-
-                if (box3.Min.X < minX)
-                    minX = box3.Min.X;
-
-                if (box3.Max.X > maxX)
-                    maxX = box3.Max.X;
-
-                if (box3.Min.Y < minY)
-                    minY = box3.Min.Y;
-
-                if (box3.Max.Y > maxY)
-                    maxY = box3.Max.Y;
-
-                if (box3.Min.Z < minZ)
-                    minZ = box3.Min.Z;
-
-                if (box3.Max.Z > maxZ)
-                    maxZ = box3.Max.Z;
-
-                var tile = new TileElement
+                if (boundsMapper[lod].TryGetValue(descriptor, out Box3? box3))
                 {
-                    GeometricError = lod == 0 ? 0 : CalculateGeometricError(refBox, box3, lod),
-                    Refine = "REPLACE",
-                    Children = new List<TileElement>(),
-                    Content = new Content
-                    {
-                        Uri = $"LOD-{lod}/{Path.GetFileNameWithoutExtension(descriptor)}.b3dm"
-                    },
-                    BoundingVolume = box3.ToBoundingVolume()
-                };
+                    if (box3.Min.X < minX)
+                        minX = box3.Min.X;
 
-                currentTileElement.Children.Add(tile);
-                currentTileElement = tile;
+                    if (box3.Max.X > maxX)
+                        maxX = box3.Max.X;
+
+                    if (box3.Min.Y < minY)
+                        minY = box3.Min.Y;
+
+                    if (box3.Max.Y > maxY)
+                        maxY = box3.Max.Y;
+
+                    if (box3.Min.Z < minZ)
+                        minZ = box3.Min.Z;
+
+                    if (box3.Max.Z > maxZ)
+                        maxZ = box3.Max.Z;
+
+                    var tile = new TileElement
+                    {
+                        GeometricError = lod == 0 ? 0 : CalculateGeometricError(refBox, box3, lod),
+                        Refine = "REPLACE",
+                        Children = new List<TileElement>(),
+                        Content = new Content
+                        {
+                            Uri = $"LOD-{lod}/{Path.GetFileNameWithoutExtension(descriptor)}.b3dm"
+                        },
+                        BoundingVolume = box3.ToBoundingVolume()
+                    };
+
+                    currentTileElement.Children.Add(tile);
+                    currentTileElement = tile;
+                }
             }
         }
 
