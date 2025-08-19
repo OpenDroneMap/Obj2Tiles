@@ -88,6 +88,12 @@ public class MeshUtils
                         var vt2 = int.Parse(second[1]);
                         var vt3 = int.Parse(third[1]);
 
+                        var materialIndex = 0;
+                        if (currentMaterial != string.Empty)
+                        {
+                            materialIndex = materialsDict[currentMaterial];
+                        }
+
                         var faceT = new FaceT(
                             v1 - 1,
                             v2 - 1,
@@ -95,7 +101,7 @@ public class MeshUtils
                             vt1 - 1,
                             vt2 - 1,
                             vt3 - 1,
-                            materialsDict[currentMaterial]);
+                            materialIndex);
 
                         facesT.Add(faceT);
                     }
