@@ -30,7 +30,7 @@ namespace Obj2Tiles.Tiles
         {
             const int headerLength = 28;
 
-            var featureTableJson = BufferPadding.AddPadding(FeatureTableJson, headerLength);
+            var featureTableJson = BufferPadding.AddPadding(FeatureTableJson);
             var batchTableJson = BufferPadding.AddPadding(BatchTableJson);
             var featureTableBinary = BufferPadding.AddPadding(FeatureTableBinary);
             var batchTableBinary = BufferPadding.AddPadding(BatchTableBinary);
