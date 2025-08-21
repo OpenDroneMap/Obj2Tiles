@@ -173,7 +173,7 @@ namespace SilentWave.Obj2Gltf
                     Name = "Normals",
                     Buffer = _model.AddBuffer(NormalsBuffer),
                     ByteStride = 12,
-                    //Target = BufferViewTarget.ARRAY_BUFFER
+                    Target = BufferViewTarget.ARRAY_BUFFER
                 };
                 NormalsBufferViewIndex = _model.AddBufferView(NormalsBufferView);
             }
@@ -203,7 +203,7 @@ namespace SilentWave.Obj2Gltf
                     Name = "Uvs",
                     Buffer = _model.AddBuffer(UvsBuffer),
                     ByteStride = 8,
-                    //Target = BufferViewTarget.ARRAY_BUFFER
+                    Target = BufferViewTarget.ARRAY_BUFFER
                 };
                 UvsBufferViewIndex = _model.AddBufferView(UvsBufferView);
             }
