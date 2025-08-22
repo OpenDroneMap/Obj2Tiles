@@ -30,10 +30,13 @@ namespace Obj2Tiles.Tiles
         {
             const int headerLength = 28;
 
-            var featureTableJson = BufferPadding.AddPadding(FeatureTableJson);
+            var featureTableJson = BufferPadding.AddPadding(FeatureTableJson, headerLength);
             var batchTableJson = BufferPadding.AddPadding(BatchTableJson);
             var featureTableBinary = BufferPadding.AddPadding(FeatureTableBinary);
             var batchTableBinary = BufferPadding.AddPadding(BatchTableBinary);
+
+            // Ensure GLB data is padded to 8-byte alignment
+            GlbData = BufferPadding.AddPadding(GlbData);
 
             B3dmHeader.ByteLength = GlbData.Length + headerLength + featureTableJson.Length + Encoding.UTF8.GetByteCount(batchTableJson) + batchTableBinary.Length + FeatureTableBinary.Length;
 

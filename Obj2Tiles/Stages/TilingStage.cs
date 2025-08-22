@@ -16,7 +16,7 @@ public static partial class StagesFacade
     {
 
         Console.WriteLine(" ?> Working on objs conversion");
-        
+
         ConvertAllB3dm(sourcePath, destPath, lods);
 
         Console.WriteLine(" -> Generating tileset.json");
@@ -26,7 +26,7 @@ public static partial class StagesFacade
             Console.WriteLine(" ?> Using default coordinates");
             coords = DefaultGpsCoords;
         }
-       
+
         // Don't ask me why 100, I have no idea but it works
         // https://github.com/CesiumGS/3d-tiles/issues/162
         //const int baseError = 100;
@@ -40,9 +40,7 @@ public static partial class StagesFacade
             {
                 GeometricError = baseError,
                 Refine = "ADD",
-
                 Transform = coords.ToEcefTransform(),
-                Children = new List<TileElement>()
             }
         };
 
@@ -54,11 +52,11 @@ public static partial class StagesFacade
         var minZ = double.MaxValue;
 
         var masterDescriptors = boundsMapper[0].Keys;
-        
+
         foreach (var descriptor in masterDescriptors)
         {
             var currentTileElement = tileset.Root;
-            
+
             var refBox = boundsMapper[0][descriptor];
 
             for (var lod = lods - 1; lod >= 0; lod--)
@@ -87,7 +85,6 @@ public static partial class StagesFacade
                     {
                         GeometricError = lod == 0 ? 0 : CalculateGeometricError(refBox, box3, lod),
                         Refine = "REPLACE",
-                        Children = new List<TileElement>(),
                         Content = new Content
                         {
                             Uri = $"LOD-{lod}/{Path.GetFileNameWithoutExtension(descriptor)}.b3dm"
@@ -95,6 +92,8 @@ public static partial class StagesFacade
                         BoundingVolume = box3.ToBoundingVolume()
                     };
 
+                    if (currentTileElement.Children == null)
+                        currentTileElement.Children = new List<TileElement>();
                     currentTileElement.Children.Add(tile);
                     currentTileElement = tile;
                 }
@@ -116,7 +115,7 @@ public static partial class StagesFacade
         var dW = Math.Abs(refBox.Width - box.Width) / box.Width + 1;
         var dH = Math.Abs(refBox.Height - box.Height) / box.Height + 1;
         var dD = Math.Abs(refBox.Depth - box.Depth) / box.Depth + 1;
-       
+
         return Math.Pow(dW + dH + dD, lod);
 
     }
