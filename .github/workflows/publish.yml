@@ -32,15 +32,15 @@ jobs:
       run: dotnet publish -p:PublishProfile=osx-x64.pubxml Obj2Tiles  
 
     - name: Zip win-x64
-      run: cd Obj2Tiles/bin/Release/net8.0/publish/win-x64/ && zip -r ../../../../../../Obj2Tiles-Win64.zip *
+      run: cd Obj2Tiles/bin/Release/net9.0/publish/win-x64/ && zip -r ../../../../../../Obj2Tiles-Win64.zip *
     - name: Zip win-arm64
-      run: cd Obj2Tiles/bin/Release/net8.0/publish/win-arm64/ && zip -r ../../../../../../Obj2Tiles-WinArm64.zip *
+      run: cd Obj2Tiles/bin/Release/net9.0/publish/win-arm64/ && zip -r ../../../../../../Obj2Tiles-WinArm64.zip *
     - name: Zip linux-x64
-      run: cd Obj2Tiles/bin/Release/net8.0/publish/linux-x64/ && zip -r ../../../../../../Obj2Tiles-Linux64.zip *
+      run: cd Obj2Tiles/bin/Release/net9.0/publish/linux-x64/ && zip -r ../../../../../../Obj2Tiles-Linux64.zip *
     - name: Zip linux-arm64
-      run: cd Obj2Tiles/bin/Release/net8.0/publish/linux-arm64/ && zip -r ../../../../../../Obj2Tiles-LinuxArm64.zip *
+      run: cd Obj2Tiles/bin/Release/net9.0/publish/linux-arm64/ && zip -r ../../../../../../Obj2Tiles-LinuxArm64.zip *
     - name: Zip osx-x64
-      run: cd Obj2Tiles/bin/Release/net8.0/publish/osx-x64/ && zip -r ../../../../../../Obj2Tiles-Osx64.zip *
+      run: cd Obj2Tiles/bin/Release/net9.0/publish/osx-x64/ && zip -r ../../../../../../Obj2Tiles-Osx64.zip *
       
     - name: Release
       uses: softprops/action-gh-release@v1
