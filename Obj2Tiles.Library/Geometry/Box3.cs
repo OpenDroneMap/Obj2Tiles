@@ -63,21 +63,21 @@ namespace Obj2Tiles.Library.Geometry
         {
             return axis switch
             {
-                Axis.X => new[]
-                {
+                Axis.X =>
+                [
                     new Box3(Min, new Vertex3(position, Max.Y, Max.Z)),
                     new Box3(new Vertex3(position, Min.Y, Min.Z), Max)
-                },
-                Axis.Y => new[]
-                {
+                ],
+                Axis.Y =>
+                [
                     new Box3(Min, new Vertex3(Max.X, position, Max.Z)),
                     new Box3(new Vertex3(Min.X, position, Min.Z), Max)
-                },
-                Axis.Z => new[]
-                {
+                ],
+                Axis.Z =>
+                [
                     new Box3(Min, new Vertex3(Max.X, Max.Y, position)),
                     new Box3(new Vertex3(Min.X, Min.Y, position), Max)
-                },
+                ],
                 _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, null)
             };
         }
@@ -86,21 +86,21 @@ namespace Obj2Tiles.Library.Geometry
         {
             return axis switch
             {
-                Axis.X => new[]
-                {
+                Axis.X =>
+                [
                     new Box3(Min, new Vertex3(Min.X + Width / 2, Max.Y, Max.Z)),
                     new Box3(new Vertex3(Min.X + Width / 2, Min.Y, Min.Z), Max)
-                },
-                Axis.Y => new[]
-                {
+                ],
+                Axis.Y =>
+                [
                     new Box3(Min, new Vertex3(Max.X, Min.Y + Height / 2, Max.Z)),
                     new Box3(new Vertex3(Min.X, Min.Y + Height / 2, Min.Z), Max)
-                },
-                Axis.Z => new[]
-                {
+                ],
+                Axis.Z =>
+                [
                     new Box3(Min, new Vertex3(Max.X, Max.Y, Min.Z + Depth / 2)),
                     new Box3(new Vertex3(Min.X, Min.Y, Min.Z + Depth / 2), Max)
-                },
+                ],
                 _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, null)
             };
         }

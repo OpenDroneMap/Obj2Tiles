@@ -51,7 +51,7 @@ namespace MeshDecimatorCore
         private Vector4[] colors = null;
         private BoneWeight[] boneWeights = null;
 
-        private static readonly int[] emptyIndices = new int[0];
+        private static readonly int[] emptyIndices = [];
         #endregion
 
         #region Properties

@@ -10,8 +10,8 @@ namespace Obj2Tiles.Tiles
             FeatureTableJson = string.Empty;
             BatchTableJson = string.Empty;
             FeatureTableJson = "{\"BATCH_LENGTH\":0}  ";
-            FeatureTableBinary = Array.Empty<byte>();
-            BatchTableBinary = Array.Empty<byte>();
+            FeatureTableBinary = [];
+            BatchTableBinary = [];
         }
 
         public B3dm(byte[] glb): this()

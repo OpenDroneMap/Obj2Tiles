@@ -36,7 +36,7 @@ namespace MeshDecimatorCore.Collections
         private T[] items = null;
         private int length = 0;
 
-        private static T[] emptyArr = new T[0];
+        private static T[] emptyArr = [];
         #endregion
 
         #region Properties

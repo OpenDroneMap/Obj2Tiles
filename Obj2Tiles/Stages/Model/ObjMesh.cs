@@ -327,7 +327,7 @@ namespace Obj2Tiles.Stages.Model
                     if (line.Length == 0 || line[0] == '#')
                         continue;
 
-                    string[] lineSplit = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] lineSplit = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
                     string firstPart = lineSplit[0];
                     if (string.Equals(firstPart, "v"))
                     {
