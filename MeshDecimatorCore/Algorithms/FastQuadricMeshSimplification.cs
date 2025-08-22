@@ -1414,7 +1414,7 @@ namespace MeshDecimatorCore.Algorithms
                 else
                 {
                     // This mesh doesn't have any triangles left
-                    indices[subMeshIndex] = new int[0];
+                    indices[subMeshIndex] = [];
                 }
             }
 

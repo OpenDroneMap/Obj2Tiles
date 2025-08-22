@@ -52,8 +52,8 @@ namespace Obj2Tiles.Common
 
             for (var i = 0; i < iterations; i++)
             {
-                fs1.Read(one, 0, BytesToRead);
-                fs2.Read(two, 0, BytesToRead);
+                fs1.ReadExactly(one, 0, BytesToRead);
+                fs2.ReadExactly(two, 0, BytesToRead);
 
                 if (BitConverter.ToInt64(one, 0) != BitConverter.ToInt64(two, 0))
                     return false;
@@ -317,7 +317,7 @@ namespace Obj2Tiles.Common
                 }
 
                 if (!entries.Any()) 
-                    return Array.Empty<string>();
+                    return [];
 
                 Thread.Sleep(delay);
             }
@@ -325,8 +325,8 @@ namespace Obj2Tiles.Common
             return entries.ToArray();
         }
 
-        private static readonly HashSet<string> _compressibleMimeTypes = new()
-        {
+        private static readonly HashSet<string> _compressibleMimeTypes =
+        [
             "text/html",
             "text/css",
             "text/plain",
@@ -358,7 +358,7 @@ namespace Obj2Tiles.Common
             "font/eot",
             "font/otf",
             "font/opentype"
-        };
+        ];
 
 
         // Credit https://stackoverflow.com/a/11124118

@@ -61,42 +61,40 @@ public static partial class StagesFacade
 
             for (var lod = lods - 1; lod >= 0; lod--)
             {
-                if (boundsMapper[lod].TryGetValue(descriptor, out Box3? box3))
+                if (!boundsMapper[lod].TryGetValue(descriptor, out var box3)) continue;
+                
+                if (box3.Min.X < minX)
+                    minX = box3.Min.X;
+
+                if (box3.Max.X > maxX)
+                    maxX = box3.Max.X;
+
+                if (box3.Min.Y < minY)
+                    minY = box3.Min.Y;
+
+                if (box3.Max.Y > maxY)
+                    maxY = box3.Max.Y;
+
+                if (box3.Min.Z < minZ)
+                    minZ = box3.Min.Z;
+
+                if (box3.Max.Z > maxZ)
+                    maxZ = box3.Max.Z;
+
+                var tile = new TileElement
                 {
-                    if (box3.Min.X < minX)
-                        minX = box3.Min.X;
-
-                    if (box3.Max.X > maxX)
-                        maxX = box3.Max.X;
-
-                    if (box3.Min.Y < minY)
-                        minY = box3.Min.Y;
-
-                    if (box3.Max.Y > maxY)
-                        maxY = box3.Max.Y;
-
-                    if (box3.Min.Z < minZ)
-                        minZ = box3.Min.Z;
-
-                    if (box3.Max.Z > maxZ)
-                        maxZ = box3.Max.Z;
-
-                    var tile = new TileElement
+                    GeometricError = lod == 0 ? 0 : CalculateGeometricError(refBox, box3, lod),
+                    Refine = "REPLACE",
+                    Content = new Content
                     {
-                        GeometricError = lod == 0 ? 0 : CalculateGeometricError(refBox, box3, lod),
-                        Refine = "REPLACE",
-                        Content = new Content
-                        {
-                            Uri = $"LOD-{lod}/{Path.GetFileNameWithoutExtension(descriptor)}.b3dm"
-                        },
-                        BoundingVolume = box3.ToBoundingVolume()
-                    };
+                        Uri = $"LOD-{lod}/{Path.GetFileNameWithoutExtension(descriptor)}.b3dm"
+                    },
+                    BoundingVolume = box3.ToBoundingVolume()
+                };
 
-                    if (currentTileElement.Children == null)
-                        currentTileElement.Children = new List<TileElement>();
-                    currentTileElement.Children.Add(tile);
-                    currentTileElement = tile;
-                }
+                currentTileElement.Children ??= [];
+                currentTileElement.Children.Add(tile);
+                currentTileElement = tile;
             }
         }
 
@@ -145,7 +143,7 @@ public static partial class StagesFacade
         });
     }
 
-    // Where is it?
+    // Duomo of Milan
     private static readonly GpsCoords DefaultGpsCoords = new()
     {
         Altitude = 0,
