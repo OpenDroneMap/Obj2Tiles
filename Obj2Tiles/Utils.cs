@@ -22,7 +22,8 @@ public static class Utils
 
             if (!trimmedLine.StartsWith("mtllib")) continue;
 
-            var mtlPath = Path.Combine(folderName, trimmedLine[7..].Trim());
+            var mtlPath = folderName != null ? Path.Combine(folderName, trimmedLine[7..].Trim()) : trimmedLine[7..].Trim();
+            
             dependencies.Add(trimmedLine[7..].Trim());
 
             dependencies.AddRange(GetMtlDependencies(mtlPath));
@@ -31,7 +32,7 @@ public static class Utils
         return dependencies;
     }
 
-    private static IList<string> GetMtlDependencies(string mtlPath)
+    private static List<string> GetMtlDependencies(string mtlPath)
     {
         var mtlFile = File.ReadAllLines(mtlPath);
 

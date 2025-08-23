@@ -76,11 +76,7 @@ public static partial class StagesFacade
             sourceMesh.SetUVs(0, sourceTexCoords3D);
         }
 
-        var currentTriangleCount = 0;
-        for (var i = 0; i < sourceSubMeshIndices.Length; i++)
-        {
-            currentTriangleCount += sourceSubMeshIndices[i].Length / 3;
-        }
+        var currentTriangleCount = sourceSubMeshIndices.Sum(t => t.Length / 3);
 
         var targetTriangleCount = (int)Math.Ceiling(currentTriangleCount * quality);
         Console.WriteLine(" ?> Input: {0} vertices, {1} triangles (target {2})",
@@ -124,11 +120,7 @@ public static partial class StagesFacade
 
         destObjMesh.WriteFile(destPath);
 
-        var outputTriangleCount = 0;
-        for (var i = 0; i < destIndices.Length; i++)
-        {
-            outputTriangleCount += (destIndices[i].Length / 3);
-        }
+        var outputTriangleCount = destIndices.Sum(t => (t.Length / 3));
 
         var reduction = (float)outputTriangleCount / currentTriangleCount;
         var timeTaken = (float)stopwatch.Elapsed.TotalSeconds;

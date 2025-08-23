@@ -103,10 +103,8 @@ public static partial class StagesFacade
         sw.Restart();
 
         var ms = meshes.ToArray();
-        for (var index = 0; index < ms.Length; index++)
+        foreach (var m in ms)
         {
-            var m = ms[index];
-
             if (m is MeshT t)
                 t.TexturesStrategy = textureStrategy;
 

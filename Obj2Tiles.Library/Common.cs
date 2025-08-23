@@ -35,7 +35,7 @@ public static class Common
                     {
                         sourceRowIndex %= sourceRow.Length;
                     }
-                    targetRow[x + destX] = sourceRow[sourceRowIndex];// 
+                    targetRow[x + destX] = sourceRow[sourceRowIndex];
                 }
             }
         });

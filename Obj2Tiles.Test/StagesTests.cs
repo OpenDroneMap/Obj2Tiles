@@ -18,7 +18,7 @@ public class StagesTests
     private const string TestDataPath = "TestData";
     private const string TestOutputPath = "TestOutput";
 
-    private string GetTestOutputPath(string testName)
+    private static string GetTestOutputPath(string testName)
     {
         var folder = Path.Combine(TestOutputPath, testName);
         if (Directory.Exists(folder))
@@ -47,7 +47,7 @@ public class StagesTests
                 Name = Path.GetFileNameWithoutExtension(file)
             }).ToDictionary(item => item.Name, item => item.Bounds);
     
-        StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, new[] { boundsMapper });
+        StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, [boundsMapper]);
         
     }
 

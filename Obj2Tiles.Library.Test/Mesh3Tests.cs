@@ -2,10 +2,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using FluentAssertions;
 using NUnit.Framework;
 using Obj2Tiles.Common;
 using Obj2Tiles.Library.Geometry;
+using Shouldly;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.PixelFormats;
@@ -19,8 +19,7 @@ public class Mesh3Tests
     private const string TestOutputPath = "TestOutput";
     private const string BrightonTexturingTestUrl = "https://github.com/DroneDB/test_data/raw/master/brighton/odm_texturing.zip";
 
-
-    private string GetTestOutputPath(string testName)
+    private static string GetTestOutputPath(string testName)
     {
         var folder = Path.Combine(TestOutputPath, testName);
         if (Directory.Exists(folder))
@@ -262,9 +261,9 @@ public class Mesh3Tests
         
         var o = Common.Orientation(v1, v2, v3);
 
-        o.Z.Should().Be(1);
-        o.X.Should().Be(0);
-        o.Y.Should().Be(0);
+        o.Z.ShouldBe(1);
+        o.X.ShouldBe(0);
+        o.Y.ShouldBe(0);
     }
     
     
@@ -277,9 +276,9 @@ public class Mesh3Tests
         
         var o = Common.Orientation(v1, v2, v3);
 
-        o.Z.Should().Be(0);
-        o.X.Should().Be(0);
-        o.Y.Should().Be(0);
+        o.Z.ShouldBe(0);
+        o.X.ShouldBe(0);
+        o.Y.ShouldBe(0);
     }
 
     [Test]
@@ -289,9 +288,9 @@ public class Mesh3Tests
 
         var orientation = mesh.GetAverageOrientation();
 
-        orientation.X.Should().Be(0);
-        orientation.Y.Should().Be(0);
-        orientation.Z.Should().Be(0);
+        orientation.X.ShouldBe(0);
+        orientation.Y.ShouldBe(0);
+        orientation.Z.ShouldBe(0);
     }
     
     [Test]
