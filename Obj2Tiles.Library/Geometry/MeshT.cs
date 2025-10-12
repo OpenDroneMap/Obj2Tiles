@@ -538,8 +538,16 @@ public class MeshT : IMesh
                 normalMapFileName = material.NormalMap != null
                     ? $"{Name}-texture-normal-{material.Name}{Path.GetExtension(material.NormalMap)}" : null;
 
-                if (material.Texture != null) { newPathTexture = Path.Combine(targetFolder, textureFileName); newTexture.Save(newPathTexture); newTexture.Dispose(); }
-                if (material.NormalMap != null) { newPathNormalMap = Path.Combine(targetFolder, normalMapFileName); newNormalMap.Save(newPathNormalMap); newNormalMap.Dispose(); }
+                if (material.Texture != null) { 
+                    newPathTexture = Path.Combine(targetFolder, textureFileName); 
+                    newTexture.Save(newPathTexture); newTexture.Dispose(); 
+                }
+
+                if (material.NormalMap != null) { 
+                    newPathNormalMap = Path.Combine(targetFolder, normalMapFileName); 
+                    newNormalMap.Save(newPathNormalMap); 
+                    newNormalMap.Dispose(); 
+                }
 
                 // fresh atlas
                 newTexture = material.Texture != null ? new Image<Rgba32>(edgeLength, edgeLength) : null;
@@ -664,12 +672,22 @@ public class MeshT : IMesh
                 case TexturesStrategy.Repack: tx.Save(newPathNormalMap); break;
                 default: throw new InvalidOperationException("KeepOriginal/Compress are meaningless here");
             }
-            Debug.WriteLine("Saved texture to " + newNormalMap);
+            Debug.WriteLine("Saved texture to " + newPathNormalMap);
             tx.Dispose();
         }, newNormalMap, TaskCreationOptions.LongRunning);
 
-        if (material.Texture != null) { tasks.Add(saveTaskTexture); saveTaskTexture.Start(); material.Texture = textureFileName; }
-        if (material.NormalMap != null) { tasks.Add(saveTaskNormalMap); saveTaskNormalMap.Start(); material.NormalMap = normalMapFileName; }
+        if (material.Texture != null) { 
+            tasks.Add(saveTaskTexture); 
+            saveTaskTexture.Start(); 
+            material.Texture = textureFileName; 
+        
+        }
+        
+        if (material.NormalMap != null) { 
+            tasks.Add(saveTaskNormalMap); 
+            saveTaskNormalMap.Start(); 
+            material.NormalMap = normalMapFileName; 
+        }
     }
 
     // Adds bleed padding to each chart when estimating total area and max dims.
