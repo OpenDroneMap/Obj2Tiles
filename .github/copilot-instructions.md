@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Obj2Tiles is a .NET 9.0 CLI tool that converts OBJ files to [3D Tiles](https://www.ogc.org/standard/3dtiles/) format. It runs a three-stage pipeline: **Decimation → Splitting → Tiling**. The user can stop at any stage via `--stage`.
+Obj2Tiles is a .NET 10 CLI tool that converts OBJ files to [3D Tiles](https://www.ogc.org/standard/3dtiles/) format. It runs a three-stage pipeline: **Decimation → Splitting → Tiling**. The user can stop at any stage via `--stage`.
 
 ## Architecture
 
@@ -48,7 +48,7 @@ dotnet test                                     # run all tests
 dotnet run --project Obj2Tiles -- model.obj ./output  # run CLI
 ```
 
-Target framework is **net9.0** with `InvariantGlobalization=true` and nullable enabled.
+Target framework is **net10.0** with `InvariantGlobalization=true` and nullable enabled.
 
 ## Testing
 

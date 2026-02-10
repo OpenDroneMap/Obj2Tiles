@@ -48,7 +48,7 @@ The pipeline is composed of the following steps:
 ### Decimation
 
 The source obj is decimated using the `Fast Quadric Mesh Simplification` algorithm (by [Mattias Edlund](https://github.com/Whinarn)). 
-The algorithm was ported from .NET Framework 3.5 to .NET Core 6.0. The original repo is [here](https://github.com/Whinarn/MeshDecimator). 
+The algorithm was ported from .NET Framework 3.5 to .NET Core. The original repo is [here](https://github.com/Whinarn/MeshDecimator). 
 
 You can specify how many LODs (levels of detail) you want to generate using the `--lods` parameter. The decimation levels are generated using this formula:
 
@@ -73,7 +73,7 @@ See the [Remarks](#Remarks) section to find out how to rotate the model.
 
 ## Running
 
-Obj2Tiles is built using [.NET Core 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0). Releases are available on [GitHub](https://github.com/OpenDroneMap/Obj2Tiles/releases) for a multitude of platforms (win / linux / mac).
+Obj2Tiles is built using [.NET](https://dotnet.microsoft.com/en-us/download/dotnet/10.0). Releases are available on [GitHub](https://github.com/OpenDroneMap/Obj2Tiles/releases) for a multitude of platforms (win / linux / mac).
 You can download the [latest release](https://github.com/OpenDroneMap/Obj2Tiles/releases/latest) or compile it yourself using the following commands:
 
 ```
