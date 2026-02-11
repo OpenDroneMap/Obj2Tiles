@@ -17,11 +17,13 @@ public class MeshT : IMesh
     private List<Vertex2> _textureVertices;
     private readonly List<FaceT> _faces;
     private List<Material> _materials;
+    private List<RGB>? _vertexColors;
 
     public IReadOnlyList<Vertex3> Vertices => _vertices;
     public IReadOnlyList<Vertex2> TextureVertices => _textureVertices;
     public IReadOnlyList<FaceT> Faces => _faces;
     public IReadOnlyList<Material> Materials => _materials;
+    public IReadOnlyList<RGB>? VertexColors => _vertexColors;
 
     public const string DefaultName = "Mesh";
 
@@ -30,12 +32,13 @@ public class MeshT : IMesh
     public TexturesStrategy TexturesStrategy { get; set; }
 
     public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
-        IEnumerable<FaceT> faces, IEnumerable<Material> materials)
+        IEnumerable<FaceT> faces, IEnumerable<Material> materials, IEnumerable<RGB>? vertexColors = null)
     {
         _vertices = [.. vertices];
         _textureVertices = [.. textureVertices];
         _faces = [.. faces];
         _materials = [.. materials];
+        _vertexColors = vertexColors != null ? [.. vertexColors] : null;
     }
 
     public int Split(IVertexUtils utils, double q, out IMesh left,
@@ -49,6 +52,10 @@ public class MeshT : IMesh
 
         var leftTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
         var rightTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
+
+        var hasColors = _vertexColors != null;
+        var leftColors = hasColors ? new List<RGB>(_vertices.Count) : null;
+        var rightColors = hasColors ? new List<RGB>(_vertices.Count) : null;
 
         var count = 0;
 
@@ -76,9 +83,13 @@ public class MeshT : IMesh
                     {
                         // All on the left
 
-                        var indexALeft = leftVertices.AddIndex(vA);
-                        var indexBLeft = leftVertices.AddIndex(vB);
-                        var indexCLeft = leftVertices.AddIndex(vC);
+                        AddVertexWithColor(leftVertices, leftColors, vA, face.IndexA);
+                        AddVertexWithColor(leftVertices, leftColors, vB, face.IndexB);
+                        AddVertexWithColor(leftVertices, leftColors, vC, face.IndexC);
+
+                        var indexALeft = leftVertices[vA];
+                        var indexBLeft = leftVertices[vB];
+                        var indexCLeft = leftVertices[vC];
 
                         var indexATextureLeft = leftTextureVertices!.AddIndex(vtA);
                         var indexBTextureLeft = leftTextureVertices!.AddIndex(vtB);
@@ -93,6 +104,7 @@ public class MeshT : IMesh
                         IntersectRight2DWithTexture(utils, q, face.IndexC, face.IndexA, face.IndexB,
                             leftVertices,
                             rightVertices,
+                            leftColors, rightColors,
                             face.TextureIndexC, face.TextureIndexA, face.TextureIndexB,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex, leftFaces, rightFaces
                         );
@@ -106,6 +118,7 @@ public class MeshT : IMesh
                         IntersectRight2DWithTexture(utils, q, face.IndexB, face.IndexC, face.IndexA,
                             leftVertices,
                             rightVertices,
+                            leftColors, rightColors,
                             face.TextureIndexB, face.TextureIndexC, face.TextureIndexA,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex, leftFaces,
                             rightFaces);
@@ -116,6 +129,7 @@ public class MeshT : IMesh
                         IntersectLeft2DWithTexture(utils, q, face.IndexA, face.IndexB, face.IndexC,
                             leftVertices,
                             rightVertices,
+                            leftColors, rightColors,
                             face.TextureIndexA, face.TextureIndexB, face.TextureIndexC,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex, leftFaces,
                             rightFaces);
@@ -132,6 +146,7 @@ public class MeshT : IMesh
                         IntersectRight2DWithTexture(utils, q, face.IndexA, face.IndexB, face.IndexC,
                             leftVertices,
                             rightVertices,
+                            leftColors, rightColors,
                             face.TextureIndexA, face.TextureIndexB, face.TextureIndexC,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex, leftFaces,
                             rightFaces);
@@ -142,6 +157,7 @@ public class MeshT : IMesh
                         IntersectLeft2DWithTexture(utils, q, face.IndexB, face.IndexC, face.IndexA,
                             leftVertices,
                             rightVertices,
+                            leftColors, rightColors,
                             face.TextureIndexB, face.TextureIndexC, face.TextureIndexA,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex, leftFaces,
                             rightFaces);
@@ -155,6 +171,7 @@ public class MeshT : IMesh
                         IntersectLeft2DWithTexture(utils, q, face.IndexC, face.IndexA, face.IndexB,
                             leftVertices,
                             rightVertices,
+                            leftColors, rightColors,
                             face.TextureIndexC, face.TextureIndexA, face.TextureIndexB,
                             leftTextureVertices, rightTextureVertices, face.MaterialIndex, leftFaces,
                             rightFaces);
@@ -164,9 +181,13 @@ public class MeshT : IMesh
                     {
                         // All on the right
 
-                        var indexARight = rightVertices.AddIndex(vA);
-                        var indexBRight = rightVertices.AddIndex(vB);
-                        var indexCRight = rightVertices.AddIndex(vC);
+                        AddVertexWithColor(rightVertices, rightColors, vA, face.IndexA);
+                        AddVertexWithColor(rightVertices, rightColors, vB, face.IndexB);
+                        AddVertexWithColor(rightVertices, rightColors, vC, face.IndexC);
+
+                        var indexARight = rightVertices[vA];
+                        var indexBRight = rightVertices[vB];
+                        var indexCRight = rightVertices[vC];
 
                         var indexATextureRight = rightTextureVertices!.AddIndex(vtA);
                         var indexBTextureRight = rightTextureVertices!.AddIndex(vtB);
@@ -188,11 +209,11 @@ public class MeshT : IMesh
         var orderedRightTextureVertices = rightTextureVertices.OrderBy(x => x.Value).Select(x => x.Key);
         var leftMaterials = _materials.Select(mat => (Material)mat.Clone());
 
-        left = new MeshT(orderedLeftVertices, orderedLeftTextureVertices, leftFaces, leftMaterials)
+        left = new MeshT(orderedLeftVertices, orderedLeftTextureVertices, leftFaces, leftMaterials, leftColors)
         {
             Name = $"{Name}-{utils.Axis}L"
         };
-        right = new MeshT(orderedRightVertices, orderedRightTextureVertices, rightFaces, rightMaterials)
+        right = new MeshT(orderedRightVertices, orderedRightTextureVertices, rightFaces, rightMaterials, rightColors)
         {
             Name = $"{Name}-{utils.Axis}R"
         };
@@ -200,9 +221,34 @@ public class MeshT : IMesh
         return count;
     }
 
+    /// <summary>
+    /// Adds a vertex to the dictionary and appends its color to the parallel list if the vertex is new.
+    /// </summary>
+    private void AddVertexWithColor(IDictionary<Vertex3, int> vertices, List<RGB>? colors,
+        Vertex3 vertex, int sourceIndex)
+    {
+        var prevCount = vertices.Count;
+        vertices.AddIndex(vertex);
+        if (colors != null && vertices.Count > prevCount)
+            colors.Add(_vertexColors![sourceIndex]);
+    }
+
+    /// <summary>
+    /// Adds an interpolated intersection vertex and its interpolated color.
+    /// </summary>
+    private static void AddIntersectionVertexWithColor(IDictionary<Vertex3, int> vertices, List<RGB>? colors,
+        Vertex3 vertex, RGB? color)
+    {
+        var prevCount = vertices.Count;
+        vertices.AddIndex(vertex);
+        if (colors != null && vertices.Count > prevCount)
+            colors.Add(color!);
+    }
+
     private void IntersectLeft2DWithTexture(IVertexUtils utils, double q, int indexVL,
         int indexVR1, int indexVR2,
         IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
+        List<RGB>? leftColors, List<RGB>? rightColors,
         int indexTextureVL, int indexTextureVR1, int indexTextureVR2,
         IDictionary<Vertex2, int> leftTextureVertices, IDictionary<Vertex2, int> rightTextureVertices,
         int materialIndex, ICollection<FaceT> leftFaces, ICollection<FaceT> rightFaces)
@@ -215,7 +261,8 @@ public class MeshT : IMesh
         var tVR1 = _textureVertices[indexTextureVR1];
         var tVR2 = _textureVertices[indexTextureVR2];
 
-        var indexVLLeft = leftVertices.AddIndex(vL);
+        AddVertexWithColor(leftVertices, leftColors, vL, indexVL);
+        var indexVLLeft = leftVertices[vL];
         var indexTextureVLLeft = leftTextureVertices.AddIndex(tVL);
 
         if (Math.Abs(utils.GetDimension(vR1) - q) < Common.Epsilon &&
@@ -223,8 +270,10 @@ public class MeshT : IMesh
         {
             // Right Vertices are on the line
 
-            var indexVR1Left = leftVertices.AddIndex(vR1);
-            var indexVR2Left = leftVertices.AddIndex(vR2);
+            AddVertexWithColor(leftVertices, leftColors, vR1, indexVR1);
+            AddVertexWithColor(leftVertices, leftColors, vR2, indexVR2);
+            var indexVR1Left = leftVertices[vR1];
+            var indexVR2Left = leftVertices[vR2];
 
             var indexTextureVR1Left = leftTextureVertices.AddIndex(tVR1);
             var indexTextureVR2Left = leftTextureVertices.AddIndex(tVR2);
@@ -235,20 +284,38 @@ public class MeshT : IMesh
             return;
         }
 
-        var indexVR1Right = rightVertices.AddIndex(vR1);
-        var indexVR2Right = rightVertices.AddIndex(vR2);
+        AddVertexWithColor(rightVertices, rightColors, vR1, indexVR1);
+        AddVertexWithColor(rightVertices, rightColors, vR2, indexVR2);
+        var indexVR1Right = rightVertices[vR1];
+        var indexVR2Right = rightVertices[vR2];
 
         // a on the left, b and c on the right
 
         // Prima intersezione
         var t1 = utils.CutEdge(vL, vR1, q);
-        var indexT1Left = leftVertices.AddIndex(t1);
-        var indexT1Right = rightVertices.AddIndex(t1);
+        RGB? t1Color = null;
+        if (_vertexColors != null)
+        {
+            var perc1Color = Common.GetIntersectionPerc(vL, vR1, t1);
+            t1Color = _vertexColors[indexVL].CutEdgePerc(_vertexColors[indexVR1], perc1Color);
+        }
+        AddIntersectionVertexWithColor(leftVertices, leftColors, t1, t1Color);
+        AddIntersectionVertexWithColor(rightVertices, rightColors, t1, t1Color);
+        var indexT1Left = leftVertices[t1];
+        var indexT1Right = rightVertices[t1];
 
         // Seconda intersezione
         var t2 = utils.CutEdge(vL, vR2, q);
-        var indexT2Left = leftVertices.AddIndex(t2);
-        var indexT2Right = rightVertices.AddIndex(t2);
+        RGB? t2Color = null;
+        if (_vertexColors != null)
+        {
+            var perc2Color = Common.GetIntersectionPerc(vL, vR2, t2);
+            t2Color = _vertexColors[indexVL].CutEdgePerc(_vertexColors[indexVR2], perc2Color);
+        }
+        AddIntersectionVertexWithColor(leftVertices, leftColors, t2, t2Color);
+        AddIntersectionVertexWithColor(rightVertices, rightColors, t2, t2Color);
+        var indexT2Left = leftVertices[t2];
+        var indexT2Right = rightVertices[t2];
 
         // Split texture
         var indexTextureVR1Right = rightTextureVertices.AddIndex(tVR1);
@@ -284,6 +351,7 @@ public class MeshT : IMesh
     private void IntersectRight2DWithTexture(IVertexUtils utils, double q, int indexVR,
         int indexVL1, int indexVL2,
         IDictionary<Vertex3, int> leftVertices, IDictionary<Vertex3, int> rightVertices,
+        List<RGB>? leftColors, List<RGB>? rightColors,
         int indexTextureVR, int indexTextureVL1, int indexTextureVL2,
         IDictionary<Vertex2, int> leftTextureVertices, IDictionary<Vertex2, int> rightTextureVertices,
         int materialIndex, ICollection<FaceT> leftFaces, ICollection<FaceT> rightFaces)
@@ -296,7 +364,8 @@ public class MeshT : IMesh
         var tVL1 = _textureVertices[indexTextureVL1];
         var tVL2 = _textureVertices[indexTextureVL2];
 
-        var indexVRRight = rightVertices.AddIndex(vR);
+        AddVertexWithColor(rightVertices, rightColors, vR, indexVR);
+        var indexVRRight = rightVertices[vR];
         var indexTextureVRRight = rightTextureVertices.AddIndex(tVR);
 
         if (Math.Abs(utils.GetDimension(vL1) - q) < Common.Epsilon &&
@@ -304,8 +373,10 @@ public class MeshT : IMesh
         {
             // Left Vertices are on the line
 
-            var indexVL1Right = rightVertices.AddIndex(vL1);
-            var indexVL2Right = rightVertices.AddIndex(vL2);
+            AddVertexWithColor(rightVertices, rightColors, vL1, indexVL1);
+            AddVertexWithColor(rightVertices, rightColors, vL2, indexVL2);
+            var indexVL1Right = rightVertices[vL1];
+            var indexVL2Right = rightVertices[vL2];
 
             var indexTextureVL1Right = rightTextureVertices.AddIndex(tVL1);
             var indexTextureVL2Right = rightTextureVertices.AddIndex(tVL2);
@@ -316,20 +387,38 @@ public class MeshT : IMesh
             return;
         }
 
-        var indexVL1Left = leftVertices.AddIndex(vL1);
-        var indexVL2Left = leftVertices.AddIndex(vL2);
+        AddVertexWithColor(leftVertices, leftColors, vL1, indexVL1);
+        AddVertexWithColor(leftVertices, leftColors, vL2, indexVL2);
+        var indexVL1Left = leftVertices[vL1];
+        var indexVL2Left = leftVertices[vL2];
 
         // a on the right, b and c on the left
 
         // Prima intersezione
         var t1 = utils.CutEdge(vR, vL1, q);
-        var indexT1Left = leftVertices.AddIndex(t1);
-        var indexT1Right = rightVertices.AddIndex(t1);
+        RGB? t1Color = null;
+        if (_vertexColors != null)
+        {
+            var perc1Color = Common.GetIntersectionPerc(vR, vL1, t1);
+            t1Color = _vertexColors[indexVR].CutEdgePerc(_vertexColors[indexVL1], perc1Color);
+        }
+        AddIntersectionVertexWithColor(leftVertices, leftColors, t1, t1Color);
+        AddIntersectionVertexWithColor(rightVertices, rightColors, t1, t1Color);
+        var indexT1Left = leftVertices[t1];
+        var indexT1Right = rightVertices[t1];
 
         // Seconda intersezione
         var t2 = utils.CutEdge(vR, vL2, q);
-        var indexT2Left = leftVertices.AddIndex(t2);
-        var indexT2Right = rightVertices.AddIndex(t2);
+        RGB? t2Color = null;
+        if (_vertexColors != null)
+        {
+            var perc2Color = Common.GetIntersectionPerc(vR, vL2, t2);
+            t2Color = _vertexColors[indexVR].CutEdgePerc(_vertexColors[indexVL2], perc2Color);
+        }
+        AddIntersectionVertexWithColor(leftVertices, leftColors, t2, t2Color);
+        AddIntersectionVertexWithColor(rightVertices, rightColors, t2, t2Color);
+        var indexT2Left = leftVertices[t2];
+        var indexT2Right = rightVertices[t2];
 
         // Split texture
         var indexTextureVL1Left = leftTextureVertices.AddIndex(tVL1);
@@ -538,15 +627,15 @@ public class MeshT : IMesh
                 normalMapFileName = material.NormalMap != null
                     ? $"{Name}-texture-normal-{material.Name}{Path.GetExtension(material.NormalMap)}" : null;
 
-                if (material.Texture != null) { 
-                    newPathTexture = Path.Combine(targetFolder, textureFileName); 
-                    newTexture.Save(newPathTexture); newTexture.Dispose(); 
+                if (material.Texture != null) {
+                    newPathTexture = Path.Combine(targetFolder, textureFileName);
+                    newTexture.Save(newPathTexture); newTexture.Dispose();
                 }
 
-                if (material.NormalMap != null) { 
-                    newPathNormalMap = Path.Combine(targetFolder, normalMapFileName); 
-                    newNormalMap.Save(newPathNormalMap); 
-                    newNormalMap.Dispose(); 
+                if (material.NormalMap != null) {
+                    newPathNormalMap = Path.Combine(targetFolder, normalMapFileName);
+                    newNormalMap.Save(newPathNormalMap);
+                    newNormalMap.Dispose();
                 }
 
                 // fresh atlas
@@ -676,17 +765,17 @@ public class MeshT : IMesh
             tx.Dispose();
         }, newNormalMap, TaskCreationOptions.LongRunning);
 
-        if (material.Texture != null) { 
-            tasks.Add(saveTaskTexture); 
-            saveTaskTexture.Start(); 
-            material.Texture = textureFileName; 
-        
+        if (material.Texture != null) {
+            tasks.Add(saveTaskTexture);
+            saveTaskTexture.Start();
+            material.Texture = textureFileName;
+
         }
-        
-        if (material.NormalMap != null) { 
-            tasks.Add(saveTaskNormalMap); 
-            saveTaskNormalMap.Start(); 
-            material.NormalMap = normalMapFileName; 
+
+        if (material.NormalMap != null) {
+            tasks.Add(saveTaskNormalMap);
+            saveTaskNormalMap.Start();
+            material.NormalMap = normalMapFileName;
         }
     }
 
@@ -1000,6 +1089,7 @@ public class MeshT : IMesh
     private void RemoveUnusedVertices()
     {
         var newVertexes = new Dictionary<Vertex3, int>(_vertices.Count);
+        var newColors = _vertexColors != null ? new List<RGB>(_vertices.Count) : null;
 
         for (var f = 0; f < _faces.Count; f++)
         {
@@ -1010,22 +1100,35 @@ public class MeshT : IMesh
             var vC = _vertices[face.IndexC];
 
             if (!newVertexes.TryGetValue(vA, out var newVA))
+            {
                 newVA = newVertexes.AddIndex(vA);
+                if (newColors != null)
+                    newColors.Add(_vertexColors![face.IndexA]);
+            }
 
             face.IndexA = newVA;
 
             if (!newVertexes.TryGetValue(vB, out var newVB))
+            {
                 newVB = newVertexes.AddIndex(vB);
+                if (newColors != null)
+                    newColors.Add(_vertexColors![face.IndexB]);
+            }
 
             face.IndexB = newVB;
 
             if (!newVertexes.TryGetValue(vC, out var newVC))
+            {
                 newVC = newVertexes.AddIndex(vC);
+                if (newColors != null)
+                    newColors.Add(_vertexColors![face.IndexC]);
+            }
 
             face.IndexC = newVC;
         }
 
         _vertices = newVertexes.Keys.ToList();
+        _vertexColors = newColors;
     }
 
     private void RemoveUnusedVerticesAndUvs()
@@ -1033,6 +1136,7 @@ public class MeshT : IMesh
         var newVertexes = new Dictionary<Vertex3, int>(_vertices.Count);
         var newUvs = new Dictionary<Vertex2, int>(_textureVertices.Count);
         var newMaterials = new Dictionary<Material, int>(_materials.Count);
+        var newColors = _vertexColors != null ? new List<RGB>(_vertices.Count) : null;
 
         for (var f = 0; f < _faces.Count; f++)
         {
@@ -1045,17 +1149,29 @@ public class MeshT : IMesh
             var vC = _vertices[face.IndexC];
 
             if (!newVertexes.TryGetValue(vA, out var newVA))
+            {
                 newVA = newVertexes.AddIndex(vA);
+                if (newColors != null)
+                    newColors.Add(_vertexColors![face.IndexA]);
+            }
 
             face.IndexA = newVA;
 
             if (!newVertexes.TryGetValue(vB, out var newVB))
+            {
                 newVB = newVertexes.AddIndex(vB);
+                if (newColors != null)
+                    newColors.Add(_vertexColors![face.IndexB]);
+            }
 
             face.IndexB = newVB;
 
             if (!newVertexes.TryGetValue(vC, out var newVC))
+            {
                 newVC = newVertexes.AddIndex(vC);
+                if (newColors != null)
+                    newColors.Add(_vertexColors![face.IndexC]);
+            }
 
             face.IndexC = newVC;
 
@@ -1093,6 +1209,7 @@ public class MeshT : IMesh
         _vertices = newVertexes.Keys.ToList();
         _textureVertices = newUvs.Keys.ToList();
         _materials = newMaterials.Keys.ToList();
+        _vertexColors = newColors;
     }
 
     // Build a padded chart block by duplicating edge texels (ImageSharp-safe)
@@ -1159,14 +1276,28 @@ public class MeshT : IMesh
 
             writer.WriteLine("mtllib {0}", Path.GetFileName(materialsPath));
 
-            foreach (var vertex in _vertices)
+            for (var i = 0; i < _vertices.Count; i++)
             {
+                var vertex = _vertices[i];
                 writer.Write("v ");
                 writer.Write(vertex.X);
                 writer.Write(" ");
                 writer.Write(vertex.Y);
                 writer.Write(" ");
-                writer.WriteLine(vertex.Z);
+                writer.Write(vertex.Z);
+
+                if (_vertexColors != null)
+                {
+                    var color = _vertexColors[i];
+                    writer.Write(" ");
+                    writer.Write(color.R);
+                    writer.Write(" ");
+                    writer.Write(color.G);
+                    writer.Write(" ");
+                    writer.Write(color.B);
+                }
+
+                writer.WriteLine();
             }
 
             foreach (var textureVertex in _textureVertices)
@@ -1270,7 +1401,20 @@ public class MeshT : IMesh
             writer.Write(" ");
             writer.Write(vertex.Y);
             writer.Write(" ");
-            writer.WriteLine(vertex.Z);
+            writer.Write(vertex.Z);
+
+            if (_vertexColors != null)
+            {
+                var color = _vertexColors[index];
+                writer.Write(" ");
+                writer.Write(color.R);
+                writer.Write(" ");
+                writer.Write(color.G);
+                writer.Write(" ");
+                writer.Write(color.B);
+            }
+
+            writer.WriteLine();
         }
 
         for (var index = 0; index < _faces.Count; index++)

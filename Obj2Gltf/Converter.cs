@@ -27,7 +27,7 @@ namespace SilentWave.Obj2Gltf
         private readonly ObjParser _objParser;
         private readonly IMtlParser _mtlParser;
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="objPath">obj file path</param>
         /// <param name="options"></param>
@@ -196,7 +196,7 @@ namespace SilentWave.Obj2Gltf
             return val;
         }
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="mat"></param>
         /// <returns>roughnessFactor</returns>
@@ -364,13 +364,13 @@ namespace SilentWave.Obj2Gltf
             {
                 var matName = fg.Key;
                 var f = new Face(matName);
-                
+
                 foreach (var ff in fg)
                     f.Triangles.AddRange(ff.Triangles);
-                
+
                 if (f.Triangles.Count > 0)
                     faces.Add(f);
-                
+
             }
 
             // Vertex attributes are shared by all primitives in the mesh
@@ -388,6 +388,7 @@ namespace SilentWave.Obj2Gltf
 
                 var hasUvs = f.Triangles.Any(d => d.V1.T > 0);
                 var hasNormals = f.Triangles.Any(d => d.V1.N > 0);
+                var hasColors = objModel.Colors.Count == objModel.Vertices.Count;
 
                 var materialIndex = GetMaterialIndexOrDefault(gltfModel, objModel, f.MatName);
                 var material = materialIndex < objModel.Materials.Count ? objModel.Materials[materialIndex] : null;
@@ -425,6 +426,12 @@ namespace SilentWave.Obj2Gltf
                     }
                 }
 
+                if (hasColors)
+                {
+                    var colorsAccessorIndex = bufferState.MakeColorsAccessor(faceName + "_colors");
+                    atts.Add("COLOR_0", colorsAccessorIndex);
+                }
+
                 // f is a primitive
                 var iList = new List<int>(f.Triangles.Count * 3 * 2); // primitive indices
                 foreach (var triangle in f.Triangles)
@@ -435,11 +442,11 @@ namespace SilentWave.Obj2Gltf
                     var v1 = objModel.Vertices[v1Index];
                     var v2 = objModel.Vertices[v2Index];
                     var v3 = objModel.Vertices[v3Index];
-                   
+
                     var n1 = new SVec3();
                     var n2 = new SVec3();
                     var n3 = new SVec3();
-                    
+
                     if (triangle.V1.N > 0) // hasNormals
                     {
                         var n1Index = triangle.V1.N - 1;
@@ -453,7 +460,7 @@ namespace SilentWave.Obj2Gltf
                     var t1 = new SVec2();
                     var t2 = new SVec2();
                     var t3 = new SVec2();
-                    
+
                     if (materialHasTexture)
                     {
                         if (triangle.V1.T > 0) // hasUvs
@@ -478,6 +485,10 @@ namespace SilentWave.Obj2Gltf
                         {
                             bufferState.AddNormal(n1);
                         }
+                        if (hasColors)
+                        {
+                            bufferState.AddColor(SrgbToLinear(objModel.Colors[v1Index]));
+                        }
                         if (materialHasTexture)
                         {
                             if (triangle.V1.T > 0) // hasUvs
@@ -498,6 +509,10 @@ namespace SilentWave.Obj2Gltf
                         {
                             bufferState.AddNormal(n2);
                         }
+                        if (hasColors)
+                        {
+                            bufferState.AddColor(SrgbToLinear(objModel.Colors[v2Index]));
+                        }
                         if (materialHasTexture)
                         {
                             if (triangle.V2.T > 0) // hasUvs
@@ -517,6 +532,10 @@ namespace SilentWave.Obj2Gltf
                         if (triangle.V3.N > 0) // hasNormals
                         {
                             bufferState.AddNormal(n3);
+                        }
+                        if (hasColors)
+                        {
+                            bufferState.AddColor(SrgbToLinear(objModel.Colors[v3Index]));
                         }
                         if (materialHasTexture)
                         {
@@ -615,5 +634,28 @@ namespace SilentWave.Obj2Gltf
         }
 
         #endregion Meshes
+
+        #region sRGB to Linear
+
+        /// <summary>
+        /// Converts an sRGB color to linear RGB for glTF COLOR_0 attribute.
+        /// Uses IEC 61966-2-1 transfer function.
+        /// </summary>
+        private static SVec3 SrgbToLinear(SVec3 srgb)
+        {
+            return new SVec3(
+                SrgbChannelToLinear(srgb.X),
+                SrgbChannelToLinear(srgb.Y),
+                SrgbChannelToLinear(srgb.Z));
+        }
+
+        private static float SrgbChannelToLinear(float c)
+        {
+            if (c <= 0.04045f)
+                return c / 12.92f;
+            return (float)Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        #endregion sRGB to Linear
     }
 }

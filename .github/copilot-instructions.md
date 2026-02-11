@@ -33,9 +33,11 @@ CLI (Program.cs + Options.cs)  ← CommandLineParser
 
 ```
 IMesh (Obj2Tiles.Library/Geometry/IMesh.cs)
-├── Mesh  — geometry only (vertices + Face)
-└── MeshT — geometry + textures (vertices + texture coords + FaceT + Material[])
+├── Mesh  — geometry only (vertices + Face), optional vertex colors (List<RGB>?)
+└── MeshT — geometry + textures (vertices + texture coords + FaceT + Material[]), optional vertex colors (List<RGB>?)
 ```
+
+Both `Mesh` and `MeshT` support optional per-vertex colors via nullable `List<RGB>?`. Colors are parsed from extended OBJ vertex lines (`v x y z r g b`), preserved through `Split` (with interpolation at edge intersections via `RGB.CutEdgePerc`), and written back in `WriteObj`. The sRGB→linear conversion (IEC 61966-2-1) happens at glTF writing time in `Converter.cs`, not at parsing.
 
 `MeshT.WriteObj` handles texture repacking using `MaxRectanglesBinPack` and `SixLabors.ImageSharp`. The `Split` method on both types cuts along an axis, classifying triangles relative to a threshold and computing edge intersections via `CutEdge`/`CutEdgePerc`.
 
@@ -68,6 +70,7 @@ Target framework is **net10.0** with `InvariantGlobalization=true` and nullable 
 - **Async parallelism**: LOD decimation runs in parallel via `Task.WhenAll`. Recursive mesh splitting uses `ConcurrentBag<IMesh>`. Split operations per-LOD also run in parallel.
 - **`FormattingStreamWriter`**: Custom `StreamWriter` subclass (in `Common.cs`) that forces `InvariantCulture` — always use it when writing OBJ files to ensure decimal separator consistency.
 - **Extension method `AddIndex<T>`** (in `Extenders.cs`): Adds an element to a collection/dictionary and returns its index. Used extensively during vertex merging in split operations.
+- **Vertex colors**: Three independent OBJ parsers (`MeshUtils.LoadMesh`, `ObjMesh.ReadFile`, `ObjParser.Parse`) all read extended vertex lines (`v x y z r g b`). Colors flow through Split (interpolated at edge intersections via `RGB.CutEdgePerc`), Decimation (via `MeshDecimatorCore.Mesh.Colors`), and glTF export (as `COLOR_0` VEC3/F32 with sRGB→linear conversion in `Converter.cs`).
 
 ## CI/CD
 

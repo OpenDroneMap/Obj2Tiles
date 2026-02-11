@@ -11,7 +11,7 @@ public static partial class StagesFacade
 {
     public static async Task<DecimateResult> Decimate(string sourcePath, string destPath, int lods)
     {
-        
+
         var qualities = Enumerable.Range(0, lods - 1).Select(i => 1.0f - ((i + 1) / (float)lods)).ToArray();
 
         var sourceObjMesh = new ObjMesh();
@@ -25,7 +25,7 @@ public static partial class StagesFacade
         var destFiles = new List<string> { originalSourceFile };
 
         var tasks = new List<Task>();
-        
+
         for (var index = 0; index < qualities.Length; index++)
         {
             var quality = qualities[index];
@@ -37,13 +37,13 @@ public static partial class StagesFacade
             Console.WriteLine(" -> Decimating mesh {0} with quality {1:0.00}", fileName, quality);
 
             tasks.Add(Task.Run(() => InternalDecimate(sourceObjMesh, destFile, quality)));
-            
+
             destFiles.Add(destFile);
         }
 
         await Task.WhenAll(tasks);
         Console.WriteLine(" ?> Decimation done");
-        
+
         Console.WriteLine(" -> Copying obj dependencies");
         Utils.CopyObjDependencies(sourcePath, destPath);
         Console.WriteLine(" ?> Dependencies copied");
@@ -64,7 +64,8 @@ public static partial class StagesFacade
 
         var sourceMesh = new Mesh(sourceVertices, sourceSubMeshIndices)
         {
-            Normals = sourceNormals
+            Normals = sourceNormals,
+            Colors = sourceObjMesh.VertexColors
         };
 
         if (sourceTexCoords2D != null)
@@ -103,6 +104,7 @@ public static partial class StagesFacade
         var destObjMesh = new ObjMesh(destVertices, destIndices)
         {
             Normals = destNormals,
+            VertexColors = destMesh.Colors,
             MaterialLibraries = sourceObjMesh.MaterialLibraries,
             SubMeshMaterials = sourceObjMesh.SubMeshMaterials
         };
