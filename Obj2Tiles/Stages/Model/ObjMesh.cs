@@ -354,11 +354,21 @@ namespace Obj2Tiles.Stages.Model
                         if (lineSplit.Length >= 7)
                         {
                             readColorList ??= new List<Vector4>(VertexInitialCapacity);
+                            // Back-fill default white for any previous vertices that had no color
+                            while (readColorList.Count < readVertexList.Count - 1)
+                                readColorList.Add(new Vector4(1f, 1f, 1f, 1f));
                             float.TryParse(lineSplit[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var cr);
                             float.TryParse(lineSplit[5], NumberStyles.Float, CultureInfo.InvariantCulture, out var cg);
                             float.TryParse(lineSplit[6], NumberStyles.Float, CultureInfo.InvariantCulture, out var cb);
-                            var ca = lineSplit.Length >= 8 ? float.Parse(lineSplit[7], NumberStyles.Float, CultureInfo.InvariantCulture) : 1f;
+                            var ca = 1f;
+                            if (lineSplit.Length >= 8)
+                                float.TryParse(lineSplit[7], NumberStyles.Float, CultureInfo.InvariantCulture, out ca);
                             readColorList.Add(new Vector4(cr, cg, cb, ca));
+                        }
+                        else if (readColorList != null)
+                        {
+                            // Vertex without color after colors were already detected: pad with default white
+                            readColorList.Add(new Vector4(1f, 1f, 1f, 1f));
                         }
 
                         if (x < minX) minX = x; else if (x > maxX) maxX = x;
@@ -737,6 +747,11 @@ namespace Obj2Tiles.Stages.Model
                     writer.Write(c.y.ToString("g", CultureInfo.InvariantCulture));
                     writer.Write(' ');
                     writer.Write(c.z.ToString("g", CultureInfo.InvariantCulture));
+                    if (c.w != 1f)
+                    {
+                        writer.Write(' ');
+                        writer.Write(c.w.ToString("g", CultureInfo.InvariantCulture));
+                    }
                 }
                 writer.WriteLine();
             }
