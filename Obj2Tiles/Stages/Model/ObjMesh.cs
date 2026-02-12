@@ -95,6 +95,7 @@ namespace Obj2Tiles.Stages.Model
 
         private Vector3d[] vertices = null;
         private Vector3[] normals = null;
+        private Vector4[] vertexColors = null;
         private Vector2[] texCoords2D = null;
         private Vector3[] texCoords3D = null;
         private int[][] subMeshIndices = null;
@@ -122,6 +123,15 @@ namespace Obj2Tiles.Stages.Model
         {
             get => normals;
             set => normals = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the vertex colors (RGBA) for this mesh.
+        /// </summary>
+        public Vector4[] VertexColors
+        {
+            get => vertexColors;
+            set => vertexColors = value;
         }
 
         /// <summary>
@@ -298,9 +308,11 @@ namespace Obj2Tiles.Stages.Model
         {
             var materialLibraryList = new List<string>();
             var readVertexList = new List<Vector3d>(VertexInitialCapacity);
+            List<Vector4> readColorList = null;
             List<Vector3> readNormalList = null;
             List<Vector3> readTexCoordList = null;
             var vertexList = new List<Vector3d>(VertexInitialCapacity);
+            List<Vector4> colorList = null;
             List<Vector3> normalList = null;
             List<Vector3> texCoordList = null;
             var triangleIndexList = new List<int>(IndexInitialCapacity);
@@ -338,11 +350,31 @@ namespace Obj2Tiles.Stages.Model
                         double.TryParse(lineSplit[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var y);
                         double.TryParse(lineSplit[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var z);
                         readVertexList.Add(new Vector3d(x, y, z));
-                        
+
+                        if (lineSplit.Length >= 7)
+                        {
+                            readColorList ??= new List<Vector4>(VertexInitialCapacity);
+                            // Back-fill default white for any previous vertices that had no color
+                            while (readColorList.Count < readVertexList.Count - 1)
+                                readColorList.Add(new Vector4(1f, 1f, 1f, 1f));
+                            float.TryParse(lineSplit[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var cr);
+                            float.TryParse(lineSplit[5], NumberStyles.Float, CultureInfo.InvariantCulture, out var cg);
+                            float.TryParse(lineSplit[6], NumberStyles.Float, CultureInfo.InvariantCulture, out var cb);
+                            var ca = 1f;
+                            if (lineSplit.Length >= 8)
+                                float.TryParse(lineSplit[7], NumberStyles.Float, CultureInfo.InvariantCulture, out ca);
+                            readColorList.Add(new Vector4(cr, cg, cb, ca));
+                        }
+                        else if (readColorList != null)
+                        {
+                            // Vertex without color after colors were already detected: pad with default white
+                            readColorList.Add(new Vector4(1f, 1f, 1f, 1f));
+                        }
+
                         if (x < minX) minX = x; else if (x > maxX) maxX = x;
                         if (y < minY) minY = y; else if (y > maxY) maxY = y;
                         if (z < minZ) minZ = z; else if (z > maxZ) maxZ = z;
-                        
+
                     }
                     else if (string.Equals(firstPart, "vn"))
                     {
@@ -454,6 +486,20 @@ namespace Obj2Tiles.Stages.Model
 
                                 vertexList.Add(readVertexList[vertexIndex]);
 
+                                if (readColorList != null)
+                                {
+                                    colorList ??= new List<Vector4>(VertexInitialCapacity);
+
+                                    if (vertexIndex >= 0 && vertexIndex < readColorList.Count)
+                                    {
+                                        colorList.Add(readColorList[vertexIndex]);
+                                    }
+                                    else
+                                    {
+                                        colorList.Add(new Vector4(1f, 1f, 1f, 1f));
+                                    }
+                                }
+
                                 if (readNormalList != null)
                                 {
                                     normalList ??= new List<Vector3>(VertexInitialCapacity);
@@ -551,8 +597,10 @@ namespace Obj2Tiles.Stages.Model
             int subMeshCount = subMeshIndicesList.Count;
             bool hasNormals = (readNormalList != null);
             bool hasTexCoords = (readTexCoordList != null);
+            bool hasColors = (colorList != null);
             int vertexCount = vertexList.Count;
             var processedVertexList = new List<Vector3d>(vertexCount);
+            var processedColorList = (hasColors ? new List<Vector4>(vertexCount) : null);
             var processedNormalList = (hasNormals ? new List<Vector3>(vertexCount) : null);
             var processedTexCoordList = (hasTexCoords ? new List<Vector3>(vertexCount) : null);
             var processedIndices = new List<int[]>(subMeshCount);
@@ -571,6 +619,11 @@ namespace Obj2Tiles.Stages.Model
                     else
                     {
                         processedVertexList.Add(vertexList[index]);
+                        if (hasColors)
+                        {
+                            processedColorList.Add(colorList[index]);
+                        }
+
                         if (hasNormals)
                         {
                             processedNormalList.Add(normalList[index]);
@@ -591,6 +644,7 @@ namespace Obj2Tiles.Stages.Model
             }
 
             vertices = processedVertexList.ToArray();
+            vertexColors = (processedColorList != null ? processedColorList.ToArray() : null);
             normals = (processedNormalList != null ? processedNormalList.ToArray() : null);
 
             if (processedTexCoordList != null)
@@ -656,7 +710,7 @@ namespace Obj2Tiles.Stages.Model
                     writer.WriteLine();
                 }
 
-                WriteVertices(writer, vertices);
+                WriteVertices(writer, vertices, vertexColors);
                 WriteNormals(writer, normals);
                 WriteTextureCoords(writer, texCoords2D, texCoords3D);
 
@@ -672,8 +726,9 @@ namespace Obj2Tiles.Stages.Model
 
         #region Private Methods
 
-        private static void WriteVertices(TextWriter writer, Vector3d[] vertices)
+        private static void WriteVertices(TextWriter writer, Vector3d[] vertices, Vector4[] colors)
         {
+            bool hasColors = (colors != null && colors.Length == vertices.Length);
             for (int i = 0; i < vertices.Length; i++)
             {
                 var vertex = vertices[i];
@@ -683,6 +738,21 @@ namespace Obj2Tiles.Stages.Model
                 writer.Write(vertex.y.ToString("g", CultureInfo.InvariantCulture));
                 writer.Write(' ');
                 writer.Write(vertex.z.ToString("g", CultureInfo.InvariantCulture));
+                if (hasColors)
+                {
+                    var c = colors[i];
+                    writer.Write(' ');
+                    writer.Write(c.x.ToString("g", CultureInfo.InvariantCulture));
+                    writer.Write(' ');
+                    writer.Write(c.y.ToString("g", CultureInfo.InvariantCulture));
+                    writer.Write(' ');
+                    writer.Write(c.z.ToString("g", CultureInfo.InvariantCulture));
+                    if (c.w != 1f)
+                    {
+                        writer.Write(' ');
+                        writer.Write(c.w.ToString("g", CultureInfo.InvariantCulture));
+                    }
+                }
                 writer.WriteLine();
             }
         }

@@ -1,0 +1,5 @@
+# Colors appear starting from vertex 3 (late start)
+v 0 0 0
+v 1 0 0
+v 0.5 1 0 0.5 0.5 0.5
+f 1 2 3

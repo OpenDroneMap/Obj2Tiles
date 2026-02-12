@@ -9,7 +9,7 @@ using SilentWave.Obj2Gltf.Geom;
 namespace SilentWave.Obj2Gltf.WaveFront
 {
     /// <summary>
-    /// parse an obj file 
+    /// parse an obj file
     /// </summary>
     public class ObjParser
     {
@@ -97,6 +97,15 @@ namespace SilentWave.Obj2Gltf.WaveFront
                             float.Parse(strs[1], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
                             float.Parse(strs[2], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat));
                         model.Vertices.Add(v);
+
+                        if (strs.Length >= 6)
+                        {
+                            var c = new SVec3(
+                                float.Parse(strs[3], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
+                                float.Parse(strs[4], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat),
+                                float.Parse(strs[5], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat));
+                            model.Colors.Add(c);
+                        }
                     }
                     else if (StartWith(line, Statements.VectorNormal))
                     {

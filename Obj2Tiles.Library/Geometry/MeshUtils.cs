@@ -11,12 +11,13 @@ public class MeshUtils
     {
         return LoadMesh(fileName, out _);
     }
-    
+
     public static IMesh LoadMesh(string fileName, out string[] dependencies)
     {
         using var reader = new StreamReader(fileName);
 
         var vertices = new List<Vertex3>();
+        var vertexColors = new List<RGB>();
         var textureVertices = new List<Vertex2>();
         var facesT = new List<FaceT>();
         var faces = new List<Face>();
@@ -43,16 +44,24 @@ public class MeshUtils
                         double.Parse(segs[1], CultureInfo.InvariantCulture),
                         double.Parse(segs[2], CultureInfo.InvariantCulture),
                         double.Parse(segs[3], CultureInfo.InvariantCulture)));
+
+                    if (segs.Length >= 7)
+                    {
+                        vertexColors.Add(new RGB(
+                            double.Parse(segs[4], CultureInfo.InvariantCulture),
+                            double.Parse(segs[5], CultureInfo.InvariantCulture),
+                            double.Parse(segs[6], CultureInfo.InvariantCulture)));
+                    }
                     break;
                 case "vt" when segs.Length >= 3:
 
                     var vtx = new Vertex2(
                         double.Parse(segs[1], CultureInfo.InvariantCulture),
                         double.Parse(segs[2], CultureInfo.InvariantCulture));
-                    
+
                     if (vtx.X < 0 || vtx.Y < 0)
                         throw new Exception("Invalid texture coordinates: " + vtx);
-                    
+
                     textureVertices.Add(vtx);
                     break;
                 case "vn" when segs.Length == 3:
@@ -121,12 +130,12 @@ public class MeshUtils
                 {
                     var mtlFileName = segs[1];
                     var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
-                    
+
                     var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps);
 
                     deps.AddRange(mtlDeps);
                     deps.Add(mtlFilePath);
-                    
+
                     foreach (var mat in mats)
                     {
                         materials.Add(mat);
@@ -143,10 +152,17 @@ public class MeshUtils
         }
 
         dependencies = deps.ToArray();
-        
+
+        if (vertexColors.Count > 0 && vertexColors.Count != vertices.Count)
+            throw new InvalidDataException(
+                $"Vertex color count ({vertexColors.Count}) does not match vertex count ({vertices.Count}). " +
+                "All vertices must have colors or none.");
+
+        var colors = vertexColors.Count > 0 ? vertexColors : null;
+
         return textureVertices.Count != 0
-            ? new MeshT(vertices, textureVertices, facesT, materials)
-            : new Mesh(vertices, faces);
+            ? new MeshT(vertices, textureVertices, facesT, materials, colors)
+            : new Mesh(vertices, faces, colors);
     }
 
     #region Splitters

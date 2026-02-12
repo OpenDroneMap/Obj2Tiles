@@ -1,14 +1,21 @@
 
 # Obj2Tiles - Converts OBJ file to 3D Tiles format
 
-![license](https://img.shields.io/github/license/HeDo88TH/Obj2Tiles) 
-![commits](https://img.shields.io/github/commit-activity/m/HeDo88TH/Obj2Tiles) 
+![license](https://img.shields.io/github/license/HeDo88TH/Obj2Tiles)
+![commits](https://img.shields.io/github/commit-activity/m/HeDo88TH/Obj2Tiles)
 ![languages](https://img.shields.io/github/languages/top/HeDo88TH/Obj2Tiles)
 [![Build & Test](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml)
 [![Publish](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml)
 
-Obj2Tiles is a fully fledged tool to convert OBJ files to 3D Tiles format. 
+Obj2Tiles is a fully fledged tool to convert OBJ files to 3D Tiles format.
 It creates multiple LODs, splits the mesh and repacks the textures.
+
+### Vertex Colors
+
+Obj2Tiles supports OBJ files with per-vertex colors (extended vertex format: `v x y z r g b`). Vertex colors are:
+- **Parsed** from OBJ files by all three internal parsers (splitting, decimation, and glTF conversion stages)
+- **Preserved** through mesh splitting (with correct interpolation at edge intersections) and LOD decimation
+- **Exported** to glTF/GLB as `COLOR_0` attribute with automatic sRGB → linear RGB conversion per the glTF specification
 
 ## Installation
 
@@ -19,26 +26,26 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
 ```
   Input (pos. 0)         Required. Input OBJ file.
   Output (pos. 1)        Required. Output folder.
-  
+
   -s, --stage            (Default: Tiling) Stage to stop at (Decimation, Splitting, Tiling)
-  
+
   -l, --lods             (Default: 3) How many levels of details
 
   -d, --divisions        (Default: 2) How many tiles divisions
   -z, --zsplit           (Default: false) Splits along z-axis too
   -k, --keeptextures     (Default: false) Keeps original textures
-  
+
   --lat                  Latitude of the mesh
   --lon                  Longitude of the mesh
   --alt                  (Default: 0) Altitude of the mesh (meters)
   -e, --error            (Default: 100), baseError value for root node
-  --scale                (Default: 1), scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)  
-  
+  --scale                (Default: 1), scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)
+
   --y-up-to-z-up         (Default: false) Converts Y-up to Z-up
-  
+
   --use-system-temp      (Default: false) Uses the system temp folder
   --keep-intermediate    (Default: false) Keeps the intermediate files (do not cleanup)
-      
+
   --help                 Display this help screen.
   --version              Display version information.
 ```
@@ -47,8 +54,8 @@ The pipeline is composed of the following steps:
 
 ### Decimation
 
-The source obj is decimated using the `Fast Quadric Mesh Simplification` algorithm (by [Mattias Edlund](https://github.com/Whinarn)). 
-The algorithm was ported from .NET Framework 3.5 to .NET Core. The original repo is [here](https://github.com/Whinarn/MeshDecimator). 
+The source obj is decimated using the `Fast Quadric Mesh Simplification` algorithm (by [Mattias Edlund](https://github.com/Whinarn)).
+The algorithm was ported from .NET Framework 3.5 to .NET Core. The original repo is [here](https://github.com/Whinarn/MeshDecimator).
 
 You can specify how many LODs (levels of detail) you want to generate using the `--lods` parameter. The decimation levels are generated using this formula:
 
@@ -67,7 +74,7 @@ You can control how many times the split is performed by using the `--divisions`
 
 ### 3D Tiles conversion
 
-Each split mesh is converted to B3DM format using [ObjConvert](https://github.com/SilentWave/ObjConvert). 
+Each split mesh is converted to B3DM format using [ObjConvert](https://github.com/SilentWave/ObjConvert).
 Then the `tileset.json` is generated using the resulting files. You can specify the `--lat` and `--lon` and `--alt` parameters to set the location of the model.
 See the [Remarks](#Remarks) section to find out how to rotate the model.
 
@@ -86,7 +93,7 @@ dotnet build -c Release
 
 ## Examples
 
-You can download the test obj file [here](https://github.com/DroneDB/test_data/raw/master/brighton/odm_texturing.zip). 
+You can download the test obj file [here](https://github.com/DroneDB/test_data/raw/master/brighton/odm_texturing.zip).
 The Brighton Beach textured model generated using [OpenDroneMap](https://github.com/OpenDroneMap/ODM).
 
 ### Basic usage (using defaults)

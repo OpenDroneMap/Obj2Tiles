@@ -25,6 +25,10 @@ namespace SilentWave.Obj2Gltf.WaveFront
         /// </summary>
         public List<SVec3> Normals { get; set; } = new List<SVec3>();
         /// <summary>
+        /// per-vertex colors (RGB, from extended OBJ vertex lines: v x y z r g b)
+        /// </summary>
+        public List<SVec3> Colors { get; set; } = new List<SVec3>();
+        /// <summary>
         /// vertices texture coordinates list
         /// </summary>
         public List<SVec2> Uvs { get; set; } = new List<SVec2>();
@@ -80,9 +84,9 @@ namespace SilentWave.Obj2Gltf.WaveFront
         {
             var gg = new Geometry(g.Id);
 
-            var pntList = box.Pnts; // new List<int>(); // 
-            var normList = box.Norms; // new List<int>(); // 
-            var uvList = box.Uvs; // new List<int>(); // 
+            var pntList = box.Pnts; // new List<int>(); //
+            var normList = box.Norms; // new List<int>(); //
+            var uvList = box.Uvs; // new List<int>(); //
 
             //if (pntList.Count == 0)
             //{
