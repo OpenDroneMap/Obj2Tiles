@@ -156,16 +156,26 @@ public class ObjMeshParsingTests
         // may cause InvalidOperationException in downstream processing.
         // This test checks basic parsing resilience.
         var tempFile = Path.GetTempFileName();
+        var roundTripFile = Path.GetTempFileName();
         try
         {
             File.WriteAllText(tempFile, "v 0 0 0\nv 1 0 0\nv 0.5 1 0\nf 1 2 3\nusemtl OrphanMaterial\n");
             var mesh = new ObjMesh();
             // ReadFile should not crash even with trailing usemtl
             Should.NotThrow(() => mesh.ReadFile(tempFile));
+
+            // The orphan usemtl must not create a material entry without
+            // matching indices — that mismatch is the root cause of Issue #54.
+            if (mesh.SubMeshMaterials != null)
+                mesh.SubMeshMaterials.Length.ShouldBe(mesh.SubMeshIndices.Length);
+
+            // WriteFile must also survive (this is where the original crash was reported).
+            Should.NotThrow(() => mesh.WriteFile(roundTripFile));
         }
         finally
         {
             File.Delete(tempFile);
+            File.Delete(roundTripFile);
         }
     }
 }
