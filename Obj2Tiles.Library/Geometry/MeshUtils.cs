@@ -59,13 +59,14 @@ public class MeshUtils
                         double.Parse(segs[1], CultureInfo.InvariantCulture),
                         double.Parse(segs[2], CultureInfo.InvariantCulture));
 
-                    if (vtx.X < 0 || vtx.Y < 0)
-                        throw new Exception("Invalid texture coordinates: " + vtx);
+                    // Wrap UV coordinates to [0, 1] range for mirroring/UDIM workflows (Issue #35)
+                    if (vtx.X < 0 || vtx.X > 1 || vtx.Y < 0 || vtx.Y > 1)
+                        vtx = new Vertex2(vtx.X - Math.Floor(vtx.X), vtx.Y - Math.Floor(vtx.Y));
 
                     textureVertices.Add(vtx);
                     break;
-                case "vn" when segs.Length == 3:
-                    // Skipping normals
+                case "vn" when segs.Length >= 4:
+                    // Skipping normals (recognized but not used)
                     break;
                 case "usemtl" when segs.Length == 2:
                 {
@@ -126,6 +127,42 @@ public class MeshUtils
 
                     break;
                 }
+                case "f" when segs.Length >= 5:
+                {
+                    // Fan triangulation for quads and n-gons (Issue #60)
+                    // Splits polygon v0-v1-v2-...-vN into triangles: (v0,v1,v2), (v0,v2,v3), ..., (v0,vN-1,vN)
+                    var faceVerts = new string[segs.Length - 1][];
+                    for (var fi = 0; fi < segs.Length - 1; fi++)
+                        faceVerts[fi] = segs[fi + 1].Split('/');
+
+                    var hasTex = faceVerts[0].Length > 1 && faceVerts[0][1].Length > 0;
+
+                    for (var fi = 1; fi < faceVerts.Length - 1; fi++)
+                    {
+                        var fv0 = int.Parse(faceVerts[0][0]) - 1;
+                        var fv1 = int.Parse(faceVerts[fi][0]) - 1;
+                        var fv2 = int.Parse(faceVerts[fi + 1][0]) - 1;
+
+                        if (hasTex)
+                        {
+                            var ft0 = int.Parse(faceVerts[0][1]) - 1;
+                            var ft1 = int.Parse(faceVerts[fi][1]) - 1;
+                            var ft2 = int.Parse(faceVerts[fi + 1][1]) - 1;
+
+                            var materialIndex = 0;
+                            if (currentMaterial != string.Empty)
+                                materialIndex = materialsDict[currentMaterial];
+
+                            facesT.Add(new FaceT(fv0, fv1, fv2, ft0, ft1, ft2, materialIndex));
+                        }
+                        else
+                        {
+                            faces.Add(new Face(fv0, fv1, fv2));
+                        }
+                    }
+
+                    break;
+                }
                 case "mtllib" when segs.Length == 2:
                 {
                     var mtlFileName = segs[1];
@@ -144,7 +181,10 @@ public class MeshUtils
 
                     break;
                 }
-                case "l" or "cstype" or "deg" or "bmat" or "step" or "curv" or "curv2" or "surf" or "parm" or "trim"
+                case "l":
+                    // Line elements are irrelevant for triangular meshes, skip gracefully (Issue #64)
+                    break;
+                case "cstype" or "deg" or "bmat" or "step" or "curv" or "curv2" or "surf" or "parm" or "trim"
                     or "end" or "hole" or "scrv" or "sp" or "con":
 
                     throw new NotSupportedException("Element not supported: '" + line + "'");

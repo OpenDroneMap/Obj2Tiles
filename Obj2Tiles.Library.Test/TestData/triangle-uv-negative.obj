@@ -1,0 +1,10 @@
+# Triangle with negative/out-of-range UV coordinates (wrapping/UDIM)
+v 0 0 0
+v 1 0 0
+v 0.5 1 0
+vt -0.5 1.5
+vt 2.3 -0.2
+vt 0.5 0.5
+mtllib triangle-uv-negative.mtl
+usemtl Default
+f 1/1 2/2 3/3

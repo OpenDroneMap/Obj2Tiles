@@ -1,0 +1,7 @@
+# Face with degenerate triangle (all 3 vertices are coincident)
+v 0 0 0
+v 1 0 0
+v 0.5 1 0
+v 0 0 0
+f 1 2 3
+f 1 4 1

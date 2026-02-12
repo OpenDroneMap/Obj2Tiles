@@ -1,0 +1,15 @@
+# File with many comments, blank lines, and whitespace-only lines
+# This is a comment
+
+# Another comment
+
+v 0 0 0
+
+v 1 0 0
+
+# Vertex 3
+v 0.5 1 0
+
+# Face definition
+f 1 2 3
+# End of file
