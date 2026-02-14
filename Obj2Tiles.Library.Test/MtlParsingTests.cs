@@ -122,15 +122,14 @@ public class MtlParsingTests
         }
     }
 
-    // --- DiffuseColor-only material (Issue #36 context) ---
+    // --- DiffuseColor-only material ---
 
     [Test]
     public void ReadMtl_DiffuseColorOnly_KdParsed()
     {
         // Materials with only Kd (no map_Kd) should still have DiffuseColor set.
-        // BUG: Issue #36 — the Converter.cs ignores Kd when no texture is present,
-        // producing grey materials in glTF. This test verifies the MTL parser works correctly;
-        // the downstream glTF conversion bug is separate.
+        // NOTE: Issue #36 (grey materials in glTF) is a downstream Converter.cs bug
+        // and is NOT addressed by this PR. This test only validates the MTL parser.
         var tempFile = Path.GetTempFileName();
         try
         {

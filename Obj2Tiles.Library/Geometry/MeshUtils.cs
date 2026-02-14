@@ -135,17 +135,32 @@ public class MeshUtils
                     for (var fi = 0; fi < segs.Length - 1; fi++)
                         faceVerts[fi] = segs[fi + 1].Split('/');
 
-                    var hasTex = faceVerts[0].Length > 1 && faceVerts[0][1].Length > 0;
+                    // Determine whether all vertices have texture coordinates.
+                    var anyHasTex = false;
+                    var allHaveTex = true;
+                    for (var fi = 0; fi < faceVerts.Length; fi++)
+                    {
+                        var hasVt = faceVerts[fi].Length > 1 && faceVerts[fi][1].Length > 0;
+                        anyHasTex |= hasVt;
+                        allHaveTex &= hasVt;
+                    }
+
+                    if (anyHasTex && !allHaveTex)
+                        throw new FormatException("OBJ face has inconsistent texture coordinate indices (mixed v/vt and v//vn or missing vt) which is not supported.");
+
+                    var hasTex = allHaveTex;
+
+                    // Parse the pivot vertex once outside the loop
+                    var fv0 = int.Parse(faceVerts[0][0]) - 1;
+                    var ft0 = hasTex ? int.Parse(faceVerts[0][1]) - 1 : 0;
 
                     for (var fi = 1; fi < faceVerts.Length - 1; fi++)
                     {
-                        var fv0 = int.Parse(faceVerts[0][0]) - 1;
                         var fv1 = int.Parse(faceVerts[fi][0]) - 1;
                         var fv2 = int.Parse(faceVerts[fi + 1][0]) - 1;
 
                         if (hasTex)
                         {
-                            var ft0 = int.Parse(faceVerts[0][1]) - 1;
                             var ft1 = int.Parse(faceVerts[fi][1]) - 1;
                             var ft2 = int.Parse(faceVerts[fi + 1][1]) - 1;
 
