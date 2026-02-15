@@ -4,14 +4,14 @@ namespace Obj2Tiles.Test;
 
 public class BoxDTO
 {
-    public VertexDTO Min { get; set; }
-    public VertexDTO Max { get; set; }
+    public VertexDTO Min { get; set; } = null!;
+    public VertexDTO Max { get; set; } = null!;
 
     public double Width { get; set; }
     public double Height { get; set; }
     public double Depth { get; set; }
 
-    public VertexDTO Center { get; set; }
+    public VertexDTO Center { get; set; } = null!;
 
     public BoxDTO()
     {

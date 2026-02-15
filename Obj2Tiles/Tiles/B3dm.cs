@@ -24,7 +24,7 @@ namespace Obj2Tiles.Tiles
         public byte[] FeatureTableBinary { get; set; }
         public string BatchTableJson { get; set; }
         public byte[] BatchTableBinary { get; set; }
-        public byte[] GlbData { get; set; }
+        public byte[] GlbData { get; set; } = [];
 
         public byte[] ToBytes()
         {

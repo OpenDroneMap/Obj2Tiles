@@ -1,0 +1,5 @@
+# Coordinates in scientific notation
+v 1.5e-3 2.0e2 -3.1e1
+v 0.0e0 1.0e0 0.0e0
+v 5.0e-1 0.0e0 1.0e-1
+f 1 2 3

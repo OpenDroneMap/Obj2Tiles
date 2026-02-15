@@ -10,14 +10,14 @@ public static partial class StagesFacade
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
         bool zsplit, Box3 bounds, bool keepOriginalTextures = false)
     {
-      
+
         var tasks = new List<Task<Dictionary<string, Box3>>>();
 
         for (var index = 0; index < sourceFiles.Length; index++)
         {
             var file = sourceFiles[index];
             var dest = Path.Combine(destFolder, "LOD-" + index);
-            
+
             // We compress textures except the first one (the original one)
             var textureStrategy = keepOriginalTextures ? TexturesStrategy.KeepOriginal :
                 index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed;
@@ -42,7 +42,7 @@ public static partial class StagesFacade
         var tilesBounds = new Dictionary<string, Box3>();
 
         Directory.CreateDirectory(destPath);
-        
+
         Console.WriteLine($" -> Loading OBJ file \"{sourcePath}\"");
 
         sw.Start();
@@ -57,13 +57,13 @@ public static partial class StagesFacade
 
             if (mesh is MeshT t)
                 t.TexturesStrategy = TexturesStrategy.Compress;
-            
+
             mesh.WriteObj(Path.Combine(destPath, $"{mesh.Name}.obj"));
-            
+
             return new Dictionary<string, Box3> { { mesh.Name, mesh.Bounds } };
-            
+
         }
-                
+
         Console.WriteLine(
             $" -> Splitting with a depth of {divisions}{(zSplit ? " with z-split" : "")}");
 
@@ -73,7 +73,7 @@ public static partial class StagesFacade
 
         int count;
 
-        if (bounds != null)
+        if (bounds is not null)
         {
             count = zSplit
                 ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, bounds, meshes)

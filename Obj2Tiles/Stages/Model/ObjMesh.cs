@@ -93,15 +93,15 @@ namespace Obj2Tiles.Stages.Model
 
         #region Fields
 
-        private Vector3d[] vertices = null;
-        private Vector3[] normals = null;
-        private Vector4[] vertexColors = null;
-        private Vector2[] texCoords2D = null;
-        private Vector3[] texCoords3D = null;
-        private int[][] subMeshIndices = null;
-        private string[] subMeshMaterials = null;
+        private Vector3d[]? vertices = null;
+        private Vector3[]? normals = null;
+        private Vector4[]? vertexColors = null;
+        private Vector2[]? texCoords2D = null;
+        private Vector3[]? texCoords3D = null;
+        private int[][]? subMeshIndices = null;
+        private string[]? subMeshMaterials = null;
 
-        private string[] materialLibraries = null;
+        private string[]? materialLibraries = null;
 
         #endregion
 
@@ -110,7 +110,7 @@ namespace Obj2Tiles.Stages.Model
         /// <summary>
         /// Gets or sets the vertices for this mesh.
         /// </summary>
-        public Vector3d[] Vertices
+        public Vector3d[]? Vertices
         {
             get => vertices;
             set => vertices = value;
@@ -119,7 +119,7 @@ namespace Obj2Tiles.Stages.Model
         /// <summary>
         /// Gets or sets the normals for this mesh.
         /// </summary>
-        public Vector3[] Normals
+        public Vector3[]? Normals
         {
             get => normals;
             set => normals = value;
@@ -128,7 +128,7 @@ namespace Obj2Tiles.Stages.Model
         /// <summary>
         /// Gets or sets the vertex colors (RGBA) for this mesh.
         /// </summary>
-        public Vector4[] VertexColors
+        public Vector4[]? VertexColors
         {
             get => vertexColors;
             set => vertexColors = value;
@@ -137,7 +137,7 @@ namespace Obj2Tiles.Stages.Model
         /// <summary>
         /// Gets or sets the 2D texture coordinates for this mesh.
         /// </summary>
-        public Vector2[] TexCoords2D
+        public Vector2[]? TexCoords2D
         {
             get => texCoords2D;
             set
@@ -150,7 +150,7 @@ namespace Obj2Tiles.Stages.Model
         /// <summary>
         /// Gets or sets the 3D texture coordinates for this mesh.
         /// </summary>
-        public Vector3[] TexCoords3D
+        public Vector3[]? TexCoords3D
         {
             get => texCoords3D;
             set
@@ -170,7 +170,7 @@ namespace Obj2Tiles.Stages.Model
         /// Note that setting this will remove any existing sub-meshes and turn it into just one sub-mesh.
         /// </summary>
         [Obsolete("Prefer to use the 'SubMeshIndices' property instead.", false)]
-        public int[] Indices
+        public int[]? Indices
         {
             get
             {
@@ -210,7 +210,7 @@ namespace Obj2Tiles.Stages.Model
         /// <summary>
         /// Gets or sets the indices divided by sub-meshes.
         /// </summary>
-        public int[][] SubMeshIndices
+        public int[][]? SubMeshIndices
         {
             get => subMeshIndices;
             set
@@ -231,7 +231,7 @@ namespace Obj2Tiles.Stages.Model
         /// <summary>
         /// Gets or sets the names of each sub-mesh material.
         /// </summary>
-        public string[] SubMeshMaterials
+        public string[]? SubMeshMaterials
         {
             get => subMeshMaterials;
             set
@@ -252,13 +252,13 @@ namespace Obj2Tiles.Stages.Model
         /// <summary>
         /// Gets or sets the paths to material libraries used by this mesh.
         /// </summary>
-        public string[] MaterialLibraries
+        public string[]? MaterialLibraries
         {
             get => materialLibraries;
             set => materialLibraries = value;
         }
 
-        public Box3 Bounds { get; private set; }
+        public Box3 Bounds { get; private set; } = default!;
 
         #endregion
 
@@ -308,13 +308,13 @@ namespace Obj2Tiles.Stages.Model
         {
             var materialLibraryList = new List<string>();
             var readVertexList = new List<Vector3d>(VertexInitialCapacity);
-            List<Vector4> readColorList = null;
-            List<Vector3> readNormalList = null;
-            List<Vector3> readTexCoordList = null;
+            List<Vector4>? readColorList = null;
+            List<Vector3>? readNormalList = null;
+            List<Vector3>? readTexCoordList = null;
             var vertexList = new List<Vector3d>(VertexInitialCapacity);
-            List<Vector4> colorList = null;
-            List<Vector3> normalList = null;
-            List<Vector3> texCoordList = null;
+            List<Vector4>? colorList = null;
+            List<Vector3>? normalList = null;
+            List<Vector3>? texCoordList = null;
             var triangleIndexList = new List<int>(IndexInitialCapacity);
             var subMeshIndicesList = new List<int[]>();
             var subMeshMaterialList = new List<string>();
@@ -322,9 +322,9 @@ namespace Obj2Tiles.Stages.Model
             var tempFaceList = new List<int>(6);
             bool texCoordsAre3D = false;
 
-            string currentGroup = null;
-            string currentObject = null;
-            string currentMaterial = null;
+            string? currentGroup = null;
+            string? currentObject = null;
+            string? currentMaterial = null;
             int newFaceIndex = 0;
 
             double minX = double.MaxValue, maxX = double.MinValue;
@@ -333,7 +333,7 @@ namespace Obj2Tiles.Stages.Model
 
             using (var reader = File.OpenText(path))
             {
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     if (line.Length == 0 || line[0] == '#')
@@ -442,7 +442,7 @@ namespace Obj2Tiles.Stages.Model
                                 int.TryParse(word1, out vertexIndex);
                                 int.TryParse(word2, out texIndex);
                                 vertexIndex = ShiftIndex(vertexIndex, readVertexList.Count);
-                                texIndex = ShiftIndex(texIndex, readTexCoordList.Count);
+                                texIndex = ShiftIndex(texIndex, readTexCoordList!.Count);
                                 normalIndex = -1;
                             }
                             else if (slashCount == 2)
@@ -458,14 +458,14 @@ namespace Obj2Tiles.Stages.Model
                                 vertexIndex = ShiftIndex(vertexIndex, readVertexList.Count);
                                 if (hasTexCoord)
                                 {
-                                    texIndex = ShiftIndex(texIndex, readTexCoordList.Count);
+                                    texIndex = ShiftIndex(texIndex, readTexCoordList!.Count);
                                 }
                                 else
                                 {
                                     texIndex = -1;
                                 }
 
-                                normalIndex = ShiftIndex(normalIndex, readNormalList.Count);
+                                normalIndex = ShiftIndex(normalIndex, readNormalList!.Count);
                             }
                             else
                             {
@@ -518,7 +518,7 @@ namespace Obj2Tiles.Stages.Model
                                 {
                                     texCoordList ??= new List<Vector3>(VertexInitialCapacity);
 
-                                    if (texIndex >= 0 && texIndex < readTexCoordList.Count)
+                                    if (texIndex >= 0 && texIndex < readTexCoordList!.Count)
                                     {
                                         texCoordList.Add(readTexCoordList[texIndex]);
                                     }
@@ -586,13 +586,14 @@ namespace Obj2Tiles.Stages.Model
             {
                 subMeshIndicesList.Add(triangleIndexList.ToArray());
                 triangleIndexList.Clear();
-
-                /*
-                if (currentMaterial == null)
-                {
-                    subMeshMaterialList.Add("none");
-                }*/
             }
+
+            // Fix Issue #54: Remove orphan material entries that have no corresponding
+            // index arrays. This happens when a trailing 'usemtl' appears without
+            // subsequent faces, causing a mismatch between SubMeshMaterials and
+            // SubMeshIndices that crashes WriteFile.
+            while (subMeshMaterialList.Count > subMeshIndicesList.Count)
+                subMeshMaterialList.RemoveAt(subMeshMaterialList.Count - 1);
 
             int subMeshCount = subMeshIndicesList.Count;
             bool hasNormals = (readNormalList != null);
@@ -621,17 +622,17 @@ namespace Obj2Tiles.Stages.Model
                         processedVertexList.Add(vertexList[index]);
                         if (hasColors)
                         {
-                            processedColorList.Add(colorList[index]);
+                            processedColorList!.Add(colorList![index]);
                         }
 
                         if (hasNormals)
                         {
-                            processedNormalList.Add(normalList[index]);
+                            processedNormalList!.Add(normalList![index]);
                         }
 
                         if (hasTexCoords)
                         {
-                            processedTexCoordList.Add(texCoordList[index]);
+                            processedTexCoordList!.Add(texCoordList![index]);
                         }
 
                         mappedIndex = processedVertexList.Count - 1;
@@ -710,13 +711,13 @@ namespace Obj2Tiles.Stages.Model
                     writer.WriteLine();
                 }
 
-                WriteVertices(writer, vertices, vertexColors);
+                WriteVertices(writer, vertices!, vertexColors);
                 WriteNormals(writer, normals);
                 WriteTextureCoords(writer, texCoords2D, texCoords3D);
 
                 bool hasTexCoords = (texCoords2D != null || texCoords3D != null);
                 bool hasNormals = (normals != null);
-                WriteSubMeshes(writer, subMeshIndices, subMeshMaterials, hasTexCoords, hasNormals);
+                WriteSubMeshes(writer, subMeshIndices!, subMeshMaterials, hasTexCoords, hasNormals);
             }
         }
 
@@ -726,7 +727,7 @@ namespace Obj2Tiles.Stages.Model
 
         #region Private Methods
 
-        private static void WriteVertices(TextWriter writer, Vector3d[] vertices, Vector4[] colors)
+        private static void WriteVertices(TextWriter writer, Vector3d[] vertices, Vector4[]? colors)
         {
             bool hasColors = (colors != null && colors.Length == vertices.Length);
             for (int i = 0; i < vertices.Length; i++)
@@ -740,7 +741,7 @@ namespace Obj2Tiles.Stages.Model
                 writer.Write(vertex.z.ToString("g", CultureInfo.InvariantCulture));
                 if (hasColors)
                 {
-                    var c = colors[i];
+                    var c = colors![i];
                     writer.Write(' ');
                     writer.Write(c.x.ToString("g", CultureInfo.InvariantCulture));
                     writer.Write(' ');
@@ -757,7 +758,7 @@ namespace Obj2Tiles.Stages.Model
             }
         }
 
-        private static void WriteNormals(TextWriter writer, Vector3[] normals)
+        private static void WriteNormals(TextWriter writer, Vector3[]? normals)
         {
             if (normals == null)
                 return;
@@ -775,7 +776,7 @@ namespace Obj2Tiles.Stages.Model
             }
         }
 
-        private static void WriteTextureCoords(TextWriter writer, Vector2[] texCoords2D, Vector3[] texCoords3D)
+        private static void WriteTextureCoords(TextWriter writer, Vector2[]? texCoords2D, Vector3[]? texCoords3D)
         {
             if (texCoords2D != null)
             {
@@ -805,7 +806,7 @@ namespace Obj2Tiles.Stages.Model
             }
         }
 
-        private static void WriteSubMeshes(TextWriter writer, int[][] subMeshIndices, string[] subMeshMaterials,
+        private static void WriteSubMeshes(TextWriter writer, int[][] subMeshIndices, string[]? subMeshMaterials,
             bool hasTexCoords, bool hasNormals)
         {
             for (int subMeshIndex = 0; subMeshIndex < subMeshIndices.Length; subMeshIndex++)

@@ -391,7 +391,13 @@ namespace SilentWave.Obj2Gltf
                 var hasColors = objModel.Colors.Count == objModel.Vertices.Count;
 
                 var materialIndex = GetMaterialIndexOrDefault(gltfModel, objModel, f.MatName);
-                var material = materialIndex < objModel.Materials.Count ? objModel.Materials[materialIndex] : null;
+                // Fix Issue #36: look up the OBJ material by name instead of relying
+                // on the gltfModel index, which can diverge from objModel.Materials
+                // when the default material is inserted at index 0.
+                var material = !string.IsNullOrEmpty(f.MatName)
+                    ? objModel.Materials.FirstOrDefault(m => m.Name == f.MatName)
+                      ?? (materialIndex < objModel.Materials.Count ? objModel.Materials[materialIndex] : null)
+                    : objModel.Materials.FirstOrDefault();
                 var materialHasTexture = material?.DiffuseTextureFile != null;
 
                 // every primitive needs their own vertex indices(v,t,n)
