@@ -45,7 +45,7 @@ public class ObjMeshVertexColorEdgeCaseTests
         mesh.ReadFile(Path.Combine(TestDataPath, "mixed-colors.obj"));
 
         mesh.VertexColors.ShouldNotBeNull();
-        mesh.VertexColors.Length.ShouldBe(mesh.Vertices.Length);
+        mesh.VertexColors!.Length.ShouldBe(mesh.Vertices!.Length);
     }
 
     [Test]
@@ -56,7 +56,7 @@ public class ObjMeshVertexColorEdgeCaseTests
         mesh.ReadFile(Path.Combine(TestDataPath, "mixed-colors.obj"));
 
         // Find a white vertex — there should be at least one from the non-colored v3
-        var hasWhite = mesh.VertexColors.Any(c =>
+        var hasWhite = mesh.VertexColors!.Any(c =>
             Math.Abs(c.x - 1f) < 0.001f &&
             Math.Abs(c.y - 1f) < 0.001f &&
             Math.Abs(c.z - 1f) < 0.001f &&
@@ -73,7 +73,7 @@ public class ObjMeshVertexColorEdgeCaseTests
         mesh.ReadFile(Path.Combine(TestDataPath, "late-colors.obj"));
 
         mesh.VertexColors.ShouldNotBeNull();
-        mesh.VertexColors.Length.ShouldBe(mesh.Vertices.Length);
+        mesh.VertexColors!.Length.ShouldBe(mesh.Vertices!.Length);
 
         // v3 (last in original OBJ) should have the explicit color (0.5, 0.5, 0.5)
         var hasGray = mesh.VertexColors.Any(c =>
@@ -98,7 +98,7 @@ public class ObjMeshVertexColorEdgeCaseTests
         reloaded.ReadFile(outPath);
 
         reloaded.VertexColors.ShouldNotBeNull();
-        reloaded.VertexColors.Length.ShouldBe(reloaded.Vertices.Length);
+        reloaded.VertexColors!.Length.ShouldBe(reloaded.Vertices!.Length);
 
         // Every vertex in the re-loaded file should now have an explicit color
         // (because WriteFile wrote colors for all vertices)
@@ -135,7 +135,7 @@ public class ObjMeshVertexColorEdgeCaseTests
         mesh.ReadFile(Path.Combine(TestDataPath, "alpha-colors.obj"));
 
         mesh.VertexColors.ShouldNotBeNull();
-        mesh.VertexColors.Length.ShouldBe(mesh.Vertices.Length);
+        mesh.VertexColors!.Length.ShouldBe(mesh.Vertices!.Length);
 
         // v1: (1, 0, 0, 0.5) — valid alpha
         // v2: (0, 1, 0, 0) — malformed alpha defaults to 0 via TryParse

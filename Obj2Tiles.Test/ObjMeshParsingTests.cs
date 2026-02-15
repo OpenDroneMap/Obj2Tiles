@@ -28,9 +28,9 @@ public class ObjMeshParsingTests
     {
         var mesh = LoadMesh("quad-mesh.obj");
 
-        mesh.Vertices.Length.ShouldBe(4);
+        mesh.Vertices!.Length.ShouldBe(4);
         // Quad → 2 triangles = 6 indices in one sub-mesh
-        var totalIndices = mesh.SubMeshIndices.Sum(s => s.Length);
+        var totalIndices = mesh.SubMeshIndices!.Sum(s => s.Length);
         (totalIndices / 3).ShouldBe(2);
     }
 
@@ -41,17 +41,17 @@ public class ObjMeshParsingTests
     {
         var mesh = LoadMesh("negative-idx.obj");
 
-        mesh.Vertices.Length.ShouldBeGreaterThan(0);
-        var totalTriangles = mesh.SubMeshIndices.Sum(s => s.Length) / 3;
+        mesh.Vertices!.Length.ShouldBeGreaterThan(0);
+        var totalTriangles = mesh.SubMeshIndices!.Sum(s => s.Length) / 3;
         totalTriangles.ShouldBe(2);
 
         // All indices should be valid (non-negative, within bounds)
-        foreach (var submesh in mesh.SubMeshIndices)
+        foreach (var submesh in mesh.SubMeshIndices!)
         {
             foreach (var idx in submesh)
             {
                 idx.ShouldBeGreaterThanOrEqualTo(0);
-                idx.ShouldBeLessThan(mesh.Vertices.Length);
+                idx.ShouldBeLessThan(mesh.Vertices!.Length);
             }
         }
     }
@@ -80,8 +80,8 @@ public class ObjMeshParsingTests
             var mesh = new ObjMesh();
             mesh.ReadFile(tempFile);
 
-            mesh.Vertices.Length.ShouldBe(0);
-            mesh.SubMeshIndices.Length.ShouldBe(0);
+            mesh.Vertices!.Length.ShouldBe(0);
+            mesh.SubMeshIndices!.Length.ShouldBe(0);
         }
         finally
         {
@@ -96,8 +96,8 @@ public class ObjMeshParsingTests
     {
         var mesh = LoadMesh("scientific-notation.obj");
 
-        mesh.Vertices.Length.ShouldBeGreaterThan(0);
-        var totalTriangles = mesh.SubMeshIndices.Sum(s => s.Length) / 3;
+        mesh.Vertices!.Length.ShouldBeGreaterThan(0);
+        var totalTriangles = mesh.SubMeshIndices!.Sum(s => s.Length) / 3;
         totalTriangles.ShouldBe(1);
     }
 
@@ -109,7 +109,7 @@ public class ObjMeshParsingTests
         var mesh = LoadMesh("cube-colors-3d.obj");
 
         mesh.VertexColors.ShouldNotBeNull();
-        mesh.VertexColors!.Length.ShouldBe(mesh.Vertices.Length);
+        mesh.VertexColors!.Length.ShouldBe(mesh.Vertices!.Length);
     }
 
     [Test]
@@ -126,8 +126,8 @@ public class ObjMeshParsingTests
     public void WriteRead_RoundTrip_PreservesGeometry()
     {
         var mesh = LoadMesh("quad-mesh.obj");
-        var originalVertexCount = mesh.Vertices.Length;
-        var originalTriangles = mesh.SubMeshIndices.Sum(s => s.Length) / 3;
+        var originalVertexCount = mesh.Vertices!.Length;
+        var originalTriangles = mesh.SubMeshIndices!.Sum(s => s.Length) / 3;
 
         var tempFile = Path.GetTempFileName();
         try
@@ -137,8 +137,8 @@ public class ObjMeshParsingTests
             var reloaded = new ObjMesh();
             reloaded.ReadFile(tempFile);
 
-            reloaded.Vertices.Length.ShouldBe(originalVertexCount);
-            var reloadedTriangles = reloaded.SubMeshIndices.Sum(s => s.Length) / 3;
+            reloaded.Vertices!.Length.ShouldBe(originalVertexCount);
+            var reloadedTriangles = reloaded.SubMeshIndices!.Sum(s => s.Length) / 3;
             reloadedTriangles.ShouldBe(originalTriangles);
         }
         finally
@@ -167,7 +167,7 @@ public class ObjMeshParsingTests
             // The orphan usemtl must not create a material entry without
             // matching indices — that mismatch is the root cause of Issue #54.
             if (mesh.SubMeshMaterials != null)
-                mesh.SubMeshMaterials.Length.ShouldBe(mesh.SubMeshIndices.Length);
+                mesh.SubMeshMaterials.Length.ShouldBe(mesh.SubMeshIndices!.Length);
 
             // WriteFile must also survive (this is where the original crash was reported).
             Should.NotThrow(() => mesh.WriteFile(roundTripFile));

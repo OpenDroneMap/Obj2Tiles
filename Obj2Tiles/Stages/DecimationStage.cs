@@ -62,7 +62,7 @@ public static partial class StagesFacade
         var sourceTexCoords3D = sourceObjMesh.TexCoords3D;
         var sourceSubMeshIndices = sourceObjMesh.SubMeshIndices;
 
-        var sourceMesh = new Mesh(sourceVertices, sourceSubMeshIndices)
+        var sourceMesh = new Mesh(sourceVertices!, sourceSubMeshIndices!)
         {
             Normals = sourceNormals,
             Colors = sourceObjMesh.VertexColors
@@ -77,11 +77,11 @@ public static partial class StagesFacade
             sourceMesh.SetUVs(0, sourceTexCoords3D);
         }
 
-        var currentTriangleCount = sourceSubMeshIndices.Sum(t => t.Length / 3);
+        var currentTriangleCount = sourceSubMeshIndices!.Sum(t => t.Length / 3);
 
         var targetTriangleCount = (int)Math.Ceiling(currentTriangleCount * quality);
         Console.WriteLine(" ?> Input: {0} vertices, {1} triangles (target {2})",
-            sourceVertices.Length, currentTriangleCount, targetTriangleCount);
+            sourceVertices!.Length, currentTriangleCount, targetTriangleCount);
 
         var stopwatch = new Stopwatch();
         stopwatch.Reset();

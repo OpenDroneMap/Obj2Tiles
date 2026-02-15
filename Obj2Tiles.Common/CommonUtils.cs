@@ -62,7 +62,7 @@ namespace Obj2Tiles.Common
             return true;
         }
 
-        public static TValue SafeGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key)
+        public static TValue? SafeGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key)
         {
             return !dictionary.TryGetValue(key, out var value) ? default : value;
         }
@@ -74,7 +74,7 @@ namespace Obj2Tiles.Common
         }
 
         /// <summary>
-        /// Ensures that the sqlite database folder exists 
+        /// Ensures that the sqlite database folder exists
         /// </summary>
         /// <param name="connstr"></param>
         public static void EnsureFolderCreated(string connstr)
@@ -93,7 +93,7 @@ namespace Obj2Tiles.Common
 
                     if (folder != null)
                         Directory.CreateDirectory(folder);
-                }   
+                }
             }
         }
 
@@ -125,7 +125,7 @@ namespace Obj2Tiles.Common
 
         private static string ConvertBytesToString(byte[] bytes)
         {
-            // Convert byte array to a string   
+            // Convert byte array to a string
             var builder = new StringBuilder();
             foreach (var t in bytes)
                 builder.Append(t.ToString("x2"));
@@ -202,7 +202,7 @@ namespace Obj2Tiles.Common
                 return false;
             }
         }
-        
+
         public static bool SafeCopy(string source, string dest, bool overwrite = true)
         {
             try
@@ -316,7 +316,7 @@ namespace Obj2Tiles.Common
                     }
                 }
 
-                if (!entries.Any()) 
+                if (!entries.Any())
                     return [];
 
                 Thread.Sleep(delay);
@@ -363,7 +363,7 @@ namespace Obj2Tiles.Common
 
         // Credit https://stackoverflow.com/a/11124118
         /// <summary>
-        /// Returns the human-readable file size for an arbitrary, 64-bit file size 
+        /// Returns the human-readable file size for an arbitrary, 64-bit file size
         /// </summary>
         /// <param name="i"></param>
         /// <returns></returns>
@@ -420,7 +420,7 @@ namespace Obj2Tiles.Common
         {
             results = new List<ValidationResult>();
 
-            return Validator.TryValidateObject(obj, new ValidationContext(obj), results, true);
+            return Validator.TryValidateObject(obj!, new ValidationContext(obj!), results, true);
         }
 
         public static string ToErrorString(this IEnumerable<ValidationResult> results)
@@ -448,7 +448,7 @@ namespace Obj2Tiles.Common
             int hops = 15, int baseDelay = 10, int incrementDelay = 2)
         {
             int delay = baseDelay;
-            
+
             for (var hop = 0; hop < hops; hops++)
             {
                 FileStream fs = null;
@@ -472,13 +472,13 @@ namespace Obj2Tiles.Common
             return null;
         }*/
 
-        public static async Task<FileStream> WaitForFile(string fullPath, FileMode mode, FileAccess access,
+        public static async Task<FileStream?> WaitForFile(string fullPath, FileMode mode, FileAccess access,
             FileShare share,
             int delay = 50, int retries = 1200)
         {
             for (var numTries = 0; numTries < retries; numTries++)
             {
-                FileStream fs = null;
+                FileStream? fs = null;
                 try
                 {
                     fs = new FileStream(fullPath, mode, access, share);

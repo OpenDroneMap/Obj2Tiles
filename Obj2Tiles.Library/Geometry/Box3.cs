@@ -15,7 +15,7 @@ namespace Obj2Tiles.Library.Geometry
             Min = min;
             Max = max;
         }
-        
+
         public Box3(double minX, double minY, double minZ, double maxX, double maxY, double maxZ)
         {
             Min = new Vertex3(minX, minY, minZ);
@@ -32,9 +32,9 @@ namespace Obj2Tiles.Library.Geometry
         {
             return $"{Min:0.00} - {Max:0.00} ({Width:0.00}x{Height:0.00}x{Depth:0.00}) c: {Center:0.00}";
         }
-        
+
         // Override equals operator
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Box3 box)
             {
@@ -42,22 +42,22 @@ namespace Obj2Tiles.Library.Geometry
             }
             return false;
         }
-        
+
         public override int GetHashCode()
         {
             return Min.GetHashCode() ^ Max.GetHashCode();
         }
-        
+
         public static bool operator ==(Box3 left, Box3 right)
         {
             return left.Equals(right);
         }
-        
+
         public static bool operator !=(Box3 left, Box3 right)
         {
             return !(left == right);
         }
-        
+
         // Split box into two along the given axis
         public Box3[] Split(Axis axis, double position)
         {

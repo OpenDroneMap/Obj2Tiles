@@ -19,7 +19,7 @@ public class TestArea : IDisposable
 
     }
 
-    public TestArea() : this(new StackFrame(1).GetMethod()?.Name)
+    public TestArea() : this(new StackFrame(1).GetMethod()?.Name ?? "Unknown")
     {
         //
     }

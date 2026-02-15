@@ -58,8 +58,8 @@ public class Material : ICloneable
         var materials = new List<Material>();
         var deps = new List<string>();
 
-        string texture = null;
-        string normalMap = null;
+        string? texture = null;
+        string? normalMap = null;
         var name = string.Empty;
         RGB? ambientColor = null, diffuseColor = null, specularColor = null;
         double? specularExponent = null, dissolve = null;
@@ -69,7 +69,7 @@ public class Material : ICloneable
         {
             if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line))
                 continue;
-            
+
             var lineTrimmed = line.Trim();
             var parts = lineTrimmed.Split(' ');
             switch (parts[0])
@@ -87,9 +87,9 @@ public class Material : ICloneable
                     texture = Path.IsPathRooted(parts[1])
                         ? parts[1]
                         : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, parts[1]));
-                    
+
                     deps.Add(texture);
-                    
+
                     break;
                 case "norm":
                     normalMap = Path.IsPathRooted(parts[1])
@@ -139,7 +139,7 @@ public class Material : ICloneable
             illuminationModel));
 
         dependencies = deps.ToArray();
-        
+
         return materials.ToArray();
     }
 

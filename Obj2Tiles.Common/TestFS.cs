@@ -24,7 +24,7 @@ namespace Obj2Tiles.Common
         /// </summary>
         public string BaseTestFolder { get; }
 
-        private readonly string _oldCurrentDirectory = null;
+        private readonly string? _oldCurrentDirectory = null;
 
         /// <summary>
         /// Creates a new instance of TestFS

@@ -544,8 +544,8 @@ public class MeshT : IMesh
         var texture = material.Texture != null ? TexturesCache.GetTexture(material.Texture) : null;
         var normalMap = material.NormalMap != null ? TexturesCache.GetTexture(material.NormalMap) : null;
 
-        int textureWidth = material.Texture != null ? texture.Width : normalMap.Width;
-        int textureHeight = material.Texture != null ? texture.Height : normalMap.Height;
+        int textureWidth = material.Texture != null ? texture!.Width : normalMap!.Width;
+        int textureHeight = material.Texture != null ? texture!.Height : normalMap!.Height;
 
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
@@ -628,14 +628,14 @@ public class MeshT : IMesh
                     ? $"{Name}-texture-normal-{material.Name}{Path.GetExtension(material.NormalMap)}" : null;
 
                 if (material.Texture != null) {
-                    newPathTexture = Path.Combine(targetFolder, textureFileName);
-                    newTexture.Save(newPathTexture); newTexture.Dispose();
+                    newPathTexture = Path.Combine(targetFolder, textureFileName!);
+                    newTexture!.Save(newPathTexture); newTexture!.Dispose();
                 }
 
                 if (material.NormalMap != null) {
-                    newPathNormalMap = Path.Combine(targetFolder, normalMapFileName);
-                    newNormalMap.Save(newPathNormalMap);
-                    newNormalMap.Dispose();
+                    newPathNormalMap = Path.Combine(targetFolder, normalMapFileName!);
+                    newNormalMap!.Save(newPathNormalMap);
+                    newNormalMap!.Dispose();
                 }
 
                 // fresh atlas
@@ -668,13 +668,13 @@ public class MeshT : IMesh
 
             if (material.Texture != null)
             {
-                using var block = BuildPaddedBlock(texture, srcRect, PADDING);
-                newTexture.Mutate(c => c.DrawImage(block, new Point(destOuterX, destOuterY), 1f));
+                using var block = BuildPaddedBlock(texture!, srcRect, PADDING);
+                newTexture!.Mutate(c => c.DrawImage(block, new Point(destOuterX, destOuterY), 1f));
             }
             if (material.NormalMap != null)
             {
-                using var blockN = BuildPaddedBlock(normalMap, srcRect, PADDING);
-                newNormalMap.Mutate(c => c.DrawImage(blockN, new Point(destOuterX, destOuterY), 1f));
+                using var blockN = BuildPaddedBlock(normalMap!, srcRect, PADDING);
+                newNormalMap!.Mutate(c => c.DrawImage(blockN, new Point(destOuterX, destOuterY), 1f));
             }
 
             // Inner rect size in pixels
@@ -741,11 +741,11 @@ public class MeshT : IMesh
 
         var saveTaskTexture = new Task(t =>
         {
-            var tx = t as Image<Rgba32>;
+            var tx = (Image<Rgba32>)t!;
             switch (TexturesStrategy)
             {
-                case TexturesStrategy.RepackCompressed: tx.SaveAsJpeg(newPathTexture, encoder); break;
-                case TexturesStrategy.Repack: tx.Save(newPathTexture); break;
+                case TexturesStrategy.RepackCompressed: tx.SaveAsJpeg(newPathTexture!, encoder); break;
+                case TexturesStrategy.Repack: tx.Save(newPathTexture!); break;
                 default: throw new InvalidOperationException("KeepOriginal/Compress are meaningless here");
             }
             Debug.WriteLine("Saved texture to " + newPathTexture);
@@ -754,11 +754,11 @@ public class MeshT : IMesh
 
         var saveTaskNormalMap = new Task(t =>
         {
-            var tx = t as Image<Rgba32>;
+            var tx = (Image<Rgba32>)t!;
             switch (TexturesStrategy)
             {
-                case TexturesStrategy.RepackCompressed: tx.SaveAsJpeg(newPathNormalMap, encoder); break;
-                case TexturesStrategy.Repack: tx.Save(newPathNormalMap); break;
+                case TexturesStrategy.RepackCompressed: tx.SaveAsJpeg(newPathNormalMap!, encoder); break;
+                case TexturesStrategy.Repack: tx.Save(newPathNormalMap!); break;
                 default: throw new InvalidOperationException("KeepOriginal/Compress are meaningless here");
             }
             Debug.WriteLine("Saved texture to " + newPathNormalMap);
