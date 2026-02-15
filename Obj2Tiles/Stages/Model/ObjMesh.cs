@@ -586,13 +586,14 @@ namespace Obj2Tiles.Stages.Model
             {
                 subMeshIndicesList.Add(triangleIndexList.ToArray());
                 triangleIndexList.Clear();
-
-                /*
-                if (currentMaterial == null)
-                {
-                    subMeshMaterialList.Add("none");
-                }*/
             }
+
+            // Fix Issue #54: Remove orphan material entries that have no corresponding
+            // index arrays. This happens when a trailing 'usemtl' appears without
+            // subsequent faces, causing a mismatch between SubMeshMaterials and
+            // SubMeshIndices that crashes WriteFile.
+            while (subMeshMaterialList.Count > subMeshIndicesList.Count)
+                subMeshMaterialList.RemoveAt(subMeshMaterialList.Count - 1);
 
             int subMeshCount = subMeshIndicesList.Count;
             bool hasNormals = (readNormalList != null);

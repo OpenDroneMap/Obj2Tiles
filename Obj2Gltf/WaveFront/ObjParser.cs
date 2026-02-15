@@ -74,7 +74,7 @@ namespace SilentWave.Obj2Gltf.WaveFront
 
             using (_reader)
             {
-                model.Materials.Add(new Material() { Ambient = new Reflectivity(new FactorColor(1)) });
+                model.Materials.Add(new Material() { Name = "default", Ambient = new Reflectivity(new FactorColor(1)) });
                 var currentMaterialName = "default";
                 var currentGeometries = model.GetOrAddGeometries("default");
                 Face currentFace = null;

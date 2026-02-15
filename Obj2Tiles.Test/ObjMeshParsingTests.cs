@@ -147,14 +147,11 @@ public class ObjMeshParsingTests
         }
     }
 
-    // --- BUG: Issue #54 — usemtl without subsequent faces ---
-
     [Test]
     public void ReadFile_UsemtlWithoutFaces_DoesNotThrow()
     {
-        // BUG: Issue #54 — usemtl at the end of file without subsequent faces
-        // may cause InvalidOperationException in downstream processing.
-        // This test checks basic parsing resilience.
+        // Fixed: Issue #54 — trailing usemtl without subsequent faces no longer
+        // creates orphan material entries that cause mismatch with SubMeshIndices.
         var tempFile = Path.GetTempFileName();
         var roundTripFile = Path.GetTempFileName();
         try
@@ -170,6 +167,46 @@ public class ObjMeshParsingTests
                 mesh.SubMeshMaterials.Length.ShouldBe(mesh.SubMeshIndices!.Length);
 
             // WriteFile must also survive (this is where the original crash was reported).
+            Should.NotThrow(() => mesh.WriteFile(roundTripFile));
+        }
+        finally
+        {
+            File.Delete(tempFile);
+            File.Delete(roundTripFile);
+        }
+    }
+
+    [Test]
+    public void ReadFile_MultiMaterial_TrailingUsemtl_MaterialsMatchIndices()
+    {
+        // Issue #54 — realistic scenario: two active materials with faces,
+        // then a trailing orphan usemtl with no subsequent faces.
+        var tempFile = Path.GetTempFileName();
+        var roundTripFile = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(tempFile,
+                "v 0 0 0\nv 1 0 0\nv 0.5 1 0\nv 0 1 0\n" +
+                "usemtl MatA\nf 1 2 3\n" +
+                "usemtl MatB\nf 1 3 4\n" +
+                "usemtl OrphanC\n");
+
+            var mesh = new ObjMesh();
+            Should.NotThrow(() => mesh.ReadFile(tempFile));
+
+            // SubMeshMaterials must match SubMeshIndices length
+            mesh.SubMeshMaterials.ShouldNotBeNull();
+            mesh.SubMeshIndices.ShouldNotBeNull();
+            mesh.SubMeshMaterials!.Length.ShouldBe(mesh.SubMeshIndices!.Length);
+
+            // OrphanC must not be present
+            mesh.SubMeshMaterials.ShouldNotContain("OrphanC");
+
+            // Both active materials should be present
+            mesh.SubMeshMaterials.ShouldContain("MatA");
+            mesh.SubMeshMaterials.ShouldContain("MatB");
+
+            // WriteFile round-trip must also survive
             Should.NotThrow(() => mesh.WriteFile(roundTripFile));
         }
         finally
