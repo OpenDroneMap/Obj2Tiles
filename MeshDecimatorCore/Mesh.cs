@@ -44,12 +44,10 @@ namespace MeshDecimatorCore
         private Vector3d[] vertices = null;
         private int[][] indices = null;
         private Vector3[] normals = null;
-        private Vector4[] tangents = null;
         private Vector2[][] uvs2D = null;
         private Vector3[][] uvs3D = null;
         private Vector4[][] uvs4D = null;
         private Vector4[] colors = null;
-        private BoneWeight[] boneWeights = null;
 
         private static readonly int[] emptyIndices = [];
         #endregion
@@ -167,21 +165,6 @@ namespace MeshDecimatorCore
         }
 
         /// <summary>
-        /// Gets or sets the tangents for this mesh.
-        /// </summary>
-        public Vector4[] Tangents
-        {
-            get { return tangents; }
-            set
-            {
-                if (value != null && value.Length != vertices.Length)
-                    throw new ArgumentException(string.Format("The vertex tangents must be as many as the vertices. Assigned: {0}  Require: {1}", value.Length, vertices.Length));
-
-                tangents = value;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the first UV set for this mesh.
         /// </summary>
         public Vector2[] UV1
@@ -232,20 +215,6 @@ namespace MeshDecimatorCore
             }
         }
 
-        /// <summary>
-        /// Gets or sets the vertex bone weights for this mesh.
-        /// </summary>
-        public BoneWeight[] BoneWeights
-        {
-            get { return boneWeights; }
-            set
-            {
-                if (value != null && value.Length != vertices.Length)
-                    throw new ArgumentException(string.Format("The vertex bone weights must be as many as the vertices. Assigned: {0}  Require: {1}", value.Length, vertices.Length));
-
-                boneWeights = value;
-            }
-        }
         #endregion
 
         #region Constructor
@@ -295,12 +264,10 @@ namespace MeshDecimatorCore
         private void ClearVertexAttributes()
         {
             normals = null;
-            tangents = null;
             uvs2D = null;
             uvs3D = null;
             uvs4D = null;
             colors = null;
-            boneWeights = null;
         }
         #endregion
 
@@ -350,123 +317,6 @@ namespace MeshDecimatorCore
             }
 
             this.normals = normals;
-        }
-        #endregion
-
-        #region Recalculate Tangents
-        /// <summary>
-        /// Recalculates the tangents for this mesh.
-        /// </summary>
-        public void RecalculateTangents()
-        {
-            // Make sure we have the normals first
-            if (normals == null)
-                return;
-
-            // Also make sure that we have the first UV set
-            bool uvIs2D = (uvs2D != null && uvs2D[0] != null);
-            bool uvIs3D = (uvs3D != null && uvs3D[0] != null);
-            bool uvIs4D = (uvs4D != null && uvs4D[0] != null);
-            if (!uvIs2D && !uvIs3D && !uvIs4D)
-                return;
-
-            int vertexCount = vertices.Length;
-            
-            var tangents = new Vector4[vertexCount];
-            var tan1 = new Vector3[vertexCount];
-            var tan2 = new Vector3[vertexCount];
-
-            Vector2[] uv2D = (uvIs2D ? uvs2D[0] : null);
-            Vector3[] uv3D = (uvIs3D ? uvs3D[0] : null);
-            Vector4[] uv4D = (uvIs4D ? uvs4D[0] : null);
-
-            int subMeshCount = this.indices.Length;
-            for (int subMeshIndex = 0; subMeshIndex < subMeshCount; subMeshIndex++)
-            {
-                int[] indices = this.indices[subMeshIndex];
-                if (indices == null)
-                    continue;
-
-                int indexCount = indices.Length;
-                for (int i = 0; i < indexCount; i += 3)
-                {
-                    int i0 = indices[i];
-                    int i1 = indices[i + 1];
-                    int i2 = indices[i + 2];
-
-                    var v0 = vertices[i0];
-                    var v1 = vertices[i1];
-                    var v2 = vertices[i2];
-
-                    float s1, s2, t1, t2;
-                    if (uvIs2D)
-                    {
-                        var w0 = uv2D[i0];
-                        var w1 = uv2D[i1];
-                        var w2 = uv2D[i2];
-                        s1 = w1.x - w0.x;
-                        s2 = w2.x - w0.x;
-                        t1 = w1.y - w0.y;
-                        t2 = w2.y - w0.y;
-                    }
-                    else if (uvIs3D)
-                    {
-                        var w0 = uv3D[i0];
-                        var w1 = uv3D[i1];
-                        var w2 = uv3D[i2];
-                        s1 = w1.x - w0.x;
-                        s2 = w2.x - w0.x;
-                        t1 = w1.y - w0.y;
-                        t2 = w2.y - w0.y;
-                    }
-                    else
-                    {
-                        var w0 = uv4D[i0];
-                        var w1 = uv4D[i1];
-                        var w2 = uv4D[i2];
-                        s1 = w1.x - w0.x;
-                        s2 = w2.x - w0.x;
-                        t1 = w1.y - w0.y;
-                        t2 = w2.y - w0.y;
-                    }
-                    
-
-                    float x1 = (float)(v1.x - v0.x);
-                    float x2 = (float)(v2.x - v0.x);
-                    float y1 = (float)(v1.y - v0.y);
-                    float y2 = (float)(v2.y - v0.y);
-                    float z1 = (float)(v1.z - v0.z);
-                    float z2 = (float)(v2.z - v0.z);
-                    float r = 1f / (s1 * t2 - s2 * t1);
-
-                    var sdir = new Vector3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r);
-                    var tdir = new Vector3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r);
-
-                    tan1[i0] += sdir;
-                    tan1[i1] += sdir;
-                    tan1[i2] += sdir;
-                    tan2[i0] += tdir;
-                    tan2[i1] += tdir;
-                    tan2[i2] += tdir;
-                }
-            }
-
-            for (int i = 0; i < vertexCount; i++)
-            {
-                var n = normals[i];
-                var t = tan1[i];
-
-                var tmp = (t - n * Vector3.Dot(ref n, ref t));
-                tmp.Normalize();
-
-                Vector3 c;
-                Vector3.Cross(ref n, ref t, out c);
-                float dot = Vector3.Dot(ref c, ref tan2[i]);
-                float w = (dot < 0f ? -1f : 1f);
-                tangents[i] = new Vector4(tmp.x, tmp.y, tmp.z, w);
-            }
-
-            this.tangents = tangents;
         }
         #endregion
 

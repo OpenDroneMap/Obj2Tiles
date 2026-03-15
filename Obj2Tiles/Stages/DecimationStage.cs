@@ -89,9 +89,17 @@ public static partial class StagesFacade
 
         var algorithm = new FastQuadricMeshSimplification
         {
-            PreserveSeams = true,
             Verbose = true,
-            PreserveBorders = true
+            Options = new SimplificationOptions
+            {
+                EnableSmartLink = true,
+                PreserveUVSeamEdges = false,
+                PreserveBorderEdges = quality > 0.2f,
+                PreserveSurfaceCurvature = true,
+                Agressiveness = 7.0,
+                MaxIterationCount = 100,
+                VertexLinkDistance = double.Epsilon
+            }
         };
 
         var destMesh = MeshDecimation.DecimateMesh(algorithm, sourceMesh, targetTriangleCount);
@@ -123,6 +131,12 @@ public static partial class StagesFacade
         destObjMesh.WriteFile(destPath);
 
         var outputTriangleCount = destIndices.Sum(t => (t.Length / 3));
+
+        if (outputTriangleCount >= currentTriangleCount * 0.95)
+        {
+            Console.WriteLine(" ?> WARNING: LOD at quality {0:0.00} could only reduce to {1}/{2} triangles",
+                quality, outputTriangleCount, currentTriangleCount);
+        }
 
         var reduction = (float)outputTriangleCount / currentTriangleCount;
         var timeTaken = (float)stopwatch.Elapsed.TotalSeconds;

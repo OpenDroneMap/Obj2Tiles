@@ -223,39 +223,23 @@ namespace MeshDecimatorCore.Algorithms
 
         #region Fields
 
-        private bool preserveFoldovers = false;
-        private bool enableSmartLink = true;
-        private int maxIterationCount = 100;
-        private double agressiveness = 7.0;
-        private double vertexLinkDistanceSqr = double.Epsilon;
-
         private int subMeshCount = 0;
         private ResizableArray<Triangle> triangles = null;
         private ResizableArray<Vertex> vertices = null;
         private ResizableArray<Ref> refs = null;
 
         private ResizableArray<Vector3> vertNormals = null;
-        private ResizableArray<Vector4> vertTangents = null;
         private UVChannels<Vector2> vertUV2D = null;
         private UVChannels<Vector3> vertUV3D = null;
         private UVChannels<Vector4> vertUV4D = null;
         private ResizableArray<Vector4> vertColors = null;
-        private ResizableArray<BoneWeight> vertBoneWeights = null;
+        private double[] vertCurvatures = null;
 
         private int remainingVertices = 0;
 
         // Pre-allocated buffers
         private double[] errArr = new double[3];
         private int[] attributeIndexArr = new int[3];
-        #endregion
-
-        #region Properties
-        /// <summary>
-        /// Gets or sets if seams should be preserved.
-        /// Default value: false
-        /// </summary>
-        public bool PreserveSeams { get; set; } = false;
-
         #endregion
 
         #region Constructor
@@ -344,6 +328,19 @@ namespace MeshDecimatorCore.Algorithms
                     resultIndex = 2;
                 }
             }
+
+            return error;
+        }
+
+        private double CalculateErrorWithCurvature(int vertIndex0, int vertIndex1, out Vector3d result, out int resultIndex)
+        {
+            var vertices = this.vertices.Data;
+            double error = CalculateError(ref vertices[vertIndex0], ref vertices[vertIndex1], out result, out resultIndex);
+            if (vertCurvatures != null)
+            {
+                double curvature = System.Math.Max(vertCurvatures[vertIndex0], vertCurvatures[vertIndex1]);
+                error += error * curvature;
+            }
             return error;
         }
         #endregion
@@ -427,9 +424,9 @@ namespace MeshDecimatorCore.Algorithms
                 }
 
                 t.dirty = true;
-                t.err0 = CalculateError(ref vertices[t.v0], ref vertices[t.v1], out p, out pIndex);
-                t.err1 = CalculateError(ref vertices[t.v1], ref vertices[t.v2], out p, out pIndex);
-                t.err2 = CalculateError(ref vertices[t.v2], ref vertices[t.v0], out p, out pIndex);
+                t.err0 = CalculateErrorWithCurvature(t.v0, t.v1, out p, out pIndex);
+                t.err1 = CalculateErrorWithCurvature(t.v1, t.v2, out p, out pIndex);
+                t.err2 = CalculateErrorWithCurvature(t.v2, t.v0, out p, out pIndex);
                 t.err3 = MathHelper.Min(t.err0, t.err1, t.err2);
                 triangles[tid] = t;
                 refs.Add(r);
@@ -437,109 +434,85 @@ namespace MeshDecimatorCore.Algorithms
         }
         #endregion
 
-        #region Move/Merge Vertex Attributes
-        private void MoveVertexAttributes(int i0, int i1)
+        #region Barycentric Interpolation
+        private static void CalculateBarycentricCoords(ref Vector3d point, ref Vector3d a, ref Vector3d b, ref Vector3d c, out double u, out double v, out double w)
         {
-            if (vertNormals != null)
-            {
-                vertNormals[i0] = vertNormals[i1];
-            }
-            if (vertTangents != null)
-            {
-                vertTangents[i0] = vertTangents[i1];
-            }
-            if (vertUV2D != null)
-            {
-                for (int i = 0; i < Mesh.UVChannelCount; i++)
-                {
-                    var vertUV = vertUV2D[i];
-                    if (vertUV != null)
-                    {
-                        vertUV[i0] = vertUV[i1];
-                    }
-                }
-            }
-            if (vertUV3D != null)
-            {
-                for (int i = 0; i < Mesh.UVChannelCount; i++)
-                {
-                    var vertUV = vertUV3D[i];
-                    if (vertUV != null)
-                    {
-                        vertUV[i0] = vertUV[i1];
-                    }
-                }
-            }
-            if (vertUV4D != null)
-            {
-                for (int i = 0; i < Mesh.UVChannelCount; i++)
-                {
-                    var vertUV = vertUV4D[i];
-                    if (vertUV != null)
-                    {
-                        vertUV[i0] = vertUV[i1];
-                    }
-                }
-            }
-            if (vertColors != null)
-            {
-                vertColors[i0] = vertColors[i1];
-            }
-            if (vertBoneWeights != null)
-            {
-                vertBoneWeights[i0] = vertBoneWeights[i1];
-            }
+            const double denomEpsilon = 1e-8;
+            var v0 = b - a;
+            var v1 = c - a;
+            var v2 = point - a;
+            double d00 = Vector3d.Dot(ref v0, ref v0);
+            double d01 = Vector3d.Dot(ref v0, ref v1);
+            double d11 = Vector3d.Dot(ref v1, ref v1);
+            double d20 = Vector3d.Dot(ref v2, ref v0);
+            double d21 = Vector3d.Dot(ref v2, ref v1);
+            double denom = d00 * d11 - d01 * d01;
+            if (System.Math.Abs(denom) < denomEpsilon)
+                denom = denomEpsilon;
+
+            v = (d11 * d20 - d01 * d21) / denom;
+            w = (d00 * d21 - d01 * d20) / denom;
+            u = 1.0 - v - w;
         }
 
-        private void MergeVertexAttributes(int i0, int i1)
+        private void InterpolateVertexAttributes(int dst, int i0, int i1, int i2, ref Vector3d point)
         {
+            var verts = this.vertices.Data;
+            var p0 = verts[i0].p;
+            var p1 = verts[i1].p;
+            var p2 = verts[i2].p;
+            CalculateBarycentricCoords(ref point, ref p0, ref p1, ref p2, out double u, out double v, out double w);
+
+            float fu = (float)u, fv = (float)v, fw = (float)w;
+
             if (vertNormals != null)
             {
-                vertNormals[i0] = (vertNormals[i0] + vertNormals[i1]) * 0.5f;
-            }
-            if (vertTangents != null)
-            {
-                vertTangents[i0] = (vertTangents[i0] + vertTangents[i1]) * 0.5f;
+                var n = vertNormals.Data;
+                var result = n[i0] * fu + n[i1] * fv + n[i2] * fw;
+                result.Normalize();
+                n[dst] = result;
             }
             if (vertUV2D != null)
             {
-                for (int i = 0; i < Mesh.UVChannelCount; i++)
+                for (int ch = 0; ch < Mesh.UVChannelCount; ch++)
                 {
-                    var vertUV = vertUV2D[i];
+                    var vertUV = vertUV2D[ch];
                     if (vertUV != null)
                     {
-                        vertUV[i0] = (vertUV[i0] + vertUV[i1]) * 0.5f;
+                        var d = vertUV.Data;
+                        d[dst] = d[i0] * fu + d[i1] * fv + d[i2] * fw;
                     }
                 }
             }
             if (vertUV3D != null)
             {
-                for (int i = 0; i < Mesh.UVChannelCount; i++)
+                for (int ch = 0; ch < Mesh.UVChannelCount; ch++)
                 {
-                    var vertUV = vertUV3D[i];
+                    var vertUV = vertUV3D[ch];
                     if (vertUV != null)
                     {
-                        vertUV[i0] = (vertUV[i0] + vertUV[i1]) * 0.5f;
+                        var d = vertUV.Data;
+                        d[dst] = d[i0] * fu + d[i1] * fv + d[i2] * fw;
                     }
                 }
             }
             if (vertUV4D != null)
             {
-                for (int i = 0; i < Mesh.UVChannelCount; i++)
+                for (int ch = 0; ch < Mesh.UVChannelCount; ch++)
                 {
-                    var vertUV = vertUV4D[i];
+                    var vertUV = vertUV4D[ch];
                     if (vertUV != null)
                     {
-                        vertUV[i0] = (vertUV[i0] + vertUV[i1]) * 0.5f;
+                        var d = vertUV.Data;
+                        d[dst] = d[i0] * fu + d[i1] * fv + d[i2] * fw;
                     }
                 }
             }
             if (vertColors != null)
             {
-                vertColors[i0] = (vertColors[i0] + vertColors[i1]) * 0.5f;
+                var c = vertColors.Data;
+                c[dst] = c[i0] * fu + c[i1] * fv + c[i2] * fw;
             }
-
-            // TODO: Do we have to blend bone weights at all or can we just keep them as it is in this scenario?
         }
         #endregion
 
@@ -583,6 +556,45 @@ namespace MeshDecimatorCore.Algorithms
         }
         #endregion
 
+        #region Surface Curvature
+        private void CalculateVertexCurvatures(Triangle[] triangles, Vertex[] vertices, Ref[] refs, int vertexCount, int triangleCount)
+        {
+            vertCurvatures = new double[vertexCount];
+            for (int i = 0; i < vertexCount; i++)
+            {
+                int tstart = vertices[i].tstart;
+                int tcount = vertices[i].tcount;
+                if (tcount <= 1)
+                {
+                    vertCurvatures[i] = 0;
+                    continue;
+                }
+
+                double maxCurvature = 0;
+                for (int j = 0; j < tcount; j++)
+                {
+                    int tidA = refs[tstart + j].tid;
+                    if (triangles[tidA].deleted) continue;
+
+                    var nA = triangles[tidA].n;
+                    for (int k = j + 1; k < tcount; k++)
+                    {
+                        int tidB = refs[tstart + k].tid;
+                        if (triangles[tidB].deleted) continue;
+
+                        var nB = triangles[tidB].n;
+                        double dot = Vector3d.Dot(ref nA, ref nB);
+                        dot = MathHelper.Clamp(dot, -1.0, 1.0);
+                        double curvature = (1.0 - dot) * 0.5; // 0 = flat, 1 = opposite normals
+                        if (curvature > maxCurvature)
+                            maxCurvature = curvature;
+                    }
+                }
+                vertCurvatures[i] = maxCurvature;
+            }
+        }
+        #endregion
+
         #region Remove Vertex Pass
         /// <summary>
         /// Remove vertices and mark deleted triangles
@@ -593,13 +605,15 @@ namespace MeshDecimatorCore.Algorithms
             int triangleCount = this.triangles.Length;
             var vertices = this.vertices.Data;
 
-            bool preserveBorders = base.PreserveBorders;
+            var options = Options;
+            bool preserveBorderEdges = options.PreserveBorderEdges;
+            bool preserveUVSeamEdges = options.PreserveUVSeamEdges;
+            bool preserveUVFoldoverEdges = options.PreserveUVFoldoverEdges;
             int maxVertexCount = base.MaxVertexCount;
             if (maxVertexCount <= 0)
                 maxVertexCount = int.MaxValue;
 
             Vector3d p;
-            int pIndex;
             for (int tid = 0; tid < triangleCount; tid++)
             {
                 if (triangles[tid].dirty || triangles[tid].deleted || triangles[tid].err3 > threshold)
@@ -625,18 +639,18 @@ namespace MeshDecimatorCore.Algorithms
                     // Foldover check
                     if (vertices[i0].foldover != vertices[i1].foldover)
                         continue;
-                    // If borders should be preserved
-                    if (preserveBorders && vertices[i0].border)
+                    // If border edges should be preserved
+                    if (preserveBorderEdges && vertices[i0].border)
                         continue;
-                    // If seams should be preserved
-                    if (PreserveSeams && vertices[i0].seam)
+                    // If UV seam edges should be preserved
+                    if (preserveUVSeamEdges && vertices[i0].seam)
                         continue;
-                    // If foldovers should be preserved
-                    if (preserveFoldovers && vertices[i0].foldover)
+                    // If UV foldover edges should be preserved
+                    if (preserveUVFoldoverEdges && vertices[i0].foldover)
                         continue;
 
                     // Compute vertex to collapse to
-                    CalculateError(ref vertices[i0], ref vertices[i1], out p, out pIndex);
+                    CalculateErrorWithCurvature(i0, i1, out p, out _);
                     deleted0.Resize(vertices[i0].tcount); // normals temporarily
                     deleted1.Resize(vertices[i1].tcount); // normals temporarily
 
@@ -647,23 +661,17 @@ namespace MeshDecimatorCore.Algorithms
                         continue;
 
                     int ia0 = attributeIndexArr[edgeIndex];
+                    int ia1 = attributeIndexArr[nextEdgeIndex];
 
                     // Not flipped, so remove edge
                     vertices[i0].p = p;
                     vertices[i0].q += vertices[i1].q;
 
-                    if (pIndex == 1)
-                    {
-                        // Move vertex attributes from ia1 to ia0
-                        int ia1 = attributeIndexArr[nextEdgeIndex];
-                        MoveVertexAttributes(ia0, ia1);
-                    }
-                    else if (pIndex == 2)
-                    {
-                        // Merge vertex attributes ia0 and ia1 into ia0
-                        int ia1 = attributeIndexArr[nextEdgeIndex];
-                        MergeVertexAttributes(ia0, ia1);
-                    }
+                    // Find the third vertex of the current triangle for barycentric interpolation
+                    int thirdEdgeIndex = 3 - edgeIndex - nextEdgeIndex;
+                    int i2 = triangles[tid][thirdEdgeIndex];
+                    int ia2 = attributeIndexArr[thirdEdgeIndex];
+                    InterpolateVertexAttributes(ia0, ia0, ia1, ia2, ref p);
 
                     if (vertices[i0].seam)
                     {
@@ -799,7 +807,7 @@ namespace MeshDecimatorCore.Algorithms
                             vertices[id].border = true;
                             ++borderVertexCount;
 
-                            if (enableSmartLink)
+                            if (Options.EnableSmartLink)
                             {
                                 if (vertices[id].p.x < borderMinX)
                                 {
@@ -814,7 +822,7 @@ namespace MeshDecimatorCore.Algorithms
                     }
                 }
 
-                if (enableSmartLink)
+                if (Options.EnableSmartLink)
                 {
                     // First find all border vertices
                     var borderVertices = new BorderVertex[borderVertexCount];
@@ -834,7 +842,8 @@ namespace MeshDecimatorCore.Algorithms
                     Array.Sort(borderVertices, 0, borderIndexCount, BorderVertexComparer.instance);
 
                     // Calculate the maximum hash distance based on the maximum vertex link distance
-                    double vertexLinkDistance = System.Math.Sqrt(vertexLinkDistanceSqr);
+                    double vertexLinkDistanceSqr = Options.VertexLinkDistance * Options.VertexLinkDistance;
+                    double vertexLinkDistance = Options.VertexLinkDistance;
                     int hashMaxDistance = System.Math.Max((int)((vertexLinkDistance / borderAreaWidth) * int.MaxValue), 1);
 
                     // Then find identical border vertices and bind them together as one
@@ -926,13 +935,19 @@ namespace MeshDecimatorCore.Algorithms
                     vertices[v2].q += sm;
                 }
 
+                // Calculate per-vertex surface curvature if requested
+                if (Options.PreserveSurfaceCurvature)
+                {
+                    CalculateVertexCurvatures(triangles, vertices, refs, vertexCount, triangleCount);
+                }
+
                 for (int i = 0; i < triangleCount; i++)
                 {
                     // Calc Edge Error
                     var triangle = triangles[i];
-                    triangles[i].err0 = CalculateError(ref vertices[triangle.v0], ref vertices[triangle.v1], out dummy, out dummy2);
-                    triangles[i].err1 = CalculateError(ref vertices[triangle.v1], ref vertices[triangle.v2], out dummy, out dummy2);
-                    triangles[i].err2 = CalculateError(ref vertices[triangle.v2], ref vertices[triangle.v0], out dummy, out dummy2);
+                    triangles[i].err0 = CalculateErrorWithCurvature(triangle.v0, triangle.v1, out dummy, out dummy2);
+                    triangles[i].err1 = CalculateErrorWithCurvature(triangle.v1, triangle.v2, out dummy, out dummy2);
+                    triangles[i].err2 = CalculateErrorWithCurvature(triangle.v2, triangle.v0, out dummy, out dummy2);
                     triangles[i].err3 = MathHelper.Min(triangles[i].err0, triangles[i].err1, triangles[i].err2);
                 }
             }
@@ -1015,12 +1030,10 @@ namespace MeshDecimatorCore.Algorithms
             }
 
             var vertNormals = (this.vertNormals != null ? this.vertNormals.Data : null);
-            var vertTangents = (this.vertTangents != null ? this.vertTangents.Data : null);
             var vertUV2D = (this.vertUV2D != null ? this.vertUV2D.Data : null);
             var vertUV3D = (this.vertUV3D != null ? this.vertUV3D.Data : null);
             var vertUV4D = (this.vertUV4D != null ? this.vertUV4D.Data : null);
             var vertColors = (this.vertColors != null ? this.vertColors.Data : null);
-            var vertBoneWeights = (this.vertBoneWeights != null ? this.vertBoneWeights.Data : null);
 
             var triangles = this.triangles.Data;
             int triangleCount = this.triangles.Length;
@@ -1034,10 +1047,6 @@ namespace MeshDecimatorCore.Algorithms
                         int iDest = triangle.va0;
                         int iSrc = triangle.v0;
                         vertices[iDest].p = vertices[iSrc].p;
-                        if (vertBoneWeights != null)
-                        {
-                            vertBoneWeights[iDest] = vertBoneWeights[iSrc];
-                        }
                         triangle.v0 = triangle.va0;
                     }
                     if (triangle.va1 != triangle.v1)
@@ -1045,10 +1054,6 @@ namespace MeshDecimatorCore.Algorithms
                         int iDest = triangle.va1;
                         int iSrc = triangle.v1;
                         vertices[iDest].p = vertices[iSrc].p;
-                        if (vertBoneWeights != null)
-                        {
-                            vertBoneWeights[iDest] = vertBoneWeights[iSrc];
-                        }
                         triangle.v1 = triangle.va1;
                     }
                     if (triangle.va2 != triangle.v2)
@@ -1056,10 +1061,6 @@ namespace MeshDecimatorCore.Algorithms
                         int iDest = triangle.va2;
                         int iSrc = triangle.v2;
                         vertices[iDest].p = vertices[iSrc].p;
-                        if (vertBoneWeights != null)
-                        {
-                            vertBoneWeights[iDest] = vertBoneWeights[iSrc];
-                        }
                         triangle.v2 = triangle.va2;
                     }
 
@@ -1088,7 +1089,6 @@ namespace MeshDecimatorCore.Algorithms
                     {
                         vertices[dst].p = vert.p;
                         if (vertNormals != null) vertNormals[dst] = vertNormals[i];
-                        if (vertTangents != null) vertTangents[dst] = vertTangents[i];
                         if (vertUV2D != null)
                         {
                             for (int j = 0; j < Mesh.UVChannelCount; j++)
@@ -1123,7 +1123,6 @@ namespace MeshDecimatorCore.Algorithms
                             }
                         }
                         if (vertColors != null) vertColors[dst] = vertColors[i];
-                        if (vertBoneWeights != null) vertBoneWeights[dst] = vertBoneWeights[i];
                     }
                     ++dst;
                 }
@@ -1141,12 +1140,10 @@ namespace MeshDecimatorCore.Algorithms
             vertexCount = dst;
             this.vertices.Resize(vertexCount);
             if (vertNormals != null) this.vertNormals.Resize(vertexCount, true);
-            if (vertTangents != null) this.vertTangents.Resize(vertexCount, true);
             if (vertUV2D != null) this.vertUV2D.Resize(vertexCount, true);
             if (vertUV3D != null) this.vertUV3D.Resize(vertexCount, true);
             if (vertUV4D != null) this.vertUV4D.Resize(vertexCount, true);
             if (vertColors != null) this.vertColors.Resize(vertexCount, true);
-            if (vertBoneWeights != null) this.vertBoneWeights.Resize(vertexCount, true);
         }
         #endregion
         #endregion
@@ -1166,9 +1163,7 @@ namespace MeshDecimatorCore.Algorithms
             int meshTriangleCount = mesh.TriangleCount;
             var meshVertices = mesh.Vertices;
             var meshNormals = mesh.Normals;
-            var meshTangents = mesh.Tangents;
             var meshColors = mesh.Colors;
-            var meshBoneWeights = mesh.BoneWeights;
             subMeshCount = meshSubMeshCount;
 
             vertices.Resize(meshVertices.Length);
@@ -1196,9 +1191,7 @@ namespace MeshDecimatorCore.Algorithms
             }
 
             vertNormals = InitializeVertexAttribute(meshNormals, "normals");
-            vertTangents = InitializeVertexAttribute(meshTangents, "tangents");
             vertColors = InitializeVertexAttribute(meshColors, "colors");
-            vertBoneWeights = InitializeVertexAttribute(meshBoneWeights, "boneWeights");
 
             for (int i = 0; i < Mesh.UVChannelCount; i++)
             {
@@ -1254,7 +1247,7 @@ namespace MeshDecimatorCore.Algorithms
             if (maxVertexCount <= 0)
                 maxVertexCount = int.MaxValue;
 
-            for (int iteration = 0; iteration < maxIterationCount; iteration++)
+            for (int iteration = 0; iteration < Options.MaxIterationCount; iteration++)
             {
                 ReportStatus(iteration, startTrisCount, (startTrisCount - deletedTris), targetTrisCount);
                 if ((startTrisCount - deletedTris) <= targetTrisCount && remainingVertices < maxVertexCount)
@@ -1279,7 +1272,7 @@ namespace MeshDecimatorCore.Algorithms
                 //
                 // The following numbers works well for most models.
                 // If it does not, try to adjust the 3 parameters
-                double threshold = 0.000000001 * System.Math.Pow(iteration + 3, agressiveness);
+                double threshold = 0.000000001 * System.Math.Pow(iteration + 3, Options.Agressiveness);
 
                 if (Verbose && (iteration % 5) == 0)
                 {
@@ -1424,17 +1417,9 @@ namespace MeshDecimatorCore.Algorithms
             {
                 newMesh.Normals = vertNormals.Data;
             }
-            if (vertTangents != null)
-            {
-                newMesh.Tangents = vertTangents.Data;
-            }
             if (vertColors != null)
             {
                 newMesh.Colors = vertColors.Data;
-            }
-            if (vertBoneWeights != null)
-            {
-                newMesh.BoneWeights = vertBoneWeights.Data;
             }
 
             if (vertUV2D != null)
