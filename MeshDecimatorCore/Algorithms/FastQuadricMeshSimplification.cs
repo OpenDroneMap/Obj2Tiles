@@ -663,15 +663,15 @@ namespace MeshDecimatorCore.Algorithms
                     int ia0 = attributeIndexArr[edgeIndex];
                     int ia1 = attributeIndexArr[nextEdgeIndex];
 
+                    // Find the third vertex of the current triangle for barycentric interpolation
+                    // Must happen BEFORE updating vertex position, otherwise barycentric coords degenerate
+                    int thirdEdgeIndex = 3 - edgeIndex - nextEdgeIndex;
+                    int ia2 = attributeIndexArr[thirdEdgeIndex];
+                    InterpolateVertexAttributes(ia0, ia0, ia1, ia2, ref p);
+
                     // Not flipped, so remove edge
                     vertices[i0].p = p;
                     vertices[i0].q += vertices[i1].q;
-
-                    // Find the third vertex of the current triangle for barycentric interpolation
-                    int thirdEdgeIndex = 3 - edgeIndex - nextEdgeIndex;
-                    int i2 = triangles[tid][thirdEdgeIndex];
-                    int ia2 = attributeIndexArr[thirdEdgeIndex];
-                    InterpolateVertexAttributes(ia0, ia0, ia1, ia2, ref p);
 
                     if (vertices[i0].seam)
                     {
@@ -1272,7 +1272,7 @@ namespace MeshDecimatorCore.Algorithms
                 //
                 // The following numbers works well for most models.
                 // If it does not, try to adjust the 3 parameters
-                double threshold = 0.000000001 * System.Math.Pow(iteration + 3, Options.Agressiveness);
+                double threshold = 0.000000001 * System.Math.Pow(iteration + 3, Options.Aggressiveness);
 
                 if (Verbose && (iteration % 5) == 0)
                 {
