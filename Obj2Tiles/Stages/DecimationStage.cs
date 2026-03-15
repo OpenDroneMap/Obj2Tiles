@@ -96,7 +96,7 @@ public static partial class StagesFacade
                 PreserveUVSeamEdges = false,
                 PreserveBorderEdges = quality > 0.2f,
                 PreserveSurfaceCurvature = true,
-                Agressiveness = 7.0,
+                Aggressiveness = 7.0,
                 MaxIterationCount = 100,
                 VertexLinkDistance = double.Epsilon
             }

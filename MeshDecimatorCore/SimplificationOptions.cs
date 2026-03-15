@@ -18,7 +18,7 @@ namespace MeshDecimatorCore
             EnableSmartLink = true,
             VertexLinkDistance = double.Epsilon,
             MaxIterationCount = 100,
-            Agressiveness = 7.0
+            Aggressiveness = 7.0
         };
 
         /// <summary>
@@ -73,6 +73,6 @@ namespace MeshDecimatorCore
         /// Higher values result in faster decimation with potentially lower quality.
         /// Default value: 7.0
         /// </summary>
-        public double Agressiveness;
+        public double Aggressiveness;
     }
 }
