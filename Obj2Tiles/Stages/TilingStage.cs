@@ -75,7 +75,7 @@ public static partial class StagesFacade
             for (var lod = lods - 1; lod >= 0; lod--)
             {
                 if (!boundsMapper[lod].TryGetValue(descriptor, out var box3)) continue;
-                
+
                 if (box3.Min.X < minX)
                     minX = box3.Min.X;
 

@@ -52,7 +52,7 @@ public class GpsCoords
 
         var xr = -sinLon;
         var yr = cosLon;
-        var zr = 0;
+        var zr = 0.0;
 
         var xe = -cosLon * sinLat;
         var ye = -sinLon * sinLat;
@@ -62,28 +62,18 @@ public class GpsCoords
         var ys = cosLat * sinLon;
         var zs = sinLat;
 
+        // Scale is applied only to the ENU basis vectors (local geometry),
+        // NOT to the ECEF translation column (x, y, z).
         var res = new[]
         {
-            xr, xe, xs, x,
-            yr, ye, ys, y,
-            zr, ze, zs, z,
-            0, 0, 0, 1
+            s * xr, s * xe, s * xs, x,
+            s * yr, s * ye, s * ys, y,
+            s * zr, s * ze, s * zs, z,
+            0.0, 0.0, 0.0, 1.0
         };
 
-        var scale = new[]
-        {
-            s, 0, 0, 0,
-            0, s, 0, 0,
-            0, 0, s, 0,
-            0, 0, 0, 1
-        };
-
-        var mult = res;
-        if (YUpToZUp)
-        {
-            mult = MultiplyMatrix(res, Rot);
-        }
-        return MultiplyMatrix(ConvertToColumnMajorOrder(mult), scale);
+        var mult = YUpToZUp ? MultiplyMatrix(res, Rot) : res;
+        return ConvertToColumnMajorOrder(mult);
     }
 
     public static readonly double[] Rot =

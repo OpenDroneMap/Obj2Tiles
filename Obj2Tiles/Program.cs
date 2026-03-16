@@ -72,7 +72,7 @@ namespace Obj2Tiles
                 destFolderSplit = opts.StopAt == Stage.Splitting
                     ? opts.Output
                     : createTempFolder($"{pipelineId}-obj2tiles-split");
-                
+
                 Console.WriteLine($" ?> Keep original textures: {opts.KeepOriginalTextures}, Split strategy: {opts.SplitPointStrategy}");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
