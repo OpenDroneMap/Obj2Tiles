@@ -12,7 +12,7 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static void Tile(string sourcePath, string destPath, int lods, double baseError, Dictionary<string, Box3>[] boundsMapper,
-        GpsCoords? coords = null)
+        GpsCoords? coords = null, bool localMode = false)
     {
 
         Console.WriteLine(" ?> Working on objs conversion");
@@ -21,15 +21,28 @@ public static partial class StagesFacade
 
         Console.WriteLine(" -> Generating tileset.json");
 
-        if (coords == null)
-        {
-            Console.WriteLine(" ?> Using default coordinates");
-            coords = DefaultGpsCoords;
-        }
+        double[] rootTransform;
 
-        // Don't ask me why 100, I have no idea but it works
-        // https://github.com/CesiumGS/3d-tiles/issues/162
-        //const int baseError = 100;
+        if (localMode)
+        {
+            Console.WriteLine(" ?> Local mode: using identity matrix (no ECEF transform)");
+            rootTransform = [
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ];
+        }
+        else
+        {
+            if (coords == null)
+            {
+                Console.WriteLine(" ?> No --lat/--lon provided, using default coordinates (Milan). Use --local to disable ECEF transform.");
+                coords = DefaultGpsCoords;
+            }
+
+            rootTransform = coords.ToEcefTransform();
+        }
 
         // Generate tileset.json
         var tileset = new Tileset
@@ -40,7 +53,7 @@ public static partial class StagesFacade
             {
                 GeometricError = baseError,
                 Refine = "ADD",
-                Transform = coords.ToEcefTransform(),
+                Transform = rootTransform,
             }
         };
 
@@ -62,7 +75,7 @@ public static partial class StagesFacade
             for (var lod = lods - 1; lod >= 0; lod--)
             {
                 if (!boundsMapper[lod].TryGetValue(descriptor, out var box3)) continue;
-                
+
                 if (box3.Min.X < minX)
                     minX = box3.Min.X;
 

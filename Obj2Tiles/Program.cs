@@ -72,11 +72,11 @@ namespace Obj2Tiles
                 destFolderSplit = opts.StopAt == Stage.Splitting
                     ? opts.Output
                     : createTempFolder($"{pipelineId}-obj2tiles-split");
-                
+
                 Console.WriteLine($" ?> Keep original textures: {opts.KeepOriginalTextures}, Split strategy: {opts.SplitPointStrategy}");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
-                    opts.ZSplit, decimateRes.Bounds, opts.KeepOriginalTextures, opts.SplitPointStrategy);
+                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 
@@ -97,7 +97,10 @@ namespace Obj2Tiles
 
                 sw.Restart();
 
-                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, opts.BaseError, boundsMapper, gpsCoords);
+                if (opts.LocalMode && (opts.Latitude != null || opts.Longitude != null))
+                    Console.WriteLine(" !> Warning: --local overrides --lat/--lon. ECEF transform will not be applied.");
+
+                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, opts.BaseError, boundsMapper, gpsCoords, opts.LocalMode);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
             }

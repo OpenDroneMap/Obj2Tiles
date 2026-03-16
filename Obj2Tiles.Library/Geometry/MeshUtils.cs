@@ -395,5 +395,115 @@ public class MeshUtils
         return count + tasks.Sum(t => t.Result);
     }
 
+    /// <summary>
+    /// Recursive balanced split on XY — computes split point per-sub-mesh per-axis
+    /// for optimal vertex balancing.
+    /// </summary>
+    public static async Task<int> RecurseSplitXYBalanced(IMesh mesh, int depth,
+        Func<IMesh, Vertex3> getSplitPoint, ConcurrentBag<IMesh> meshes)
+    {
+        var splitX = getSplitPoint(mesh);
+
+        var count = mesh.Split(xutils3, splitX.X, out var left, out var right);
+
+        // Ricalcola il punto di split Y per ogni sotto-mesh separatamente
+        if (left.FacesCount > 0)
+        {
+            var splitYLeft = getSplitPoint(left);
+            count += left.Split(yutils3, splitYLeft.Y, out var topleft, out var bottomleft);
+
+            if (depth <= 1)
+            {
+                if (topleft.FacesCount > 0) meshes.Add(topleft);
+                if (bottomleft.FacesCount > 0) meshes.Add(bottomleft);
+            }
+            else
+            {
+                var nextDepth = depth - 1;
+                var tasks = new List<Task<int>>();
+                if (topleft.FacesCount > 0)
+                    tasks.Add(RecurseSplitXYBalanced(topleft, nextDepth, getSplitPoint, meshes));
+                if (bottomleft.FacesCount > 0)
+                    tasks.Add(RecurseSplitXYBalanced(bottomleft, nextDepth, getSplitPoint, meshes));
+                await Task.WhenAll(tasks);
+                count += tasks.Sum(t => t.Result);
+            }
+        }
+
+        if (right.FacesCount > 0)
+        {
+            var splitYRight = getSplitPoint(right);
+            count += right.Split(yutils3, splitYRight.Y, out var topright, out var bottomright);
+
+            if (depth <= 1)
+            {
+                if (topright.FacesCount > 0) meshes.Add(topright);
+                if (bottomright.FacesCount > 0) meshes.Add(bottomright);
+            }
+            else
+            {
+                var nextDepth = depth - 1;
+                var tasks = new List<Task<int>>();
+                if (topright.FacesCount > 0)
+                    tasks.Add(RecurseSplitXYBalanced(topright, nextDepth, getSplitPoint, meshes));
+                if (bottomright.FacesCount > 0)
+                    tasks.Add(RecurseSplitXYBalanced(bottomright, nextDepth, getSplitPoint, meshes));
+                await Task.WhenAll(tasks);
+                count += tasks.Sum(t => t.Result);
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Recursive balanced split on XYZ — computes split point per-sub-mesh per-axis.
+    /// </summary>
+    public static async Task<int> RecurseSplitXYZBalanced(IMesh mesh, int depth,
+        Func<IMesh, Vertex3> getSplitPoint, ConcurrentBag<IMesh> meshes)
+    {
+        var splitX = getSplitPoint(mesh);
+        var count = mesh.Split(xutils3, splitX.X, out var left, out var right);
+
+        // Per ogni metà X, ricalcola Y
+        var halves = new[] { left, right };
+        var quadrants = new List<IMesh>();
+
+        foreach (var half in halves)
+        {
+            if (half.FacesCount == 0) continue;
+            var splitY = getSplitPoint(half);
+            count += half.Split(yutils3, splitY.Y, out var top, out var bottom);
+            if (top.FacesCount > 0) quadrants.Add(top);
+            if (bottom.FacesCount > 0) quadrants.Add(bottom);
+        }
+
+        // Per ogni quadrante XY, ricalcola Z
+        var octants = new List<IMesh>();
+        foreach (var quad in quadrants)
+        {
+            var splitZ = getSplitPoint(quad);
+            count += quad.Split(zutils3, splitZ.Z, out var near, out var far);
+            if (near.FacesCount > 0) octants.Add(near);
+            if (far.FacesCount > 0) octants.Add(far);
+        }
+
+        var nextDepth = depth - 1;
+
+        if (nextDepth == 0)
+        {
+            foreach (var oct in octants)
+                meshes.Add(oct);
+            return count;
+        }
+
+        var tasks = octants
+            .Select(oct => RecurseSplitXYZBalanced(oct, nextDepth, getSplitPoint, meshes))
+            .ToList();
+
+        await Task.WhenAll(tasks);
+        return count + tasks.Sum(t => t.Result);
+    }
+
     #endregion
 }

@@ -1078,6 +1078,31 @@ public class MeshT : IMesh
         return new Vertex3(x, y, z);
     }
 
+    public Vertex3 GetVertexMedian()
+    {
+        var count = _vertices.Count;
+        if (count == 0)
+            return new Vertex3(0, 0, 0);
+
+        var xs = new double[count];
+        var ys = new double[count];
+        var zs = new double[count];
+
+        for (var i = 0; i < count; i++)
+        {
+            xs[i] = _vertices[i].X;
+            ys[i] = _vertices[i].Y;
+            zs[i] = _vertices[i].Z;
+        }
+
+        Array.Sort(xs);
+        Array.Sort(ys);
+        Array.Sort(zs);
+
+        var mid = count / 2;
+        return new Vertex3(xs[mid], ys[mid], zs[mid]);
+    }
+
     public void WriteObj(string path, bool removeUnused = true)
     {
         if (_materials.Count == 0 || _textureVertices.Count == 0)
