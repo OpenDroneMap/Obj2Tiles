@@ -33,7 +33,7 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
 
   -d, --divisions        (Default: 2) How many tiles divisions
   -z, --zsplit           (Default: false) Splits along z-axis too
-  -g, --split-strategy   (Default: VertexBaricenter) Split point strategy: AbsoluteCenter or VertexBaricenter
+  -g, --split-strategy   (Default: VertexBaricenter) Split point strategy: AbsoluteCenter, VertexBaricenter or VertexMedian
   -k, --keeptextures     (Default: false) Keeps original textures
 
   --lat                  Latitude of the mesh (WGS84 decimal degrees)
