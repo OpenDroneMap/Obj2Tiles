@@ -8,7 +8,7 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
-        bool zsplit, Box3 bounds, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
+        bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
     {
         var results = new Dictionary<string, Box3>[sourceFiles.Length];
 
@@ -323,11 +323,11 @@ public static partial class StagesFacade
             plan[$"{name}-XL"] = splitYLeft;
             var (topLeft, bottomLeft) = PartitionY(leftX, splitYLeft.Y);
 
-            if (depth <= 1)
-                return; // leaf level, no further recursion
-
-            if (topLeft.Length > 0) PreComputeSplitPlanXYBalanced(topLeft, $"{name}-XL-YL", depth - 1, computeCenter, plan);
-            if (bottomLeft.Length > 0) PreComputeSplitPlanXYBalanced(bottomLeft, $"{name}-XL-YR", depth - 1, computeCenter, plan);
+            if (depth > 1)
+            {
+                if (topLeft.Length > 0) PreComputeSplitPlanXYBalanced(topLeft, $"{name}-XL-YL", depth - 1, computeCenter, plan);
+                if (bottomLeft.Length > 0) PreComputeSplitPlanXYBalanced(bottomLeft, $"{name}-XL-YR", depth - 1, computeCenter, plan);
+            }
         }
 
         if (rightX.Length > 0)
@@ -336,11 +336,11 @@ public static partial class StagesFacade
             plan[$"{name}-XR"] = splitYRight;
             var (topRight, bottomRight) = PartitionY(rightX, splitYRight.Y);
 
-            if (depth <= 1)
-                return;
-
-            if (topRight.Length > 0) PreComputeSplitPlanXYBalanced(topRight, $"{name}-XR-YL", depth - 1, computeCenter, plan);
-            if (bottomRight.Length > 0) PreComputeSplitPlanXYBalanced(bottomRight, $"{name}-XR-YR", depth - 1, computeCenter, plan);
+            if (depth > 1)
+            {
+                if (topRight.Length > 0) PreComputeSplitPlanXYBalanced(topRight, $"{name}-XR-YL", depth - 1, computeCenter, plan);
+                if (bottomRight.Length > 0) PreComputeSplitPlanXYBalanced(bottomRight, $"{name}-XR-YR", depth - 1, computeCenter, plan);
+            }
         }
     }
 
