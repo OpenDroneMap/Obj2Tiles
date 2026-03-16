@@ -27,7 +27,7 @@ public sealed class Options
     [Option('k', "keeptextures", Required = false, HelpText = "Keeps original textures", Default = false)]
     public bool KeepOriginalTextures { get; set; }
 
-    [Option('g', "split-strategy", Required = false, HelpText = "Split strategy: AbsoluteCenter or VertexBaricenter", Default = SplitPointStrategy.VertexBaricenter)]
+    [Option('g', "split-strategy", Required = false, HelpText = "Split strategy: AbsoluteCenter, VertexBaricenter, or VertexMedian (balanced tiles)", Default = SplitPointStrategy.VertexBaricenter)]
     public SplitPointStrategy SplitPointStrategy { get; set; } = SplitPointStrategy.VertexBaricenter;
 
     [Option("lat", Required = false, HelpText = "Latitude of the mesh", Default = null)]
@@ -53,6 +53,9 @@ public sealed class Options
 
     [Option('t', "y-up-to-z-up", Required = false, HelpText = "Convert the upward Y-axis to the upward Z-axis, which is used in some situations where the upward axis may be the Y-axis or the Z-axis after the obj is exported.", Default = false)]
     public bool YUpToZUp { get; set; }
+
+    [Option("local", Required = false, HelpText = "Local mode: no ECEF geo-referencing, uses identity matrix in tileset.json. Use this when you don't need to place the model on a globe.", Default = false)]
+    public bool LocalMode { get; set; }
 }
 
 public enum Stage

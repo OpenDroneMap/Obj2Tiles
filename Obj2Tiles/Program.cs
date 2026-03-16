@@ -97,7 +97,10 @@ namespace Obj2Tiles
 
                 sw.Restart();
 
-                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, opts.BaseError, boundsMapper, gpsCoords);
+                if (opts.LocalMode && (opts.Latitude != null || opts.Longitude != null))
+                    Console.WriteLine(" !> Warning: --local overrides --lat/--lon. ECEF transform will not be applied.");
+
+                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, opts.BaseError, boundsMapper, gpsCoords, opts.LocalMode);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
             }

@@ -32,8 +32,9 @@ public class GpsCoords
         var lon = Longitude * Math.PI / 180;
         var alt = Altitude;
 
-        var a = 6378137.0 / s;
-        var b = 6356752.3142 / s;
+        // WGS84 ellipsoid radii — NOT scaled, so altitude stays correct
+        const double a = 6378137.0;
+        const double b = 6356752.3142;
         var f = (a - b) / a;
 
         var eSq = 2 * f - f * f;
