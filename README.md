@@ -36,11 +36,12 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
   -g, --split-strategy   (Default: VertexBaricenter) Split point strategy: AbsoluteCenter or VertexBaricenter
   -k, --keeptextures     (Default: false) Keeps original textures
 
-  --lat                  Latitude of the mesh
-  --lon                  Longitude of the mesh
-  --alt                  (Default: 0) Altitude of the mesh (meters)
+  --lat                  Latitude of the mesh (WGS84 decimal degrees)
+  --lon                  Longitude of the mesh (WGS84 decimal degrees)
+  --alt                  (Default: 0) Altitude of the mesh (meters above ellipsoid)
   -e, --error            (Default: 100), baseError value for root node
-  --scale                (Default: 1), scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)
+  --scale                (Default: 1), scale factor for local geometry (e.g. 1200.0/3937.0 for survey ft). Does NOT affect altitude or ECEF position.
+  --local                (Default: false) Local mode: no ECEF geo-referencing, uses identity matrix. Use this when you don't need globe placement.
 
   --y-up-to-z-up         (Default: false) Converts Y-up to Z-up
 
@@ -83,6 +84,23 @@ The `--split-strategy` flag controls how the split point is determined at each r
 Each split mesh is converted to B3DM format using [ObjConvert](https://github.com/SilentWave/ObjConvert).
 Then the `tileset.json` is generated using the resulting files. You can specify the `--lat` and `--lon` and `--alt` parameters to set the location of the model.
 See the [Remarks](#Remarks) section to find out how to rotate the model.
+
+### Coordinate System & Geo-referencing
+
+The tiling stage places your model on the globe using an **ECEF** (Earth-Centered, Earth-Fixed) transformation matrix stored in `tileset.json`.
+
+**Modes of operation:**
+
+| Flags | Behavior |
+|-------|----------|
+| `--lat 45 --lon 9 --alt 100` | Model placed at the given WGS84 coordinates with full ECEF transform |
+| *(no lat/lon)* | Falls back to default coordinates (Duomo di Milano, 45.46°N 9.19°E). This is the legacy behavior. |
+| `--local` | **Identity matrix** — no geo-referencing, no rotation. Use this for local viewers or when you don't need globe placement. |
+
+**Important notes:**
+- The `--scale` factor only affects the local geometry size, **not** the altitude or ECEF position. For example, `--scale 100 --alt 17` places the model at 17 meters, not 1700 meters.
+- OBJ files typically use Y-up convention. The bounding volumes in `tileset.json` perform a Y↔Z swap internally, as 3D Tiles uses Z-up. If your model appears flipped, try `--y-up-to-z-up` which applies an additional 90° rotation around the X axis.
+- If you specify both `--local` and `--lat`/`--lon`, `--local` takes precedence (a warning is printed).
 
 ## Running
 
@@ -132,6 +150,14 @@ Run all the pipeline stages and generate the `tileset.json` file in the output f
 
 ```
 Obj2Tiles --lods 8 --divisions 3 --lat 40.689434025350025 --lon -74.0444987716782 --alt 120 model.obj ./output
+```
+
+### Local mode (no geo-referencing)
+
+If you don't need to place the model on a globe (e.g., for a local 3D viewer), use `--local` to avoid ECEF rotation:
+
+```
+Obj2Tiles --local model.obj ./output
 ```
 
 ## Rotating the model
