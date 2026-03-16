@@ -8,7 +8,7 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
-        bool zsplit, Box3 bounds, bool keepOriginalTextures = false)
+        bool zsplit, Box3 bounds, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
     {
 
         var tasks = new List<Task<Dictionary<string, Box3>>>();
@@ -22,7 +22,7 @@ public static partial class StagesFacade
             var textureStrategy = keepOriginalTextures ? TexturesStrategy.KeepOriginal :
                 index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed;
 
-            var splitTask = Split(file, dest, divisions, zsplit, bounds, textureStrategy);
+            var splitTask = Split(file, dest, divisions, zsplit, bounds, textureStrategy, splitPointStrategy);
 
             tasks.Add(splitTask);
         }
@@ -73,7 +73,7 @@ public static partial class StagesFacade
 
         int count;
 
-        if (bounds is not null)
+        if (splitPointStrategy == SplitPointStrategy.AbsoluteCenter && bounds is not null)
         {
             count = zSplit
                 ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, bounds, meshes)
