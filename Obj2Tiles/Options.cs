@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CommandLine;
+using Obj2Tiles.Stages;
 
 namespace Obj2Tiles;
 
@@ -25,6 +26,9 @@ public sealed class Options
 
     [Option('k', "keeptextures", Required = false, HelpText = "Keeps original textures", Default = false)]
     public bool KeepOriginalTextures { get; set; }
+
+    [Option('g', "split-strategy", Required = false, HelpText = "Split strategy: AbsoluteCenter or VertexBaricenter", Default = SplitPointStrategy.VertexBaricenter)]
+    public SplitPointStrategy SplitPointStrategy { get; set; } = SplitPointStrategy.VertexBaricenter;
 
     [Option("lat", Required = false, HelpText = "Latitude of the mesh", Default = null)]
     public double? Latitude { get; set; }

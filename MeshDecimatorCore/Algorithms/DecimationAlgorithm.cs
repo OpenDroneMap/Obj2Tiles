@@ -52,10 +52,9 @@ namespace MeshDecimatorCore.Algorithms
         #region Properties
 
         /// <summary>
-        /// Gets or sets if borders should be preserved.
-        /// Default value: false
+        /// Gets or sets the simplification options.
         /// </summary>
-        public bool PreserveBorders { get; set; } = false;
+        public SimplificationOptions Options { get; set; } = SimplificationOptions.Default;
 
         /// <summary>
         /// Gets or sets the maximum vertex count. Set to zero for no limitation.

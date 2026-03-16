@@ -33,6 +33,7 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
 
   -d, --divisions        (Default: 2) How many tiles divisions
   -z, --zsplit           (Default: false) Splits along z-axis too
+  -g, --split-strategy   (Default: VertexBaricenter) Split point strategy: AbsoluteCenter or VertexBaricenter
   -k, --keeptextures     (Default: false) Keeps original textures
 
   --lat                  Latitude of the mesh
@@ -71,6 +72,11 @@ Every split is a new mesh with repacked textures (to save space), the [bin pack]
 If you want to preserve the original textures, use the `--keeptextures` flag (not recommended)
 
 You can control how many times the split is performed by using the `--divisions` flag. The model will be split into `divisions^2` meshes (or `divisions^3` if `--zsplit` is used).
+
+The `--split-strategy` flag controls how the split point is determined at each recursive step:
+
+- **`VertexBaricenter`** (default): the split point is the barycenter of the vertices of the current sub-mesh. This produces tiles that are more balanced in terms of vertex/face count, because the cut plane adapts to where the geometry is actually concentrated.
+- **`AbsoluteCenter`**: the split point is the geometric center of the bounding box. This produces a spatially uniform grid, which is more predictable and reproducible but can result in uneven tiles when the geometry is not uniformly distributed.
 
 ### 3D Tiles conversion
 
