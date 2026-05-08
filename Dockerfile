@@ -35,6 +35,6 @@ RUN DOTNET_RID=$([ "$TARGETARCH" = "arm64" ] && echo "linux-arm64" || echo "linu
 # Minimal runtime
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 WORKDIR /data
-COPY --from=build /app/Obj2Tiles /usr/local/bin/obj2tiles
+COPY --from=build /app/ /app/
 
-ENTRYPOINT ["obj2tiles"]
+ENTRYPOINT ["/app/Obj2Tiles"]
