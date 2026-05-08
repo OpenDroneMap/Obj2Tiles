@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -34,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/obj2tiles
+          images: ${{ env.REGISTRY }}/opendronemap/obj2tiles
 
       - name: Set up QEMU emulator for multi-arch images
         uses: docker/setup-qemu-action@v4
