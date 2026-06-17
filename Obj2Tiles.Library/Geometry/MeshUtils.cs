@@ -183,7 +183,7 @@ public class MeshUtils
                     var mtlFileName = segs[1];
                     var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
 
-                    var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps);
+                    var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps, fileName);
 
                     deps.AddRange(mtlDeps);
                     deps.Add(mtlFilePath);
