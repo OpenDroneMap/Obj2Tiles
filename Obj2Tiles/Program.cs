@@ -76,7 +76,7 @@ namespace Obj2Tiles
                 Console.WriteLine($" ?> Keep original textures: {opts.KeepOriginalTextures}, Split strategy: {opts.SplitPointStrategy}");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
-                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.Octree);
+                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.Octree, (float)opts.LodTextureScale);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 

@@ -9,7 +9,7 @@ public static partial class StagesFacade
 {
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
         bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter,
-        bool isOctree = false)
+        bool isOctree = false, float lodTextureScale = 1.0f)
     {
         var results = new Dictionary<string, Box3>[sourceFiles.Length];
 
@@ -74,8 +74,9 @@ public static partial class StagesFacade
                 index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed;
 
             int lodDivisions = isOctree ? divisions + sourceFiles.Length - index - 1 : divisions;
+            float textureDownscale = index == 0 ? 1.0f : (float)Math.Pow(lodTextureScale, index);
 
-            tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint));
+            tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint, textureDownscale));
         }
 
         await Task.WhenAll(tasks);
@@ -107,7 +108,8 @@ public static partial class StagesFacade
         bool zSplit,
         TexturesStrategy textureStrategy,
         SplitPointStrategy splitPointStrategy,
-        Func<IMesh, Vertex3> getSplitPoint)
+        Func<IMesh, Vertex3> getSplitPoint,
+        float textureDownscale = 1.0f)
     {
         var sw = new Stopwatch();
         var tilesBounds = new Dictionary<string, Box3>();
@@ -170,7 +172,10 @@ public static partial class StagesFacade
         foreach (var m in ms)
         {
             if (m is MeshT t)
+            {
                 t.TexturesStrategy = textureStrategy;
+                t.TextureDownscale = textureDownscale;
+            }
 
             m.WriteObj(Path.Combine(destPath, $"{m.Name}.obj"));
 

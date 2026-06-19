@@ -31,6 +31,13 @@ public class MeshT : IMesh
 
     public TexturesStrategy TexturesStrategy { get; set; }
 
+    /// <summary>
+    /// Multiplier applied to the atlas edge length during texture repacking.
+    /// 1.0 = full resolution, 0.5 = half, 0.25 = quarter, etc.
+    /// Values are clamped to (0, 1]. Only has effect with Repack or RepackCompressed.
+    /// </summary>
+    public float TextureDownscale { get; set; } = 1.0f;
+
     public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
         IEnumerable<FaceT> faces, IEnumerable<Material> materials, IEnumerable<RGB>? vertexColors = null)
     {
@@ -547,9 +554,13 @@ public class MeshT : IMesh
         int textureWidth = material.Texture != null ? texture!.Width : normalMap!.Width;
         int textureHeight = material.Texture != null ? texture!.Height : normalMap!.Height;
 
+        float scale = Math.Clamp(TextureDownscale, float.Epsilon, 1.0f);
+        int effWidth  = Math.Max(1, (int)(textureWidth  * scale));
+        int effHeight = Math.Max(1, (int)(textureHeight * scale));
+
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
-        CalculateMaxMinAreaRect(clustersRects, textureWidth, textureHeight, PADDING, out var maxWidth, out var maxHeight,
+        CalculateMaxMinAreaRect(clustersRects, effWidth, effHeight, PADDING, out var maxWidth, out var maxHeight,
             out var textureArea);
 
         Debug.WriteLine("Texture area: " + textureArea);
@@ -615,8 +626,12 @@ public class MeshT : IMesh
             int syTL = Math.Clamp(textureHeight - eb, 0, textureHeight - sh);
             var srcRect = new Rectangle(sx, syTL, sw, sh);
 
+            // Atlas-space dimensions (may be smaller than source when TextureDownscale < 1)
+            int scaledSw = Math.Max(1, (int)Math.Round(sw * scale));
+            int scaledSh = Math.Max(1, (int)Math.Round(sh * scale));
+
             // ---------- reserve atlas space WITH padding ----------
-            var packRect = binPack.Insert(sw + 2 * PADDING, sh + 2 * PADDING,
+            var packRect = binPack.Insert(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING,
                                           FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
 
             // If we ran out of room: save current atlas, start a new one (keeps your behavior)
@@ -654,10 +669,10 @@ public class MeshT : IMesh
                 materialIndex = _materials.Count - 1;
 
                 // try again
-                packRect = binPack.Insert(sw + 2 * PADDING, sh + 2 * PADDING,
+                packRect = binPack.Insert(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING,
                                           FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
                 if (packRect.Width == 0)
-                    throw new Exception($"Packing failed for {sw}x{sh} into {edgeLength}x{edgeLength} (occ {binPack.Occupancy()})");
+                    throw new Exception($"Packing failed for {scaledSw}x{scaledSh} into {edgeLength}x{edgeLength} (occ {binPack.Occupancy()})");
             }
 
             int destInnerX = packRect.X + PADDING;
@@ -669,22 +684,22 @@ public class MeshT : IMesh
             if (material.Texture != null)
             {
                 using var block = BuildPaddedBlock(texture!, srcRect, PADDING);
+                if (scale < 1.0f)
+                    block.Mutate(ctx => ctx.Resize(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING));
                 newTexture!.Mutate(c => c.DrawImage(block, new Point(destOuterX, destOuterY), 1f));
             }
             if (material.NormalMap != null)
             {
                 using var blockN = BuildPaddedBlock(normalMap!, srcRect, PADDING);
+                if (scale < 1.0f)
+                    blockN.Mutate(ctx => ctx.Resize(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING));
                 newNormalMap!.Mutate(c => c.DrawImage(blockN, new Point(destOuterX, destOuterY), 1f));
             }
 
-            // Inner rect size in pixels
-            double innerWpx = sw;                 // crop width
-            double innerHpx = sh;                 // crop height
-
             double atlasU0 = destInnerX / (double)edgeLength;
-            double atlasV0 = (edgeLength - (destInnerY + sh)) / (double)edgeLength;
-            double innerUw = sw / (double)edgeLength;
-            double innerVh = sh / (double)edgeLength;
+            double atlasV0 = (edgeLength - (destInnerY + scaledSh)) / (double)edgeLength;
+            double innerUw = scaledSw / (double)edgeLength;
+            double innerVh = scaledSh / (double)edgeLength;
 
             Vertex2 MapUV(double rx, double ry) =>
                 new((float)Math.Clamp(atlasU0 + rx * innerUw, 0, 1),
