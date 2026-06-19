@@ -867,11 +867,12 @@ public class MeshT : IMesh
     {
 
         var clusters = new List<List<int>>();
-        var remainingFacesIndexes = new List<int>(facesIndexes);
+        var remainingFacesIndexes = new HashSet<int>(facesIndexes);
 
-        var currentCluster = new List<int> { remainingFacesIndexes[0] };
-        var currentClusterCache = new HashSet<int> { remainingFacesIndexes[0] };
-        remainingFacesIndexes.RemoveAt(0);
+        var first = remainingFacesIndexes.First();
+        var currentCluster = new List<int> { first };
+        var currentClusterCache = new HashSet<int> { first };
+        remainingFacesIndexes.Remove(first);
 
         var lastRemainingFacesCount = remainingFacesIndexes.Count;
 
@@ -907,9 +908,10 @@ public class MeshT : IMesh
                 if (remainingFacesIndexes.Count == 0) break;
 
                 // Let's continue with the next cluster
-                currentCluster = [remainingFacesIndexes[0]];
-                currentClusterCache = [remainingFacesIndexes[0]];
-                remainingFacesIndexes.RemoveAt(0);
+                var next = remainingFacesIndexes.First();
+                currentCluster = [next];
+                currentClusterCache = [next];
+                remainingFacesIndexes.Remove(next);
             }
 
             if (lastRemainingFacesCount == remainingFacesIndexes.Count)
