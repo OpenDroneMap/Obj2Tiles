@@ -56,6 +56,9 @@ public sealed class Options
 
     [Option("local", Required = false, HelpText = "Local mode: no ECEF geo-referencing, uses identity matrix in tileset.json. Use this when you don't need to place the model on a globe.", Default = false)]
     public bool LocalMode { get; set; }
+
+    [Option("octree", Required = false, HelpText = "Use octree spatial subdivision: each LOD gets one additional division level relative to the next coarser LOD, producing a proper tile hierarchy instead of same-count tiles per LOD.", Default = false)]
+    public bool Octree { get; set; }
 }
 
 public enum Stage

@@ -12,7 +12,7 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static void Tile(string sourcePath, string destPath, int lods, double baseError, Dictionary<string, Box3>[] boundsMapper,
-        GpsCoords? coords = null, bool localMode = false)
+        GpsCoords? coords = null, bool localMode = false, bool isOctree = false)
     {
 
         Console.WriteLine(" ?> Working on objs conversion");
@@ -64,50 +64,106 @@ public static partial class StagesFacade
         var maxZ = double.MinValue;
         var minZ = double.MaxValue;
 
-        var masterDescriptors = boundsMapper[0].Keys;
-
-        foreach (var descriptor in masterDescriptors)
+        if (isOctree)
         {
-            var currentTileElement = tileset.Root;
+            // Build a parent lookup: for each tile in a finer LOD, find its parent in the next coarser LOD.
+            // Tile names are hierarchical (e.g. "Mesh-XL-YL-XR-YR"), so a tile is a child of any coarser tile
+            // whose name is a strict prefix (key + "-") of the tile's name.
+            var lodParentMap = new Dictionary<string, string>();
+            for (var lod = 0; lod < lods - 1; lod++)
+            {
+                foreach (var fineKey in boundsMapper[lod].Keys)
+                {
+                    // Walk coarser LODs to find the immediate parent
+                    var parent = boundsMapper[lod + 1].Keys
+                        .FirstOrDefault(coarseKey => fineKey.StartsWith(coarseKey + "-"));
+                    if (parent != null)
+                        lodParentMap[fineKey] = parent;
+                }
+            }
 
-            var refBox = boundsMapper[0][descriptor];
+            // Tile element cache so children can be appended when we reach finer LODs
+            var tileMap = new Dictionary<string, TileElement>();
 
+            // Process coarsest → finest so parents exist in tileMap before their children are added
             for (var lod = lods - 1; lod >= 0; lod--)
             {
-                if (!boundsMapper[lod].TryGetValue(descriptor, out var box3)) continue;
-
-                if (box3.Min.X < minX)
-                    minX = box3.Min.X;
-
-                if (box3.Max.X > maxX)
-                    maxX = box3.Max.X;
-
-                if (box3.Min.Y < minY)
-                    minY = box3.Min.Y;
-
-                if (box3.Max.Y > maxY)
-                    maxY = box3.Max.Y;
-
-                if (box3.Min.Z < minZ)
-                    minZ = box3.Min.Z;
-
-                if (box3.Max.Z > maxZ)
-                    maxZ = box3.Max.Z;
-
-                var tile = new TileElement
+                foreach (var (descriptor, box3) in boundsMapper[lod])
                 {
-                    GeometricError = lod == 0 ? 0 : CalculateGeometricError(refBox, box3, lod),
-                    Refine = "REPLACE",
-                    Content = new Content
-                    {
-                        Uri = $"LOD-{lod}/{Path.GetFileNameWithoutExtension(descriptor)}.b3dm"
-                    },
-                    BoundingVolume = box3.ToBoundingVolume()
-                };
+                    if (box3.Min.X < minX) minX = box3.Min.X;
+                    if (box3.Max.X > maxX) maxX = box3.Max.X;
+                    if (box3.Min.Y < minY) minY = box3.Min.Y;
+                    if (box3.Max.Y > maxY) maxY = box3.Max.Y;
+                    if (box3.Min.Z < minZ) minZ = box3.Min.Z;
+                    if (box3.Max.Z > maxZ) maxZ = box3.Max.Z;
 
-                currentTileElement.Children ??= [];
-                currentTileElement.Children.Add(tile);
-                currentTileElement = tile;
+                    var tile = new TileElement
+                    {
+                        // Coarser tiles have larger geometric error (seen from farther away);
+                        // finest tiles are leaves with error = 0.
+                        GeometricError = lod == 0 ? 0 : baseError / Math.Pow(2, lods - lod),
+                        Refine = "REPLACE",
+                        Content = new Content
+                        {
+                            Uri = $"LOD-{lod}/{Path.GetFileNameWithoutExtension(descriptor)}.b3dm"
+                        },
+                        BoundingVolume = box3.ToBoundingVolume()
+                    };
+
+                    tileMap[descriptor] = tile;
+
+                    if (lodParentMap.TryGetValue(descriptor, out var parentKey))
+                    {
+                        tileMap[parentKey].Children ??= [];
+                        tileMap[parentKey].Children!.Add(tile);
+                    }
+                    else
+                    {
+                        // No parent in a coarser LOD — attach directly to the root
+                        tileset.Root!.Children ??= [];
+                        tileset.Root!.Children!.Add(tile);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Standard mode: all LODs produce the same set of tiles; each descriptor maps to a chain
+            // LOD-(n-1) → LOD-(n-2) → ... → LOD-0 hanging from the root via REPLACE refinement.
+            var masterDescriptors = boundsMapper[0].Keys;
+
+            foreach (var descriptor in masterDescriptors)
+            {
+                var currentTileElement = tileset.Root;
+
+                var refBox = boundsMapper[0][descriptor];
+
+                for (var lod = lods - 1; lod >= 0; lod--)
+                {
+                    if (!boundsMapper[lod].TryGetValue(descriptor, out var box3)) continue;
+
+                    if (box3.Min.X < minX) minX = box3.Min.X;
+                    if (box3.Max.X > maxX) maxX = box3.Max.X;
+                    if (box3.Min.Y < minY) minY = box3.Min.Y;
+                    if (box3.Max.Y > maxY) maxY = box3.Max.Y;
+                    if (box3.Min.Z < minZ) minZ = box3.Min.Z;
+                    if (box3.Max.Z > maxZ) maxZ = box3.Max.Z;
+
+                    var tile = new TileElement
+                    {
+                        GeometricError = lod == 0 ? 0 : CalculateGeometricError(refBox, box3, lod),
+                        Refine = "REPLACE",
+                        Content = new Content
+                        {
+                            Uri = $"LOD-{lod}/{Path.GetFileNameWithoutExtension(descriptor)}.b3dm"
+                        },
+                        BoundingVolume = box3.ToBoundingVolume()
+                    };
+
+                    currentTileElement.Children ??= [];
+                    currentTileElement.Children.Add(tile);
+                    currentTileElement = tile;
+                }
             }
         }
 

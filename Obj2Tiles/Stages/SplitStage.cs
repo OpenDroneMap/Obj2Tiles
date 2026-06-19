@@ -8,9 +8,13 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
-        bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
+        bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter,
+        bool isOctree = false)
     {
         var results = new Dictionary<string, Box3>[sourceFiles.Length];
+
+        // In octree mode, LOD-0 (finest) gets the most divisions; the split plan must cover that maximum depth.
+        int maxDivisions = isOctree ? divisions + sourceFiles.Length - 1 : divisions;
 
         // Pre-compute split plan from LOD-0 vertices (lightweight — no mesh splitting, just vertex partitioning)
         Console.WriteLine(" -> Pre-computing split plan from LOD-0 vertices");
@@ -31,16 +35,16 @@ public static partial class StagesFacade
         if (splitPointStrategy == SplitPointStrategy.VertexMedian)
         {
             if (zsplit)
-                PreComputeSplitPlanXYZBalanced(vertices0, "Mesh", divisions, computeCenter, splitPlan);
+                PreComputeSplitPlanXYZBalanced(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
             else
-                PreComputeSplitPlanXYBalanced(vertices0, "Mesh", divisions, computeCenter, splitPlan);
+                PreComputeSplitPlanXYBalanced(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
         }
         else
         {
             if (zsplit)
-                PreComputeSplitPlanXYZ(vertices0, "Mesh", divisions, computeCenter, splitPlan);
+                PreComputeSplitPlanXYZ(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
             else
-                PreComputeSplitPlanXY(vertices0, "Mesh", divisions, computeCenter, splitPlan);
+                PreComputeSplitPlanXY(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
         }
 
         sw.Stop();
@@ -58,7 +62,8 @@ public static partial class StagesFacade
         Func<IMesh, Vertex3> replaySplitPoint = m =>
             splitPlan.TryGetValue(m.Name, out var pt) ? pt : baseSplitPoint(m);
 
-        // Split all LODs in parallel using the pre-computed split plan
+        // Split all LODs in parallel using the pre-computed split plan.
+        // In octree mode, the finest LOD (index=0) gets the most divisions; each coarser LOD gets one fewer.
         var tasks = new List<Task<Dictionary<string, Box3>>>();
         for (var index = 0; index < sourceFiles.Length; index++)
         {
@@ -68,7 +73,9 @@ public static partial class StagesFacade
             var textureStrategy = keepOriginalTextures ? TexturesStrategy.KeepOriginal :
                 index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed;
 
-            tasks.Add(Split(file, dest, divisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint));
+            int lodDivisions = isOctree ? divisions + sourceFiles.Length - index - 1 : divisions;
+
+            tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint));
         }
 
         await Task.WhenAll(tasks);
