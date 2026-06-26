@@ -3,6 +3,7 @@
 public interface IMesh
 {
     string Name { get; set; }
+    string DebugName { get; set; }
     Box3 Bounds { get; }
     IReadOnlyList<Vertex3> Vertices { get; }
 

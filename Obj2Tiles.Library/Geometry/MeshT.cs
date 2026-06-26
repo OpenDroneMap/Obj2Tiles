@@ -28,6 +28,7 @@ public class MeshT : IMesh
     public const string DefaultName = "Mesh";
 
     public string Name { get; set; } = DefaultName;
+    public string DebugName { get; set; } = string.Empty;
 
     public TexturesStrategy TexturesStrategy { get; set; }
 
@@ -460,8 +461,6 @@ public class MeshT : IMesh
 
     private void TrimTextures(string targetFolder)
     {
-        Debug.WriteLine("Trimming textures of " + Name);
-
         var tasks = new List<Task>();
 
         LoadTexturesCache();
@@ -470,60 +469,37 @@ public class MeshT : IMesh
 
         var newTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
 
-        var sw = new Stopwatch();
-
         for (var m = 0; m < facesByMaterial.Count; m++)
         {
             var material = _materials[m];
             var facesIndexes = facesByMaterial[m];
-            Debug.WriteLine($"Working on material {m} -> {material.Name}");
 
             if (facesIndexes.Count == 0)
-            {
-                Debug.WriteLine("No faces with this material");
                 continue;
-            }
 
-            sw.Restart();
-
-            Debug.WriteLine("Creating edges mapper");
             var edgesMapper = GetEdgesMapper(facesIndexes);
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-            sw.Restart();
-
-            Debug.WriteLine("Creating faces mapper");
             var facesMapper = GetFacesMapper(edgesMapper);
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-            sw.Restart();
-
-            Debug.WriteLine("Assembling faces clusters");
             var clusters = GetFacesClusters(facesIndexes, facesMapper);
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-            sw.Restart();
-
-            Debug.WriteLine("Sorting clusters");
 
             // Sort clusters by count (improves packing density, could be removed if we notice a bottleneck)
             clusters.Sort((a, b) => b.Count.CompareTo(a.Count));
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-            sw.Restart();
 
-            Debug.WriteLine($"Material {material.Name} has {clusters.Count} clusters");
-
-            Debug.WriteLine("Bin packing clusters");
             BinPackTextures(targetFolder, m, clusters, newTextureVertices, tasks);
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
         }
 
-        Debug.WriteLine("Sorting new texture vertices");
-        sw.Restart();
         _textureVertices = newTextureVertices.OrderBy(item => item.Value).Select(item => item.Key).ToList();
-        Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
 
-        Debug.WriteLine("Waiting for save tasks to finish");
-        sw.Restart();
-        Task.WaitAll(tasks.ToArray());
-        Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
+        var allSaves = Task.WhenAll(tasks);
+        var saveSw = Stopwatch.StartNew();
+        long nextSaveProgressMs = 5000;
+        while (!allSaves.Wait(100))
+        {
+            if (saveSw.ElapsedMilliseconds >= nextSaveProgressMs)
+            {
+                Console.WriteLine($" -> [{DebugName}] Saving texture atlases... ({saveSw.Elapsed.TotalSeconds:F0}s)");
+                nextSaveProgressMs += 5000;
+            }
+        }
     }
 
     private void LoadTexturesCache()
@@ -544,6 +520,9 @@ public class MeshT : IMesh
     {
         const int PADDING = 2; // <-- bleed ring
 
+        var packSw = Stopwatch.StartNew();
+        long nextProgressMs = 5000;
+
         var material = _materials[materialIndex];
 
         if (material.Texture == null && material.NormalMap == null) return;
@@ -563,8 +542,6 @@ public class MeshT : IMesh
         CalculateMaxMinAreaRect(clustersRects, effWidth, effHeight, PADDING, out var maxWidth, out var maxHeight,
             out var textureArea);
 
-        Debug.WriteLine("Texture area: " + textureArea);
-
         var edgeLength = Math.Max(Common.NextPowerOfTwo((int)Math.Sqrt(textureArea)), 32);
 
         if (edgeLength < maxWidth)
@@ -572,8 +549,6 @@ public class MeshT : IMesh
 
         if (edgeLength < maxHeight)
             edgeLength = Common.NextPowerOfTwo((int)maxHeight);
-
-        Debug.WriteLine("Edge length: " + edgeLength);
 
         // NOTE: We could enable rotations but it would be a bit more complex
         var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
@@ -735,6 +710,12 @@ public class MeshT : IMesh
                 face.TextureIndexC = newIndexVtC;
                 face.MaterialIndex = materialIndex;
             }
+
+            if (packSw.ElapsedMilliseconds >= nextProgressMs)
+            {
+                Console.WriteLine($" -> [{DebugName}] Repacking texture '{_materials[materialIndex].Name}': {i + 1}/{clusters.Count} ({(i + 1) * 100 / clusters.Count}%) clusters ({packSw.Elapsed.TotalSeconds:F0}s)...");
+                nextProgressMs += 5000;
+            }
         }
 
         // ---------- saving (unchanged) ----------
@@ -763,7 +744,6 @@ public class MeshT : IMesh
                 case TexturesStrategy.Repack: tx.Save(newPathTexture!); break;
                 default: throw new InvalidOperationException("KeepOriginal/Compress are meaningless here");
             }
-            Debug.WriteLine("Saved texture to " + newPathTexture);
             tx.Dispose();
         }, newTexture, TaskCreationOptions.LongRunning);
 
@@ -776,7 +756,6 @@ public class MeshT : IMesh
                 case TexturesStrategy.Repack: tx.Save(newPathNormalMap!); break;
                 default: throw new InvalidOperationException("KeepOriginal/Compress are meaningless here");
             }
-            Debug.WriteLine("Saved texture to " + newPathNormalMap);
             tx.Dispose();
         }, newNormalMap, TaskCreationOptions.LongRunning);
 
@@ -1122,7 +1101,9 @@ public class MeshT : IMesh
 
     public void WriteObj(string path, bool removeUnused = true)
     {
-        if (_materials.Count == 0 || _textureVertices.Count == 0)
+        var hasTextures = _materials.Count > 0 && _textureVertices.Count > 0;
+        //Console.WriteLine($" -> '{Name}': {(hasTextures ? $"{_materials.Count} mat(s), {_textureVertices.Count} UVs [{TexturesStrategy}]" : "no textures")}");
+        if (!hasTextures)
             _WriteObjWithoutTexture(path, removeUnused);
         else
             _WriteObjWithTexture(path, removeUnused);
@@ -1310,7 +1291,6 @@ public class MeshT : IMesh
 
         if (TexturesStrategy == TexturesStrategy.Repack || TexturesStrategy == TexturesStrategy.RepackCompressed)
             TrimTextures(folderPath);
-
         using (var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture))
         {
             writer.Write("o ");

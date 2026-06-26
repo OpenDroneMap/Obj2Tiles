@@ -165,22 +165,38 @@ public static partial class StagesFacade
             $" ?> Done {count} edge splits in {sw.ElapsedMilliseconds}ms ({(double)count / sw.ElapsedMilliseconds:F2} split/ms)");
 
         Console.WriteLine(" -> Writing tiles");
+        Console.WriteLine($" ?> Destination: {destPath}");
+        Console.WriteLine($" ?> Texture strategy: {textureStrategy}, Texture downscale: {textureDownscale:F3}");
 
         sw.Restart();
 
         var ms = meshes.ToArray();
-        foreach (var m in ms)
+        var boundsMap = new ConcurrentDictionary<string, Box3>();
+        var progress = 0;
+        var lodName = Path.GetFileName(destPath);
+
+        Parallel.ForEach(ms, m =>
         {
+            var n = Interlocked.Increment(ref progress);
+            m.DebugName = $"{lodName}-Mesh-{n}/{ms.Length}";
+
             if (m is MeshT t)
             {
                 t.TexturesStrategy = textureStrategy;
                 t.TextureDownscale = textureDownscale;
             }
 
-            m.WriteObj(Path.Combine(destPath, $"{m.Name}.obj"));
+            var tilePath = Path.Combine(destPath, $"{m.Name}.obj");
+            var tileStart = sw.ElapsedMilliseconds;
+            Console.WriteLine($" -> [{m.DebugName}] Writing Tile '{m.Name}' ({m.VertexCount}v, {m.FacesCount}f)");
+            m.WriteObj(tilePath);
+            Console.WriteLine($" ?> [{m.DebugName}] Done in {sw.ElapsedMilliseconds - tileStart}ms");
 
-            tilesBounds.Add(m.Name, m.Bounds);
-        }
+            boundsMap[m.Name] = m.Bounds;
+        });
+
+        foreach (var kv in boundsMap)
+            tilesBounds.Add(kv.Key, kv.Value);
 
         Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
 
