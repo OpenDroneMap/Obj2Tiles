@@ -1235,46 +1235,32 @@ public class MeshT : IMesh
         _vertexColors = newColors;
     }
 
-    // Build a padded chart block by duplicating edge texels (ImageSharp-safe)
+    // Build a padded chart block by duplicating edge texels via direct pixel access.
+    // Each output pixel maps to a clamped source coordinate, handling interior, strips and corners uniformly.
     private static Image<Rgba32> BuildPaddedBlock(Image<Rgba32> src, Rectangle srcRect, int padding)
     {
-        // Clamp crop
         int sx = Math.Clamp(srcRect.X, 0, Math.Max(0, src.Width - 1));
         int sy = Math.Clamp(srcRect.Y, 0, Math.Max(0, src.Height - 1));
         int sw = Math.Clamp(srcRect.Width, 1, src.Width - sx);
         int sh = Math.Clamp(srcRect.Height, 1, src.Height - sy);
 
-        using var crop = src.Clone(c => c.Crop(new Rectangle(sx, sy, sw, sh)));
-
         var block = new Image<Rgba32>(sw + 2 * padding, sh + 2 * padding);
 
-        // Paste interior at (p,p)
-        block.Mutate(c => c.DrawImage(crop, new Point(padding, padding), 1f));
-
-        if (padding <= 0) return block;
-
-        // Top / Bottom strips
-        using (var top = crop.Clone(c => c.Crop(new Rectangle(0, 0, sw, 1)).Resize(sw, padding)))
-            block.Mutate(c => c.DrawImage(top, new Point(padding, 0), 1f));
-        using (var bot = crop.Clone(c => c.Crop(new Rectangle(0, sh - 1, sw, 1)).Resize(sw, padding)))
-            block.Mutate(c => c.DrawImage(bot, new Point(padding, padding + sh), 1f));
-
-        // Left / Right strips
-        using (var left = crop.Clone(c => c.Crop(new Rectangle(0, 0, 1, sh)).Resize(padding, sh)))
-            block.Mutate(c => c.DrawImage(left, new Point(0, padding), 1f));
-        using (var right = crop.Clone(c => c.Crop(new Rectangle(sw - 1, 0, 1, sh)).Resize(padding, sh)))
-            block.Mutate(c => c.DrawImage(right, new Point(padding + sw, padding), 1f));
-
-        // Corners
-        void Corner(int sx0, int sy0, int dx, int dy)
+        src.ProcessPixelRows(block, (srcAcc, blockAcc) =>
         {
-            using var px = crop.Clone(c => c.Crop(new Rectangle(sx0, sy0, 1, 1)).Resize(padding, padding));
-            block.Mutate(c => c.DrawImage(px, new Point(dx, dy), 1f));
-        }
-        Corner(0, 0, 0, 0);
-        Corner(sw - 1, 0, padding + sw, 0);
-        Corner(0, sh - 1, 0, padding + sh);
-        Corner(sw - 1, sh - 1, padding + sw, padding + sh);
+            for (int destY = 0; destY < blockAcc.Height; destY++)
+            {
+                int srcY = Math.Clamp(destY - padding, 0, sh - 1) + sy;
+                var srcRow = srcAcc.GetRowSpan(srcY);
+                var destRow = blockAcc.GetRowSpan(destY);
+
+                for (int destX = 0; destX < blockAcc.Width; destX++)
+                {
+                    int srcX = Math.Clamp(destX - padding, 0, sw - 1) + sx;
+                    destRow[destX] = srcRow[srcX];
+                }
+            }
+        });
 
         return block;
     }

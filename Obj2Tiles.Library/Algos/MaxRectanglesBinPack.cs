@@ -478,40 +478,32 @@ namespace Obj2Tiles.Library.Algos
 
         private void PruneFreeList()
         {
-            var rectanglesToRemove = new SortedSet<int>();
+            var toRemove = new bool[freeRectangles.Count];
 
             for (var i = 0; i < freeRectangles.Count; i++)
             {
+                if (toRemove[i]) continue;
+
                 for (var j = i + 1; j < freeRectangles.Count; ++j)
                 {
-                    if (rectanglesToRemove.Contains(j) || rectanglesToRemove.Contains(i))
-                    {
-                        break;
-                    }
+                    if (toRemove[j])
+                        continue;
 
                     if (freeRectangles[j].Contains(freeRectangles[i]))
                     {
-                        lock (rectanglesToRemove)
-                        {
-                            rectanglesToRemove.Add(i);
-                        }
-
+                        toRemove[i] = true;
                         break;
                     }
 
                     if (freeRectangles[i].Contains(freeRectangles[j]))
-                    {
-                        lock (rectanglesToRemove)
-                        {
-                            rectanglesToRemove.Add(j);
-                        }
-                    }
+                        toRemove[j] = true;
                 }
             }
 
-            foreach (var rectangleToRemove in rectanglesToRemove.Reverse())
+            for (var i = toRemove.Length - 1; i >= 0; i--)
             {
-                freeRectangles.RemoveAt(rectangleToRemove);
+                if (toRemove[i])
+                    freeRectangles.RemoveAt(i);
             }
         }
     }
