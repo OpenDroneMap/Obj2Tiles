@@ -658,16 +658,12 @@ public class MeshT : IMesh
 
             if (material.Texture != null)
             {
-                using var block = BuildPaddedBlock(texture!, srcRect, PADDING);
-                if (scale < 1.0f)
-                    block.Mutate(ctx => ctx.Resize(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING));
+                using var block = BuildPaddedBlock(texture!, srcRect, PADDING, scaledSw, scaledSh);
                 newTexture!.Mutate(c => c.DrawImage(block, new Point(destOuterX, destOuterY), 1f));
             }
             if (material.NormalMap != null)
             {
-                using var blockN = BuildPaddedBlock(normalMap!, srcRect, PADDING);
-                if (scale < 1.0f)
-                    blockN.Mutate(ctx => ctx.Resize(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING));
+                using var blockN = BuildPaddedBlock(normalMap!, srcRect, PADDING, scaledSw, scaledSh);
                 newNormalMap!.Mutate(c => c.DrawImage(blockN, new Point(destOuterX, destOuterY), 1f));
             }
 
@@ -1235,33 +1231,49 @@ public class MeshT : IMesh
         _vertexColors = newColors;
     }
 
-    // Build a padded chart block by duplicating edge texels via direct pixel access.
-    // Each output pixel maps to a clamped source coordinate, handling interior, strips and corners uniformly.
-    private static Image<Rgba32> BuildPaddedBlock(Image<Rgba32> src, Rectangle srcRect, int padding)
+    // Crop the source rect, resize to (scaledW x scaledH), then add a padding-wide bleed ring by
+    // edge-pixel repetition. Resizing before padding ensures the interior occupies exactly
+    // [padding, padding+scaledW) in the returned block regardless of the scale factor.
+    private static Image<Rgba32> BuildPaddedBlock(Image<Rgba32> src, Rectangle srcRect, int padding, int scaledW, int scaledH)
     {
         int sx = Math.Clamp(srcRect.X, 0, Math.Max(0, src.Width - 1));
         int sy = Math.Clamp(srcRect.Y, 0, Math.Max(0, src.Height - 1));
         int sw = Math.Clamp(srcRect.Width, 1, src.Width - sx);
         int sh = Math.Clamp(srcRect.Height, 1, src.Height - sy);
 
-        var block = new Image<Rgba32>(sw + 2 * padding, sh + 2 * padding);
-
-        src.ProcessPixelRows(block, (srcAcc, blockAcc) =>
+        // Step 1: crop the interior at full source resolution.
+        using var interior = new Image<Rgba32>(sw, sh);
+        src.ProcessPixelRows(interior, (srcAcc, intAcc) =>
         {
-            for (int destY = 0; destY < blockAcc.Height; destY++)
+            for (int y = 0; y < sh; y++)
             {
-                int srcY = Math.Clamp(destY - padding, 0, sh - 1) + sy;
-                var srcRow = srcAcc.GetRowSpan(srcY);
-                var destRow = blockAcc.GetRowSpan(destY);
-
-                for (int destX = 0; destX < blockAcc.Width; destX++)
-                {
-                    int srcX = Math.Clamp(destX - padding, 0, sw - 1) + sx;
-                    destRow[destX] = srcRow[srcX];
-                }
+                var srcRow = srcAcc.GetRowSpan(sy + y);
+                var intRow = intAcc.GetRowSpan(y);
+                for (int x = 0; x < sw; x++)
+                    intRow[x] = srcRow[sx + x];
             }
         });
 
+        // Step 2: resize the interior to the target atlas dimensions (skipped when 1:1).
+        if (scaledW != sw || scaledH != sh)
+            interior.Mutate(ctx => ctx.Resize(scaledW, scaledH));
+
+        // Step 3: add the bleed ring from the (now resized) interior edge pixels.
+        var block = new Image<Rgba32>(scaledW + 2 * padding, scaledH + 2 * padding);
+        interior.ProcessPixelRows(block, (intAcc, blockAcc) =>
+        {
+            for (int destY = 0; destY < blockAcc.Height; destY++)
+            {
+                int intY = Math.Clamp(destY - padding, 0, scaledH - 1);
+                var intRow = intAcc.GetRowSpan(intY);
+                var destRow = blockAcc.GetRowSpan(destY);
+                for (int destX = 0; destX < blockAcc.Width; destX++)
+                {
+                    int intX = Math.Clamp(destX - padding, 0, scaledW - 1);
+                    destRow[destX] = intRow[intX];
+                }
+            }
+        });
         return block;
     }
 
