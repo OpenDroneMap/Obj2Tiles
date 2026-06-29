@@ -178,9 +178,9 @@ public class MeshUtils
 
                     break;
                 }
-                case "mtllib" when segs.Length == 2:
+                case "mtllib" when segs.Length >= 2:
                 {
-                    var mtlFileName = segs[1];
+                    var mtlFileName = string.Join(" ", segs, 1, segs.Length - 1);
                     var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
 
                     var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps, fileName);

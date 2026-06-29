@@ -184,6 +184,19 @@ public class ObjParsingTests
     }
 
     [Test]
+    public void LoadMesh_MtlFileNameWithSpaces_LoadsMaterialsCorrectly()
+    {
+        // Fixed: mtllib line with spaces in the filename was truncated to the first
+        // word (segs.Length == 2 guard), so the MTL was never loaded and every
+        // subsequent usemtl threw "Material X not found".
+        var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "spaced-mtllib.obj"), out var deps);
+
+        mesh.ShouldBeOfType<MeshT>();
+        mesh.FacesCount.ShouldBe(1);
+        deps.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Test]
     public void LoadMesh_MissingMtlFile_ThrowsFileNotFound()
     {
         // mtllib points to a non-existent file → should throw (not "Access denied")
