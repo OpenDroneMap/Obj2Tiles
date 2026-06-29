@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 using Newtonsoft.Json;
 using Obj2Tiles.Library.Geometry;
@@ -74,7 +74,7 @@ public static partial class StagesFacade
             {
                 foreach (var fineKey in boundsMapper[lod].Keys)
                 {
-                    // Walk coarser LODs to find the immediate parent
+                    // Each LOD differs from the next by exactly one split level, so the parent is the single coarser tile whose name is a strict prefix
                     var parent = boundsMapper[lod + 1].Keys
                         .FirstOrDefault(coarseKey => fineKey.StartsWith(coarseKey + "-"));
                     if (parent != null)

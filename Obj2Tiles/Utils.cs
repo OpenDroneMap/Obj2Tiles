@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Globalization;
 using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Stages.Model;
@@ -177,6 +177,7 @@ public static class Utils
     public static void CopyObjDependencies(string input, string output)
     {
         var objFolder = Path.GetDirectoryName(Path.GetFullPath(input)) ?? string.Empty;
+        var outputFull = Path.GetFullPath(output).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
         foreach (var line in File.ReadAllLines(input))
         {
@@ -190,6 +191,11 @@ public static class Utils
 
             var mtlSrcPath = Path.Combine(objFolder, mtlRelPath);
             var mtlDestPath = Path.Combine(output, mtlRelPath);
+            if (!IsWithinOutput(outputFull, mtlDestPath))
+            {
+                Debug.WriteLine($" ?> Skipping MTL outside output folder: {mtlRelPath}");
+                continue;
+            }
             var mtlDestFolder = Path.GetDirectoryName(mtlDestPath);
             if (mtlDestFolder != null) Directory.CreateDirectory(mtlDestFolder);
 
@@ -202,6 +208,11 @@ public static class Utils
             foreach (var (relPath, absPath) in GetMtlTextureDependencies(mtlSrcPath, objFolder))
             {
                 var texDestPath = Path.Combine(output, relPath);
+                if (!IsWithinOutput(outputFull, texDestPath))
+                {
+                    Debug.WriteLine($" ?> Skipping texture outside output folder: {relPath}");
+                    continue;
+                }
                 var texDestFolder = Path.GetDirectoryName(texDestPath);
                 if (texDestFolder != null) Directory.CreateDirectory(texDestFolder);
 
@@ -213,6 +224,14 @@ public static class Utils
         }
     }
     
+    // Guards against path traversal: ensures destPath resolves inside the output folder.
+    private static bool IsWithinOutput(string outputFull, string destPath)
+    {
+        var full = Path.GetFullPath(destPath);
+        return full == outputFull ||
+               full.StartsWith(outputFull + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+    }
+
     public static void ConvertB3dm(string objPath, string destPath)
     {
         var dir = Path.GetDirectoryName(objPath);

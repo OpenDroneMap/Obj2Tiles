@@ -360,4 +360,54 @@ public class StagesTests
 
     #endregion
 
+
+    #region Octree / PathTraversal
+
+    [Test]
+    public void TilingStage_Octree_BuildsParentChildHierarchy()
+    {
+        var testPath = GetTestOutputPath(nameof(TilingStage_Octree_BuildsParentChildHierarchy));
+        var src = Path.Combine(testPath, "src");
+        void Tri(string lod, string name)
+        {
+            var d = Path.Combine(src, lod);
+            Directory.CreateDirectory(d);
+            File.WriteAllText(Path.Combine(d, name + ".obj"), "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n");
+        }
+        Tri("LOD-0", "Mesh-XL-XR");
+        Tri("LOD-1", "Mesh-XL");
+
+        var lod0 = new Dictionary<string, Box3> { ["Mesh-XL-XR"] = new Box3(0, 0, 0, 1, 1, 1) };
+        var lod1 = new Dictionary<string, Box3> { ["Mesh-XL"] = new Box3(0, 0, 0, 2, 2, 2) };
+
+        StagesFacade.Tile(src, testPath, 2, 100, [lod0, lod1], localMode: true, isOctree: true);
+
+        var tileset = JsonConvert.DeserializeObject<Tileset>(File.ReadAllText(Path.Combine(testPath, "tileset.json")));
+        tileset!.Root!.Children.ShouldNotBeNull();
+        tileset.Root.Children!.Count.ShouldBe(1);
+        var coarse = tileset.Root.Children[0];
+        coarse.Content!.Uri.ShouldBe("LOD-1/Mesh-XL.b3dm");
+        coarse.Children.ShouldNotBeNull();
+        coarse.Children!.Count.ShouldBe(1);
+        coarse.Children[0].Content!.Uri.ShouldBe("LOD-0/Mesh-XL-XR.b3dm");
+    }
+
+    [Test]
+    public void CopyObjDependencies_PathTraversal_DoesNotEscapeOutput()
+    {
+        var testPath = GetTestOutputPath(nameof(CopyObjDependencies_PathTraversal_DoesNotEscapeOutput));
+        var inDir = Path.Combine(testPath, "in");
+        var outDir = Path.Combine(testPath, "out");
+        Directory.CreateDirectory(inDir);
+        Directory.CreateDirectory(outDir);
+        File.WriteAllText(Path.Combine(inDir, "evil.mtl"), "newmtl X\n");
+        File.WriteAllText(Path.Combine(inDir, "model.obj"), "mtllib ../evil.mtl\n");
+
+        Obj2Tiles.Utils.CopyObjDependencies(Path.Combine(inDir, "model.obj"), outDir);
+
+        File.Exists(Path.Combine(testPath, "evil.mtl")).ShouldBeFalse("traversal must not write outside output");
+    }
+
+    #endregion
+
 }
