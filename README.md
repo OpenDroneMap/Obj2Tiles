@@ -7,8 +7,8 @@
 [![Build & Test](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml)
 [![Publish](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml)
 
-Obj2Tiles is a fully fledged tool to convert OBJ files to 3D Tiles format.
-It creates multiple LODs, splits the mesh and repacks the textures.
+Obj2Tiles is a fully-featured tool to convert OBJ files to 3D Tiles format.
+It runs a three-stage pipeline: **Decimation** → **Splitting** → **Tiling**, creating multiple LODs, splitting the mesh into spatial tiles, and repacking textures.
 
 ### Vertex Colors
 
@@ -21,205 +21,235 @@ Obj2Tiles supports OBJ files with per-vertex colors (extended vertex format: `v 
 
 You can download precompiled binaries for Windows, Linux and macOS from https://github.com/OpenDroneMap/Obj2Tiles/releases.
 
+## Usage
+
+```
+Obj2Tiles [options] <input.obj> <output-folder>
+```
+
 ## Command line parameters
 
-```
-  Input (pos. 0)         Required. Input OBJ file.
-  Output (pos. 1)        Required. Output folder.
+### Input / Output
 
-  -s, --stage            (Default: Tiling) Stage to stop at (Decimation, Splitting, Tiling)
+| Parameter | Default | Description | Example |
+|-----------|---------|-------------|---------|
+| `Input` (pos. 0) |  | Input OBJ file (required) | `model.obj` |
+| `Output` (pos. 1) |  | Output folder (required) | `./tileset-output` |
 
-  -l, --lods             (Default: 3) How many levels of details
+### Pipeline Control
 
-  -d, --divisions        (Default: 2) How many tiles divisions
-  -z, --zsplit           (Default: false) Splits along z-axis too
-  -g, --split-strategy   (Default: VertexBaricenter) Split point strategy: AbsoluteCenter, VertexBaricenter or VertexMedian
-  -k, --keeptextures     (Default: false) Keeps original textures
-
-  --lat                  Latitude of the mesh (WGS84 decimal degrees)
-  --lon                  Longitude of the mesh (WGS84 decimal degrees)
-  --alt                  (Default: 0) Altitude of the mesh (meters above ellipsoid)
-  -e, --error            (Default: 100), baseError value for root node
-  --scale                (Default: 1), scale factor for local geometry (e.g. 1200.0/3937.0 for survey ft). Does NOT affect altitude or ECEF position.
-  --local                (Default: false) Local mode: no ECEF geo-referencing, uses identity matrix. Use this when you don't need globe placement.
-
-  --octree               (Default: false) Use octree spatial subdivision. Each LOD receives one additional
-                         division level relative to the next coarser LOD, so the tile count increases with
-                         detail. Produces a proper parent-child tile hierarchy in tileset.json instead of
-                         the default same-count-per-LOD chains. Use together with --zsplit for a true octree.
-
-  --lod-texture-scale    (Default: 1.0) Per-LOD texture downscale factor applied cumulatively to each LOD
-                         after LOD-0. LOD-0 always keeps full resolution. Each subsequent LOD multiplies
-                         the previous atlas resolution by this factor. For example, 0.5 gives LOD-1 at
-                         half resolution, LOD-2 at quarter resolution, etc.
-
-  --y-up-to-z-up         (Default: false) Converts Y-up to Z-up
-
-  --use-system-temp      (Default: false) Uses the system temp folder
-  --keep-intermediate    (Default: false) Keeps the intermediate files (do not cleanup)
-
-  --help                 Display this help screen.
-  --version              Display version information.
-```
-
-
-A nice sample commandline is:
-
-```
-Obj2Tiles --lod-texture-scale 0.5 --octree --local --zsplit --lods 3 my.obj my-tileset
-```
-
-The pipeline is composed of the following steps:
-
-### Decimation
-
-The source obj is decimated using the `Fast Quadric Mesh Simplification` algorithm (by [Mattias Edlund](https://github.com/Whinarn)).
-The algorithm was ported from .NET Framework 3.5 to .NET Core. The original repo is [here](https://github.com/Whinarn/MeshDecimator).
-
-You can specify how many LODs (levels of detail) you want to generate using the `--lods` parameter. The decimation levels are generated using this formula:
-
-`quality[i] = 1 - ((i + 1) / lods)`
-
-For example: with 5 LODs the program will use the following quality levels: 80%, 60%, 40%, 20%.
-If you specify 1 LOD, the decimation will be skipped.
+| Parameter | Default | Description | Example |
+|-----------|---------|-------------|---------|
+| `-s, --stage` | `Tiling` | Stage to stop at: `Decimation`, `Splitting`, or `Tiling` | `--stage Splitting` |
+| `-l, --lods` | `3` | Number of levels of detail to generate | `--lods 5` |
 
 ### Splitting
 
-For every decimated mesh, the program splits it recursively along x, y and z axis (optional using the `--zsplit` flag).
-Every split is a new mesh with repacked textures (to save space), the [bin pack](https://github.com/juj/RectangleBinPack/) algorithm is by [Jukka Jylänki](https://github.com/juj).
-If you want to preserve the original textures, use the `--keeptextures` flag (not recommended)
+| Parameter | Default | Description | Example |
+|-----------|---------|-------------|---------|
+| `-d, --divisions` | `2` | Number of tile divisions per axis. The model is split into `divisions^2` tiles (or `divisions^3` with `--zsplit`) | `--divisions 3` |
+| `-z, --zsplit` | `false` | Also split along the Z-axis (not just X and Y) | `--zsplit` |
+| `-g, --split-strategy` | `VertexBaricenter` | How the split point is computed: `AbsoluteCenter` (bounding box center), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy VertexMedian` |
+| `-k, --keeptextures` | `false` | Keep original textures instead of repacking them (not recommended) | `--keeptextures` |
+| `--octree` | `false` | Use octree spatial subdivision: each LOD gets one additional division level, producing a proper parent-child tile hierarchy instead of per-tile LOD chains. Combine with `--zsplit` for a true 8-way octree | `--octree --zsplit` |
+| `--lod-texture-scale` | `1.0` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses bicubic resampling; LOD-0 is PNG, coarser LODs are JPEG at quality 75 | `--lod-texture-scale 0.5` |
 
-You can control how many times the split is performed by using the `--divisions` flag. The model will be split into `divisions^2` meshes (or `divisions^3` if `--zsplit` is used).
+### Geo-referencing
 
-The `--split-strategy` flag controls how the split point is determined at each recursive step:
+| Parameter | Default | Description | Example |
+|-----------|---------|-------------|---------|
+| `--lat` |  | Latitude in WGS84 decimal degrees | `--lat 45.4642` |
+| `--lon` |  | Longitude in WGS84 decimal degrees | `--lon 9.1903` |
+| `--alt` | `0` | Altitude in meters above the WGS84 ellipsoid | `--alt 120` |
+| `--scale` | `1` | Scale factor for local geometry (e.g. `1200.0/3937.0` for survey feet). Does NOT affect altitude or ECEF position | `--scale 0.3048` |
+| `--local` | `false` | Local mode: no ECEF geo-referencing, uses an identity matrix. Use when you don't need globe placement | `--local` |
+| `--y-up-to-z-up` | `false` | Apply a 90° rotation around the X-axis to convert Y-up OBJ files to Z-up (3D Tiles convention) | `--y-up-to-z-up` |
 
-- **`VertexBaricenter`** (default): the split point is the barycenter of the vertices of the current sub-mesh. This produces tiles that are more balanced in terms of vertex/face count, because the cut plane adapts to where the geometry is actually concentrated.
-- **`AbsoluteCenter`**: the split point is the geometric center of the bounding box. This produces a spatially uniform grid, which is more predictable and reproducible but can result in uneven tiles when the geometry is not uniformly distributed.
+### Other
 
-#### Octree mode (`--octree`)
+| Parameter | Default | Description | Example |
+|-----------|---------|-------------|---------|
+| `-e, --error` | `100` | Base geometric error value for the root tile in `tileset.json` | `--error 500` |
+| `--use-system-temp` | `false` | Use the system temp folder for intermediate files instead of the output folder | `--use-system-temp` |
+| `--keep-intermediate` | `false` | Keep intermediate files (decimated OBJs, split tiles) for debugging | `--keep-intermediate` |
+| `--help` |  | Display help screen | `--help` |
+| `--version` |  | Display version information | `--version` |
 
-By default every LOD produces the same number of tiles, which are then arranged as per-tile chains in `tileset.json`. With `--octree`, each LOD receives one additional division level compared to the next coarser LOD:
+## Pipeline Stages
 
-| LOD | Divisions (default `--divisions 2`, 3 LODs) | Tiles (XY) |
-|-----|---------------------------------------------|------------|
-| 0 (finest) | 4 | 256 |
-| 1 | 3 | 64 |
-| 2 (coarsest) | 2 | 16 |
+### 1. Decimation
 
-The coarser tiles become spatial parents of the finer ones in `tileset.json`, producing a proper tree hierarchy where a viewer progressively refines tiles as the camera moves closer. Use `--octree` together with `--zsplit` to get a true 8-way octree (each tile splits into 8 children).
+The source OBJ is decimated using the **Fast Quadric Mesh Simplification** algorithm by [Mattias Edlund](https://github.com/Whinarn) (ported from .NET Framework 3.5 to .NET Core; original repo [here](https://github.com/Whinarn/MeshDecimator)).
 
-#### Texture downscaling (`--lod-texture-scale`)
+The number of LODs is controlled by `--lods`. Decimation quality levels follow this formula:
 
-Each tile's texture atlas is repacked from the portion of the source texture that falls within that tile. By default every LOD receives an atlas at the same pixel resolution. Use `--lod-texture-scale` to reduce atlas resolution for coarser LODs, which are only ever seen from a distance:
+```
+quality[i] = 1 - ((i + 1) / lods)
+```
+
+For example, with 5 LODs the quality levels are: LOD-0 is the original (100%), followed by 80%, 60%, 40%, 20%.
+If you specify 1 LOD, decimation is skipped entirely.
+
+### 2. Splitting
+
+For every decimated mesh, the program splits it recursively along the X and Y axes (and optionally Z with `--zsplit`). Each split produces a new mesh with repacked textures using the [MaxRects bin packing](https://github.com/juj/RectangleBinPack/) algorithm by [Jukka Jylänki](https://github.com/juj).
+
+**Split strategies** (`--split-strategy`):
+
+- **`VertexBaricenter`** (default): split point is the barycenter of the sub-mesh vertices. Adapts to geometry concentration, producing balanced tiles.
+- **`AbsoluteCenter`**: split point is the bounding box center. Produces a spatially uniform grid but may yield uneven tiles for non-uniform geometry.
+- **`VertexMedian`**: split point is the vertex median. Most balanced of all strategies - robust to outliers and skewed distributions. Uses a *pre-computed split plan* from LOD-0 vertices so all LODs share the same split points without redundant computation.
+
+**Octree mode** (`--octree`):
+
+By default, every LOD produces the same number of tiles arranged as per-tile chains in `tileset.json`. With `--octree`, each LOD receives one additional division level compared to the next coarser LOD:
+
+| LOD | Divisions (`--divisions 2`, 3 LODs) | Tiles (XY) |
+|-----|-------------------------------------|------------|
+| 0 (finest) | 4 | 16 |
+| 1 | 3 | 9 |
+| 2 (coarsest) | 2 | 4 |
+
+Coarser tiles become spatial parents of finer ones in `tileset.json`, producing a proper tree hierarchy. Combine `--octree` with `--zsplit` for a true 8-way octree.
+
+**Texture downscaling** (`--lod-texture-scale`):
+
+Each tile's texture atlas is repacked from the portion of the source texture within that tile. Use `--lod-texture-scale` to reduce atlas resolution for coarser LODs:
 
 | LOD | Scale (`--lod-texture-scale 0.5`) | Example atlas (4096×4096 source, 16 tiles) |
 |-----|------------------------------------|--------------------------------------------|
-| 0 (finest) | 1.0 (always full) | 1024×1024 PNG |
+| 0 (finest) | 1.0 (always full) | 1024×1024 (original format) |
 | 1 | 0.5 | 512×512 JPEG |
 | 2 | 0.25 | 256×256 JPEG |
 
-The downscaling uses bicubic resampling. LOD-0 is always saved as PNG; coarser LODs are saved as JPEG at quality 75.
+Downscaling uses ImageSharp's default resampler. LOD-0 preserves the original texture format; coarser LODs are JPEG at quality 75.
 
-### 3D Tiles conversion
+### 3. Tiling
 
-Each split mesh is converted to B3DM format using [ObjConvert](https://github.com/SilentWave/ObjConvert).
-Then the `tileset.json` is generated using the resulting files. You can specify the `--lat` and `--lon` and `--alt` parameters to set the location of the model.
-See the [Remarks](#Remarks) section to find out how to rotate the model.
+Each split mesh is converted to B3DM (3D Tiles) format via an OBJ → glTF → GLB → B3DM conversion pipeline. Then `tileset.json` is generated with bounding volumes, geometric errors, and the ECEF transform matrix.
 
-### Coordinate System & Geo-referencing
+**Coordinate system & geo-referencing:**
 
-The tiling stage places your model on the globe using an **ECEF** (Earth-Centered, Earth-Fixed) transformation matrix stored in `tileset.json`.
-
-**Modes of operation:**
+The tiling stage places the model on the globe using an **ECEF** (Earth-Centered, Earth-Fixed) transformation matrix in `tileset.json`.
 
 | Flags | Behavior |
 |-------|----------|
-| `--lat 45 --lon 9 --alt 100` | Model placed at the given WGS84 coordinates with full ECEF transform |
-| *(no lat/lon)* | Falls back to default coordinates (Duomo di Milano, 45.46°N 9.19°E). This is the legacy behavior. |
-| `--local` | **Identity matrix** — no geo-referencing, no rotation. Use this for local viewers or when you don't need globe placement. |
+| `--lat 45 --lon 9 --alt 100` | Full ECEF transform at the given WGS84 coordinates |
+| *(no lat/lon)* | Falls back to default coordinates (Duomo di Milano, 45.46°N 9.19°E) |
+| `--local` | Identity matrix - no geo-referencing. Use for local viewers |
 
 **Important notes:**
-- The `--scale` factor only affects the local geometry size, **not** the altitude or ECEF position. For example, `--scale 100 --alt 17` places the model at 17 meters, not 1700 meters.
-- OBJ files typically use Y-up convention. The bounding volumes in `tileset.json` perform a Y↔Z swap internally, as 3D Tiles uses Z-up. If your model appears flipped, try `--y-up-to-z-up` which applies an additional 90° rotation around the X axis.
-- If you specify both `--local` and `--lat`/`--lon`, `--local` takes precedence (a warning is printed).
+- `--scale` only affects local geometry size, **not** altitude or ECEF position. `--scale 100 --alt 17` places the model at 17 meters, not 1700.
+- OBJ files typically use Y-up. Bounding volumes in `tileset.json` perform a Y↔Z swap internally (3D Tiles uses Z-up). If the model appears flipped, try `--y-up-to-z-up` for an additional 90° X-axis rotation.
+- `--local` takes precedence over `--lat`/`--lon` (a warning is printed if both are specified).
+
+## Examples
+
+You can download a test OBJ file [here](https://github.com/DroneDB/test_data/raw/master/brighton/odm_texturing.zip)
+(Brighton Beach textured model generated with [OpenDroneMap](https://github.com/OpenDroneMap/ODM)).
+
+### Basic usage (defaults)
+
+Run all pipeline stages and generate `tileset.json` in the output folder:
+
+```bash
+Obj2Tiles model.obj ./output
+```
+
+### Octree with texture downscaling (recommended for large models)
+
+Produce a proper octree hierarchy with textures halved at each LOD step:
+
+```bash
+Obj2Tiles --octree --zsplit --lods 3 --divisions 2 --lod-texture-scale 0.5 --local model.obj ./output
+```
+
+### Geo-referenced model
+
+Place the model at specific GPS coordinates with 8 LODs and 3 divisions:
+
+```bash
+Obj2Tiles --lods 8 --divisions 3 --lat 40.6894 --lon -74.0445 --alt 120 model.obj ./output
+```
+
+### Stop at decimation stage
+
+Generate 8 decimated LODs without splitting or tiling:
+
+```bash
+Obj2Tiles --stage Decimation --lods 8 model.obj ./output
+```
+
+### Stop at splitting stage
+
+Generate split tiles with 3 divisions per axis:
+
+```bash
+Obj2Tiles --stage Splitting --divisions 3 model.obj ./output
+```
+
+### Local mode (no geo-referencing)
+
+For local 3D viewers that don't need globe placement:
+
+```bash
+Obj2Tiles --local model.obj ./output
+```
+
+### Balanced splitting with VertexMedian
+
+Use the median-based split strategy for the most balanced tiles:
+
+```bash
+Obj2Tiles --split-strategy VertexMedian --lods 4 --divisions 2 --local model.obj ./output
+```
+
+### Survey feet to meters
+
+Scale geometry from survey feet to meters:
+
+```bash
+Obj2Tiles --scale 0.3048 --lat 45.0 --lon 9.0 --alt 0 model.obj ./output
+```
 
 ## Running
 
-Obj2Tiles is built using [.NET](https://dotnet.microsoft.com/en-us/download/dotnet/10.0). Releases are available on [GitHub](https://github.com/OpenDroneMap/Obj2Tiles/releases) for a multitude of platforms (win / linux / mac).
-You can download the [latest release](https://github.com/OpenDroneMap/Obj2Tiles/releases/latest) or compile it yourself using the following commands:
+Obj2Tiles is built using [.NET 10.0](https://dotnet.microsoft.com/en-us/download/dotnet/10.0). Binary releases are available on [GitHub](https://github.com/OpenDroneMap/Obj2Tiles/releases) for Windows, Linux, and macOS.
 
-```
+Download the [latest release](https://github.com/OpenDroneMap/Obj2Tiles/releases/latest) or compile from source:
+
+```bash
 git clone https://github.com/OpenDroneMap/Obj2Tiles.git
 cd Obj2Tiles
 dotnet build -c Release
 ```
 
-------------
+### Docker
 
-## Examples
+A Docker image is available for Linux (x64 and arm64) with a multi-stage build and trimming for minimal runtime footprint:
 
-You can download the test obj file [here](https://github.com/DroneDB/test_data/raw/master/brighton/odm_texturing.zip).
-The Brighton Beach textured model generated using [OpenDroneMap](https://github.com/OpenDroneMap/ODM).
-
-### Basic usage (using defaults)
-
-It runs all the pipeline stages and generates the `tileset.json` file in the output folder.
-
-```
-Obj2Tiles model.obj ./output
+```bash
+docker run --rm -v $(pwd):/data ghcr.io/opendronemap/obj2tiles model.obj /data/output
 ```
 
-### Decimation
+Or build locally:
 
-Stop the pipeline at the decimation stage and generate 8 LODs
-
-```
-Obj2Tiles --stage Decimation --lods 8 model.obj -o ./output
-```
-
-### Splitting
-
-Stop the pipeline at the splitting stage and generate 3 divisions per axis
-
-```
-Obj2Tiles --stage Splitting --divisions 3 model.obj ./output
-```
-
-### Full pipeline
-
-Run all the pipeline stages and generate the `tileset.json` file in the output folder.
-
-```
-Obj2Tiles --lods 8 --divisions 3 --lat 40.689434025350025 --lon -74.0444987716782 --alt 120 model.obj ./output
-```
-
-### Local mode (no geo-referencing)
-
-If you don't need to place the model on a globe (e.g., for a local 3D viewer), use `--local` to avoid ECEF rotation:
-
-```
-Obj2Tiles --local model.obj ./output
-```
-
-### Octree with texture downscaling
-
-Produce a proper octree hierarchy where coarser LODs cover larger areas and finer LODs refine them, with textures halved at each LOD step:
-
-```
-Obj2Tiles --octree --zsplit --lods 3 --divisions 2 --lod-texture-scale 0.5 --local model.obj ./output
+```bash
+docker build -t obj2tiles .
+docker run --rm -v $(pwd):/data obj2tiles model.obj /data/output
 ```
 
 ## Rotating the model
 
-After generating `tileset.json`, you can edit the file and change the 4x4 Transform matrix to account for translation, rotation and scaling. This is the matrix structure:
+After generating `tileset.json`, you can edit the 4x4 Transform matrix to add translation, rotation, and scaling. This is the matrix structure:
 
 ![TransformationMatrix1](https://user-images.githubusercontent.com/7868983/169370131-18575153-4023-4a82-8ffd-3b5e2476dce2.png)
 
-The tiling stage uses this matrix to place the model in the requested geo location:
+The tiling stage uses this matrix to place the model at the requested geo location:
 
 ![Translation-Matrix1](https://user-images.githubusercontent.com/7868983/169369875-3e337eb2-4168-4b43-b9dc-fef2cf6aecb0.png)
 
-But you can add scaling:
+You can add scaling:
 
 ![Scaling-Matrix1](https://user-images.githubusercontent.com/7868983/169370506-16878adf-ce0c-4ba7-a107-5315693b80d8.png)
 
@@ -231,16 +261,28 @@ Or rotation around any of the 3 axes:
 
 ![RotationZ-Matrix1](https://user-images.githubusercontent.com/7868983/169370755-03f016ca-ca8c-461d-a6e9-8643885cd624.png)
 
-By combining these matrices, you can rotate, scale and translate the model.
+By combining these matrices, you can rotate, scale, and translate the model.
+More details on [BrainVoyager](https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html).
 
-You can find more details about this topic on [BrainVoyager](https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html)
+## OBJ Format Support
+
+The OBJ parser handles the following format features:
+
+- **Vertex formats**: `v x y z` and `v x y z r g b` (vertex colors)
+- **Face formats**: `f v/vt/vn`, `f v//vn`, `f v/vt`, and `f v` (geometry only)
+- **Quads and n-gons**: Automatically triangulated using fan triangulation (Issue #60)
+- **Line elements**: Gracefully skipped (Issue #64)
+- **Scientific notation**: Coordinates like `1.5e-3` are parsed correctly
+- **UV wrapping**: Texture coordinates outside [0,1] are wrapped for UDIM/mirroring workflows (Issue #35)
+- **MTL options**: Full support for `-bm`, `-blendu`, `-blendv`, `-boost`, `-cc`, `-clamp`, `-imfchan`, `-mm`, `-texres`, `-type`, `-o`, `-s`, `-t` and other material map options
+- **Path resolution**: Textures are resolved by progressively relaxing the base directory (MTL folder, OBJ folder, absolute path)
 
 ## Remarks
 
-All the pipeline stages are multi threaded to speed up the process.
-You can stop the pipeline at any stage by providing the `--stage` flag.
-If you need to keep the intermediate files, use the `--keep-intermediate` flag.
-You can use the `--use-system-temp` flag to use the system temp folder instead of the output folder.
+- All pipeline stages are multi-threaded for performance. Tile writing runs in parallel.
+- Stop the pipeline at any stage with the `--stage` flag.
+- Keep intermediate files with `--keep-intermediate` for debugging.
+- Use `--use-system-temp` to store intermediate files in the system temp folder.
 
 ## Gallery
 
