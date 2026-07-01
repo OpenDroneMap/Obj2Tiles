@@ -136,6 +136,12 @@
       <None Update="TestData\multi-material.mtl">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\spaced-mtllib.obj">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\spaced name.mtl">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
       <None Update="TestData\cube-3d.obj">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>

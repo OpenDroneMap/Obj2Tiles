@@ -56,6 +56,12 @@ public sealed class Options
 
     [Option("local", Required = false, HelpText = "Local mode: no ECEF geo-referencing, uses identity matrix in tileset.json. Use this when you don't need to place the model on a globe.", Default = false)]
     public bool LocalMode { get; set; }
+
+    [Option("octree", Required = false, HelpText = "Use octree spatial subdivision: each LOD gets one additional division level relative to the next coarser LOD, producing a proper tile hierarchy instead of same-count tiles per LOD.", Default = false)]
+    public bool Octree { get; set; }
+
+    [Option("lod-texture-scale", Required = false, HelpText = "Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous resolution by this factor. E.g. 0.5 gives LOD-1 at 1/2 resolution, LOD-2 at 1/4, etc. Default 1.0 (no downscaling).", Default = 1.0)]
+    public double LodTextureScale { get; set; }
 }
 
 public enum Stage

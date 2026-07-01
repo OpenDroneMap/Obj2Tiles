@@ -19,6 +19,7 @@ public class Mesh : IMesh
     public const string DefaultName = "Mesh";
 
     public string Name { get; set; } = DefaultName;
+    public string DebugName { get; set; } = string.Empty;
 
     public Mesh(IEnumerable<Vertex3> vertices, IEnumerable<Face> faces, IEnumerable<RGB>? vertexColors = null)
     {

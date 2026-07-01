@@ -8,9 +8,13 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
-        bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
+        bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter,
+        bool isOctree = false, float lodTextureScale = 1.0f)
     {
         var results = new Dictionary<string, Box3>[sourceFiles.Length];
+
+        // In octree mode, LOD-0 (finest) gets the most divisions; the split plan must cover that maximum depth.
+        int maxDivisions = isOctree ? divisions + sourceFiles.Length - 1 : divisions;
 
         // Pre-compute split plan from LOD-0 vertices (lightweight — no mesh splitting, just vertex partitioning)
         Console.WriteLine(" -> Pre-computing split plan from LOD-0 vertices");
@@ -31,16 +35,16 @@ public static partial class StagesFacade
         if (splitPointStrategy == SplitPointStrategy.VertexMedian)
         {
             if (zsplit)
-                PreComputeSplitPlanXYZBalanced(vertices0, "Mesh", divisions, computeCenter, splitPlan);
+                PreComputeSplitPlanXYZBalanced(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
             else
-                PreComputeSplitPlanXYBalanced(vertices0, "Mesh", divisions, computeCenter, splitPlan);
+                PreComputeSplitPlanXYBalanced(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
         }
         else
         {
             if (zsplit)
-                PreComputeSplitPlanXYZ(vertices0, "Mesh", divisions, computeCenter, splitPlan);
+                PreComputeSplitPlanXYZ(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
             else
-                PreComputeSplitPlanXY(vertices0, "Mesh", divisions, computeCenter, splitPlan);
+                PreComputeSplitPlanXY(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
         }
 
         sw.Stop();
@@ -58,7 +62,8 @@ public static partial class StagesFacade
         Func<IMesh, Vertex3> replaySplitPoint = m =>
             splitPlan.TryGetValue(m.Name, out var pt) ? pt : baseSplitPoint(m);
 
-        // Split all LODs in parallel using the pre-computed split plan
+        // Split all LODs in parallel using the pre-computed split plan.
+        // In octree mode, the finest LOD (index=0) gets the most divisions; each coarser LOD gets one fewer.
         var tasks = new List<Task<Dictionary<string, Box3>>>();
         for (var index = 0; index < sourceFiles.Length; index++)
         {
@@ -68,7 +73,10 @@ public static partial class StagesFacade
             var textureStrategy = keepOriginalTextures ? TexturesStrategy.KeepOriginal :
                 index == 0 ? TexturesStrategy.Repack : TexturesStrategy.RepackCompressed;
 
-            tasks.Add(Split(file, dest, divisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint));
+            int lodDivisions = isOctree ? divisions + sourceFiles.Length - index - 1 : divisions;
+            float textureDownscale = index == 0 ? 1.0f : (float)Math.Pow(lodTextureScale, index);
+
+            tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint, textureDownscale));
         }
 
         await Task.WhenAll(tasks);
@@ -100,7 +108,8 @@ public static partial class StagesFacade
         bool zSplit,
         TexturesStrategy textureStrategy,
         SplitPointStrategy splitPointStrategy,
-        Func<IMesh, Vertex3> getSplitPoint)
+        Func<IMesh, Vertex3> getSplitPoint,
+        float textureDownscale = 1.0f)
     {
         var sw = new Stopwatch();
         var tilesBounds = new Dictionary<string, Box3>();
@@ -156,19 +165,38 @@ public static partial class StagesFacade
             $" ?> Done {count} edge splits in {sw.ElapsedMilliseconds}ms ({(double)count / sw.ElapsedMilliseconds:F2} split/ms)");
 
         Console.WriteLine(" -> Writing tiles");
+        Console.WriteLine($" ?> Destination: {destPath}");
+        Console.WriteLine($" ?> Texture strategy: {textureStrategy}, Texture downscale: {textureDownscale:F3}");
 
         sw.Restart();
 
         var ms = meshes.ToArray();
-        foreach (var m in ms)
+        var boundsMap = new ConcurrentDictionary<string, Box3>();
+        var progress = 0;
+        var lodName = Path.GetFileName(destPath);
+
+        Parallel.ForEach(ms, m =>
         {
+            var n = Interlocked.Increment(ref progress);
+            m.DebugName = $"{lodName}-Mesh-{n}/{ms.Length}";
+
             if (m is MeshT t)
+            {
                 t.TexturesStrategy = textureStrategy;
+                t.TextureDownscale = textureDownscale;
+            }
 
-            m.WriteObj(Path.Combine(destPath, $"{m.Name}.obj"));
+            var tilePath = Path.Combine(destPath, $"{m.Name}.obj");
+            var tileStart = sw.ElapsedMilliseconds;
+            Console.WriteLine($" -> [{m.DebugName}] Writing Tile '{m.Name}' ({m.VertexCount}v, {m.FacesCount}f)");
+            m.WriteObj(tilePath);
+            Console.WriteLine($" ?> [{m.DebugName}] Done in {sw.ElapsedMilliseconds - tileStart}ms");
 
-            tilesBounds.Add(m.Name, m.Bounds);
-        }
+            boundsMap[m.Name] = m.Bounds;
+        });
+
+        foreach (var kv in boundsMap)
+            tilesBounds.Add(kv.Key, kv.Value);
 
         Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
 

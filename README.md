@@ -43,6 +43,16 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
   --scale                (Default: 1), scale factor for local geometry (e.g. 1200.0/3937.0 for survey ft). Does NOT affect altitude or ECEF position.
   --local                (Default: false) Local mode: no ECEF geo-referencing, uses identity matrix. Use this when you don't need globe placement.
 
+  --octree               (Default: false) Use octree spatial subdivision. Each LOD receives one additional
+                         division level relative to the next coarser LOD, so the tile count increases with
+                         detail. Produces a proper parent-child tile hierarchy in tileset.json instead of
+                         the default same-count-per-LOD chains. Use together with --zsplit for a true octree.
+
+  --lod-texture-scale    (Default: 1.0) Per-LOD texture downscale factor applied cumulatively to each LOD
+                         after LOD-0. LOD-0 always keeps full resolution. Each subsequent LOD multiplies
+                         the previous atlas resolution by this factor. For example, 0.5 gives LOD-1 at
+                         half resolution, LOD-2 at quarter resolution, etc.
+
   --y-up-to-z-up         (Default: false) Converts Y-up to Z-up
 
   --use-system-temp      (Default: false) Uses the system temp folder
@@ -50,6 +60,13 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
 
   --help                 Display this help screen.
   --version              Display version information.
+```
+
+
+A nice sample commandline is:
+
+```
+Obj2Tiles --lod-texture-scale 0.5 --octree --local --zsplit --lods 3 my.obj my-tileset
 ```
 
 The pipeline is composed of the following steps:
@@ -78,6 +95,30 @@ The `--split-strategy` flag controls how the split point is determined at each r
 
 - **`VertexBaricenter`** (default): the split point is the barycenter of the vertices of the current sub-mesh. This produces tiles that are more balanced in terms of vertex/face count, because the cut plane adapts to where the geometry is actually concentrated.
 - **`AbsoluteCenter`**: the split point is the geometric center of the bounding box. This produces a spatially uniform grid, which is more predictable and reproducible but can result in uneven tiles when the geometry is not uniformly distributed.
+
+#### Octree mode (`--octree`)
+
+By default every LOD produces the same number of tiles, which are then arranged as per-tile chains in `tileset.json`. With `--octree`, each LOD receives one additional division level compared to the next coarser LOD:
+
+| LOD | Divisions (default `--divisions 2`, 3 LODs) | Tiles (XY) |
+|-----|---------------------------------------------|------------|
+| 0 (finest) | 4 | 256 |
+| 1 | 3 | 64 |
+| 2 (coarsest) | 2 | 16 |
+
+The coarser tiles become spatial parents of the finer ones in `tileset.json`, producing a proper tree hierarchy where a viewer progressively refines tiles as the camera moves closer. Use `--octree` together with `--zsplit` to get a true 8-way octree (each tile splits into 8 children).
+
+#### Texture downscaling (`--lod-texture-scale`)
+
+Each tile's texture atlas is repacked from the portion of the source texture that falls within that tile. By default every LOD receives an atlas at the same pixel resolution. Use `--lod-texture-scale` to reduce atlas resolution for coarser LODs, which are only ever seen from a distance:
+
+| LOD | Scale (`--lod-texture-scale 0.5`) | Example atlas (4096×4096 source, 16 tiles) |
+|-----|------------------------------------|--------------------------------------------|
+| 0 (finest) | 1.0 (always full) | 1024×1024 PNG |
+| 1 | 0.5 | 512×512 JPEG |
+| 2 | 0.25 | 256×256 JPEG |
+
+The downscaling uses bicubic resampling. LOD-0 is always saved as PNG; coarser LODs are saved as JPEG at quality 75.
 
 ### 3D Tiles conversion
 
@@ -158,6 +199,14 @@ If you don't need to place the model on a globe (e.g., for a local 3D viewer), u
 
 ```
 Obj2Tiles --local model.obj ./output
+```
+
+### Octree with texture downscaling
+
+Produce a proper octree hierarchy where coarser LODs cover larger areas and finer LODs refine them, with textures halved at each LOD step:
+
+```
+Obj2Tiles --octree --zsplit --lods 3 --divisions 2 --lod-texture-scale 0.5 --local model.obj ./output
 ```
 
 ## Rotating the model

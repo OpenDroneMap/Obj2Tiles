@@ -76,7 +76,7 @@ namespace Obj2Tiles
                 Console.WriteLine($" ?> Keep original textures: {opts.KeepOriginalTextures}, Split strategy: {opts.SplitPointStrategy}");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
-                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy);
+                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.Octree, (float)opts.LodTextureScale);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 
@@ -100,7 +100,7 @@ namespace Obj2Tiles
                 if (opts.LocalMode && (opts.Latitude != null || opts.Longitude != null))
                     Console.WriteLine(" !> Warning: --local overrides --lat/--lon. ECEF transform will not be applied.");
 
-                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, opts.BaseError, boundsMapper, gpsCoords, opts.LocalMode);
+                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, opts.BaseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
             }

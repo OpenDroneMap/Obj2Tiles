@@ -28,8 +28,16 @@ public class MeshT : IMesh
     public const string DefaultName = "Mesh";
 
     public string Name { get; set; } = DefaultName;
+    public string DebugName { get; set; } = string.Empty;
 
     public TexturesStrategy TexturesStrategy { get; set; }
+
+    /// <summary>
+    /// Multiplier applied to the atlas edge length during texture repacking.
+    /// 1.0 = full resolution, 0.5 = half, 0.25 = quarter, etc.
+    /// Values are clamped to (0, 1]. Only has effect with Repack or RepackCompressed.
+    /// </summary>
+    public float TextureDownscale { get; set; } = 1.0f;
 
     public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
         IEnumerable<FaceT> faces, IEnumerable<Material> materials, IEnumerable<RGB>? vertexColors = null)
@@ -453,8 +461,6 @@ public class MeshT : IMesh
 
     private void TrimTextures(string targetFolder)
     {
-        Debug.WriteLine("Trimming textures of " + Name);
-
         var tasks = new List<Task>();
 
         LoadTexturesCache();
@@ -463,60 +469,37 @@ public class MeshT : IMesh
 
         var newTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
 
-        var sw = new Stopwatch();
-
         for (var m = 0; m < facesByMaterial.Count; m++)
         {
             var material = _materials[m];
             var facesIndexes = facesByMaterial[m];
-            Debug.WriteLine($"Working on material {m} -> {material.Name}");
 
             if (facesIndexes.Count == 0)
-            {
-                Debug.WriteLine("No faces with this material");
                 continue;
-            }
 
-            sw.Restart();
-
-            Debug.WriteLine("Creating edges mapper");
             var edgesMapper = GetEdgesMapper(facesIndexes);
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-            sw.Restart();
-
-            Debug.WriteLine("Creating faces mapper");
             var facesMapper = GetFacesMapper(edgesMapper);
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-            sw.Restart();
-
-            Debug.WriteLine("Assembling faces clusters");
             var clusters = GetFacesClusters(facesIndexes, facesMapper);
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-            sw.Restart();
-
-            Debug.WriteLine("Sorting clusters");
 
             // Sort clusters by count (improves packing density, could be removed if we notice a bottleneck)
             clusters.Sort((a, b) => b.Count.CompareTo(a.Count));
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-            sw.Restart();
 
-            Debug.WriteLine($"Material {material.Name} has {clusters.Count} clusters");
-
-            Debug.WriteLine("Bin packing clusters");
             BinPackTextures(targetFolder, m, clusters, newTextureVertices, tasks);
-            Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
         }
 
-        Debug.WriteLine("Sorting new texture vertices");
-        sw.Restart();
         _textureVertices = newTextureVertices.OrderBy(item => item.Value).Select(item => item.Key).ToList();
-        Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
 
-        Debug.WriteLine("Waiting for save tasks to finish");
-        sw.Restart();
-        Task.WaitAll(tasks.ToArray());
-        Debug.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
+        var allSaves = Task.WhenAll(tasks);
+        var saveSw = Stopwatch.StartNew();
+        long nextSaveProgressMs = 5000;
+        while (!allSaves.Wait(100))
+        {
+            if (saveSw.ElapsedMilliseconds >= nextSaveProgressMs)
+            {
+                Console.WriteLine($" -> [{DebugName}] Saving texture atlases... ({saveSw.Elapsed.TotalSeconds:F0}s)");
+                nextSaveProgressMs += 5000;
+            }
+        }
     }
 
     private void LoadTexturesCache()
@@ -537,6 +520,9 @@ public class MeshT : IMesh
     {
         const int PADDING = 2; // <-- bleed ring
 
+        var packSw = Stopwatch.StartNew();
+        long nextProgressMs = 5000;
+
         var material = _materials[materialIndex];
 
         if (material.Texture == null && material.NormalMap == null) return;
@@ -547,12 +533,14 @@ public class MeshT : IMesh
         int textureWidth = material.Texture != null ? texture!.Width : normalMap!.Width;
         int textureHeight = material.Texture != null ? texture!.Height : normalMap!.Height;
 
+        float scale = Math.Clamp(TextureDownscale, float.Epsilon, 1.0f);
+        int effWidth  = Math.Max(1, (int)(textureWidth  * scale));
+        int effHeight = Math.Max(1, (int)(textureHeight * scale));
+
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
-        CalculateMaxMinAreaRect(clustersRects, textureWidth, textureHeight, PADDING, out var maxWidth, out var maxHeight,
+        CalculateMaxMinAreaRect(clustersRects, effWidth, effHeight, PADDING, out var maxWidth, out var maxHeight,
             out var textureArea);
-
-        Debug.WriteLine("Texture area: " + textureArea);
 
         var edgeLength = Math.Max(Common.NextPowerOfTwo((int)Math.Sqrt(textureArea)), 32);
 
@@ -561,8 +549,6 @@ public class MeshT : IMesh
 
         if (edgeLength < maxHeight)
             edgeLength = Common.NextPowerOfTwo((int)maxHeight);
-
-        Debug.WriteLine("Edge length: " + edgeLength);
 
         // NOTE: We could enable rotations but it would be a bit more complex
         var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
@@ -615,8 +601,12 @@ public class MeshT : IMesh
             int syTL = Math.Clamp(textureHeight - eb, 0, textureHeight - sh);
             var srcRect = new Rectangle(sx, syTL, sw, sh);
 
+            // Atlas-space dimensions (may be smaller than source when TextureDownscale < 1)
+            int scaledSw = Math.Max(1, (int)Math.Round(sw * scale));
+            int scaledSh = Math.Max(1, (int)Math.Round(sh * scale));
+
             // ---------- reserve atlas space WITH padding ----------
-            var packRect = binPack.Insert(sw + 2 * PADDING, sh + 2 * PADDING,
+            var packRect = binPack.Insert(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING,
                                           FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
 
             // If we ran out of room: save current atlas, start a new one (keeps your behavior)
@@ -654,10 +644,10 @@ public class MeshT : IMesh
                 materialIndex = _materials.Count - 1;
 
                 // try again
-                packRect = binPack.Insert(sw + 2 * PADDING, sh + 2 * PADDING,
+                packRect = binPack.Insert(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING,
                                           FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
                 if (packRect.Width == 0)
-                    throw new Exception($"Packing failed for {sw}x{sh} into {edgeLength}x{edgeLength} (occ {binPack.Occupancy()})");
+                    throw new Exception($"Packing failed for {scaledSw}x{scaledSh} into {edgeLength}x{edgeLength} (occ {binPack.Occupancy()})");
             }
 
             int destInnerX = packRect.X + PADDING;
@@ -668,23 +658,19 @@ public class MeshT : IMesh
 
             if (material.Texture != null)
             {
-                using var block = BuildPaddedBlock(texture!, srcRect, PADDING);
+                using var block = BuildPaddedBlock(texture!, srcRect, PADDING, scaledSw, scaledSh);
                 newTexture!.Mutate(c => c.DrawImage(block, new Point(destOuterX, destOuterY), 1f));
             }
             if (material.NormalMap != null)
             {
-                using var blockN = BuildPaddedBlock(normalMap!, srcRect, PADDING);
+                using var blockN = BuildPaddedBlock(normalMap!, srcRect, PADDING, scaledSw, scaledSh);
                 newNormalMap!.Mutate(c => c.DrawImage(blockN, new Point(destOuterX, destOuterY), 1f));
             }
 
-            // Inner rect size in pixels
-            double innerWpx = sw;                 // crop width
-            double innerHpx = sh;                 // crop height
-
             double atlasU0 = destInnerX / (double)edgeLength;
-            double atlasV0 = (edgeLength - (destInnerY + sh)) / (double)edgeLength;
-            double innerUw = sw / (double)edgeLength;
-            double innerVh = sh / (double)edgeLength;
+            double atlasV0 = (edgeLength - (destInnerY + scaledSh)) / (double)edgeLength;
+            double innerUw = scaledSw / (double)edgeLength;
+            double innerVh = scaledSh / (double)edgeLength;
 
             Vertex2 MapUV(double rx, double ry) =>
                 new((float)Math.Clamp(atlasU0 + rx * innerUw, 0, 1),
@@ -720,6 +706,12 @@ public class MeshT : IMesh
                 face.TextureIndexC = newIndexVtC;
                 face.MaterialIndex = materialIndex;
             }
+
+            if (packSw.ElapsedMilliseconds >= nextProgressMs)
+            {
+                Console.WriteLine($" -> [{DebugName}] Repacking texture '{_materials[materialIndex].Name}': {i + 1}/{clusters.Count} ({(i + 1) * 100 / clusters.Count}%) clusters ({packSw.Elapsed.TotalSeconds:F0}s)...");
+                nextProgressMs += 5000;
+            }
         }
 
         // ---------- saving (unchanged) ----------
@@ -748,7 +740,6 @@ public class MeshT : IMesh
                 case TexturesStrategy.Repack: tx.Save(newPathTexture!); break;
                 default: throw new InvalidOperationException("KeepOriginal/Compress are meaningless here");
             }
-            Debug.WriteLine("Saved texture to " + newPathTexture);
             tx.Dispose();
         }, newTexture, TaskCreationOptions.LongRunning);
 
@@ -761,7 +752,6 @@ public class MeshT : IMesh
                 case TexturesStrategy.Repack: tx.Save(newPathNormalMap!); break;
                 default: throw new InvalidOperationException("KeepOriginal/Compress are meaningless here");
             }
-            Debug.WriteLine("Saved texture to " + newPathNormalMap);
             tx.Dispose();
         }, newNormalMap, TaskCreationOptions.LongRunning);
 
@@ -867,11 +857,12 @@ public class MeshT : IMesh
     {
 
         var clusters = new List<List<int>>();
-        var remainingFacesIndexes = new List<int>(facesIndexes);
+        var remainingFacesIndexes = new HashSet<int>(facesIndexes);
 
-        var currentCluster = new List<int> { remainingFacesIndexes[0] };
-        var currentClusterCache = new HashSet<int> { remainingFacesIndexes[0] };
-        remainingFacesIndexes.RemoveAt(0);
+        var first = remainingFacesIndexes.First();
+        var currentCluster = new List<int> { first };
+        var currentClusterCache = new HashSet<int> { first };
+        remainingFacesIndexes.Remove(first);
 
         var lastRemainingFacesCount = remainingFacesIndexes.Count;
 
@@ -907,9 +898,10 @@ public class MeshT : IMesh
                 if (remainingFacesIndexes.Count == 0) break;
 
                 // Let's continue with the next cluster
-                currentCluster = [remainingFacesIndexes[0]];
-                currentClusterCache = [remainingFacesIndexes[0]];
-                remainingFacesIndexes.RemoveAt(0);
+                var next = remainingFacesIndexes.First();
+                currentCluster = [next];
+                currentClusterCache = [next];
+                remainingFacesIndexes.Remove(next);
             }
 
             if (lastRemainingFacesCount == remainingFacesIndexes.Count)
@@ -1105,7 +1097,9 @@ public class MeshT : IMesh
 
     public void WriteObj(string path, bool removeUnused = true)
     {
-        if (_materials.Count == 0 || _textureVertices.Count == 0)
+        var hasTextures = _materials.Count > 0 && _textureVertices.Count > 0;
+        //Console.WriteLine($" -> '{Name}': {(hasTextures ? $"{_materials.Count} mat(s), {_textureVertices.Count} UVs [{TexturesStrategy}]" : "no textures")}");
+        if (!hasTextures)
             _WriteObjWithoutTexture(path, removeUnused);
         else
             _WriteObjWithTexture(path, removeUnused);
@@ -1237,47 +1231,49 @@ public class MeshT : IMesh
         _vertexColors = newColors;
     }
 
-    // Build a padded chart block by duplicating edge texels (ImageSharp-safe)
-    private static Image<Rgba32> BuildPaddedBlock(Image<Rgba32> src, Rectangle srcRect, int padding)
+    // Crop the source rect, resize to (scaledW x scaledH), then add a padding-wide bleed ring by
+    // edge-pixel repetition. Resizing before padding ensures the interior occupies exactly
+    // [padding, padding+scaledW) in the returned block regardless of the scale factor.
+    private static Image<Rgba32> BuildPaddedBlock(Image<Rgba32> src, Rectangle srcRect, int padding, int scaledW, int scaledH)
     {
-        // Clamp crop
         int sx = Math.Clamp(srcRect.X, 0, Math.Max(0, src.Width - 1));
         int sy = Math.Clamp(srcRect.Y, 0, Math.Max(0, src.Height - 1));
         int sw = Math.Clamp(srcRect.Width, 1, src.Width - sx);
         int sh = Math.Clamp(srcRect.Height, 1, src.Height - sy);
 
-        using var crop = src.Clone(c => c.Crop(new Rectangle(sx, sy, sw, sh)));
-
-        var block = new Image<Rgba32>(sw + 2 * padding, sh + 2 * padding);
-
-        // Paste interior at (p,p)
-        block.Mutate(c => c.DrawImage(crop, new Point(padding, padding), 1f));
-
-        if (padding <= 0) return block;
-
-        // Top / Bottom strips
-        using (var top = crop.Clone(c => c.Crop(new Rectangle(0, 0, sw, 1)).Resize(sw, padding)))
-            block.Mutate(c => c.DrawImage(top, new Point(padding, 0), 1f));
-        using (var bot = crop.Clone(c => c.Crop(new Rectangle(0, sh - 1, sw, 1)).Resize(sw, padding)))
-            block.Mutate(c => c.DrawImage(bot, new Point(padding, padding + sh), 1f));
-
-        // Left / Right strips
-        using (var left = crop.Clone(c => c.Crop(new Rectangle(0, 0, 1, sh)).Resize(padding, sh)))
-            block.Mutate(c => c.DrawImage(left, new Point(0, padding), 1f));
-        using (var right = crop.Clone(c => c.Crop(new Rectangle(sw - 1, 0, 1, sh)).Resize(padding, sh)))
-            block.Mutate(c => c.DrawImage(right, new Point(padding + sw, padding), 1f));
-
-        // Corners
-        void Corner(int sx0, int sy0, int dx, int dy)
+        // Step 1: crop the interior at full source resolution.
+        using var interior = new Image<Rgba32>(sw, sh);
+        src.ProcessPixelRows(interior, (srcAcc, intAcc) =>
         {
-            using var px = crop.Clone(c => c.Crop(new Rectangle(sx0, sy0, 1, 1)).Resize(padding, padding));
-            block.Mutate(c => c.DrawImage(px, new Point(dx, dy), 1f));
-        }
-        Corner(0, 0, 0, 0);
-        Corner(sw - 1, 0, padding + sw, 0);
-        Corner(0, sh - 1, 0, padding + sh);
-        Corner(sw - 1, sh - 1, padding + sw, padding + sh);
+            for (int y = 0; y < sh; y++)
+            {
+                var srcRow = srcAcc.GetRowSpan(sy + y);
+                var intRow = intAcc.GetRowSpan(y);
+                for (int x = 0; x < sw; x++)
+                    intRow[x] = srcRow[sx + x];
+            }
+        });
 
+        // Step 2: resize the interior to the target atlas dimensions (skipped when 1:1).
+        if (scaledW != sw || scaledH != sh)
+            interior.Mutate(ctx => ctx.Resize(scaledW, scaledH));
+
+        // Step 3: add the bleed ring from the (now resized) interior edge pixels.
+        var block = new Image<Rgba32>(scaledW + 2 * padding, scaledH + 2 * padding);
+        interior.ProcessPixelRows(block, (intAcc, blockAcc) =>
+        {
+            for (int destY = 0; destY < blockAcc.Height; destY++)
+            {
+                int intY = Math.Clamp(destY - padding, 0, scaledH - 1);
+                var intRow = intAcc.GetRowSpan(intY);
+                var destRow = blockAcc.GetRowSpan(destY);
+                for (int destX = 0; destX < blockAcc.Width; destX++)
+                {
+                    int intX = Math.Clamp(destX - padding, 0, scaledW - 1);
+                    destRow[destX] = intRow[intX];
+                }
+            }
+        });
         return block;
     }
 
@@ -1293,7 +1289,6 @@ public class MeshT : IMesh
 
         if (TexturesStrategy == TexturesStrategy.Repack || TexturesStrategy == TexturesStrategy.RepackCompressed)
             TrimTextures(folderPath);
-
         using (var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture))
         {
             writer.Write("o ");

@@ -148,4 +148,58 @@ public class MtlParsingTests
             File.Delete(tempFile);
         }
     }
+
+    [Test]
+    public void ReadMtl_StripsLeadingOptions_FindsTexture()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "diffuse.png"), "x");
+            var mtl = Path.Combine(dir, "m.mtl");
+            File.WriteAllText(mtl, "newmtl X\nmap_Kd -bm 1.0 diffuse.png\n");
+            var materials = Material.ReadMtl(mtl, out var deps);
+            materials[0].Texture.ShouldNotBeNull();
+            materials[0].Texture!.EndsWith("diffuse.png").ShouldBeTrue();
+            deps.Length.ShouldBe(1);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Test]
+    public void ReadMtl_PathWithSpaces_ResolvesAfterNumericOptions()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "my tex.png"), "x");
+            var mtl = Path.Combine(dir, "m.mtl");
+            File.WriteAllText(mtl, "newmtl X\nmap_Kd -s 1 1 1 my tex.png\n");
+            var materials = Material.ReadMtl(mtl, out _);
+            materials[0].Texture.ShouldNotBeNull();
+            materials[0].Texture!.EndsWith("my tex.png").ShouldBeTrue();
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Test]
+    public void ReadMtl_Newmtl_ResetsTexturePerMaterial()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "t.png"), "x");
+            var mtl = Path.Combine(dir, "m.mtl");
+            File.WriteAllText(mtl, "newmtl A\nmap_Kd t.png\nnewmtl B\nKd 0.5 0.5 0.5\n");
+            var materials = Material.ReadMtl(mtl, out _);
+            materials.Length.ShouldBe(2);
+            materials[0].Texture.ShouldNotBeNull();
+            materials[1].Texture.ShouldBeNull();
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
 }
