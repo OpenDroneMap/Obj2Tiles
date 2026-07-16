@@ -97,7 +97,7 @@ namespace Obj2Tiles
                 var b = decimateRes.Bounds;
                 var modelDiagonal = Math.Sqrt(b.Width * b.Width + b.Height * b.Height + b.Depth * b.Depth);
                 var baseError = opts.BaseError > 0 ? opts.BaseError : modelDiagonal;
-                if (!(baseError > 0)) baseError = 1.0;
+                if (!(baseError > 0) || double.IsInfinity(baseError)) baseError = 1.0;
 
                 // Coarsest decimated whole-model mesh, used to give the tileset root renderable content
                 // (an empty root tile leaves the model invisible in renderers that do not descend into

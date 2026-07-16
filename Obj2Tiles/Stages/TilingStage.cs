@@ -75,9 +75,11 @@ public static partial class StagesFacade
             Root = new TileElement
             {
                 GeometricError = baseError,
-                // REPLACE (not ADD): the root's coarse whole-model content is superseded by the finer
-                // child tiles as they load, so the two never render on top of each other.
-                Refine = "REPLACE",
+                // Use REPLACE only when the root has actual content (coarse whole-model mesh):
+                // the root is superseded by the finer child tiles so the two never render on top
+                // of each other. Fall back to ADD when root content generation failed or was not
+                // requested, so children are still rendered additively from a content-less root.
+                Refine = rootContentUri != null ? "REPLACE" : "ADD",
                 Transform = rootTransform,
                 Content = rootContentUri != null ? new Content { Uri = rootContentUri } : null,
             }
