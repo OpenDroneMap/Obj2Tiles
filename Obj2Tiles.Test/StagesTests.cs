@@ -53,6 +53,61 @@ public class StagesTests
     }
 
     [Test]
+    public void TilingStage_Tile_TilesetJson_NoRootContent()
+    {
+        var testPath = GetTestOutputPath(nameof(TilingStage_Tile_TilesetJson_NoRootContent));
+
+        var boundsMapper = (from file in Directory.GetFiles("TestData/Tile1/LOD-0", "*.json")
+            let bounds = JsonConvert.DeserializeObject<BoxDTO>(File.ReadAllText(file))
+            select new
+            {
+                Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
+                    new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
+                Name = Path.GetFileNameWithoutExtension(file)
+            }).ToDictionary(item => item.Name, item => item.Bounds);
+
+        StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, [boundsMapper], rootSourceObj: null);
+
+        var tilesetPath = Path.Combine(testPath, "tileset.json");
+        File.Exists(tilesetPath).ShouldBeTrue("tileset.json should be created");
+
+        var tileset = JsonConvert.DeserializeObject<Tileset>(File.ReadAllText(tilesetPath));
+        tileset.ShouldNotBeNull();
+        tileset!.Root.ShouldNotBeNull();
+        tileset.Root!.Refine.ShouldBe("ADD", "empty root should use ADD refinement");
+        tileset.Root.Content.ShouldBeNull("empty root should have no content");
+    }
+
+    [Test]
+    public void TilingStage_Tile_TilesetJson_WithRootContent()
+    {
+        var testPath = GetTestOutputPath(nameof(TilingStage_Tile_TilesetJson_WithRootContent));
+
+        var boundsMapper = (from file in Directory.GetFiles("TestData/Tile1/LOD-0", "*.json")
+            let bounds = JsonConvert.DeserializeObject<BoxDTO>(File.ReadAllText(file))
+            select new
+            {
+                Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
+                    new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
+                Name = Path.GetFileNameWithoutExtension(file)
+            }).ToDictionary(item => item.Name, item => item.Bounds);
+
+        var rootSourceObj = Path.GetFullPath("TestData/Tile2/Mesh-XL-YR-XR-YL.obj");
+        StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, [boundsMapper], rootSourceObj: rootSourceObj);
+
+        var tilesetPath = Path.Combine(testPath, "tileset.json");
+        File.Exists(tilesetPath).ShouldBeTrue("tileset.json should be created");
+
+        var tileset = JsonConvert.DeserializeObject<Tileset>(File.ReadAllText(tilesetPath));
+        tileset.ShouldNotBeNull();
+        tileset!.Root.ShouldNotBeNull();
+        tileset.Root!.Refine.ShouldBe("REPLACE", "root with content should use REPLACE refinement");
+        tileset.Root.Content.ShouldNotBeNull("root with content should have a content entry");
+        tileset.Root.Content!.Uri.ShouldBe("root.b3dm", "root content URI should be root.b3dm");
+        File.Exists(Path.Combine(testPath, "root.b3dm")).ShouldBeTrue("root.b3dm file should be written to output");
+    }
+
+    [Test]
     public void TilingStage_TileCoords()
     {
         var gpsCoords = new GpsCoords

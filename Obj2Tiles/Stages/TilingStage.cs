@@ -12,12 +12,35 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static void Tile(string sourcePath, string destPath, int lods, double baseError, Dictionary<string, Box3>[] boundsMapper,
-        GpsCoords? coords = null, bool localMode = false, bool isOctree = false)
+        GpsCoords? coords = null, bool localMode = false, bool isOctree = false, string? rootSourceObj = null)
     {
 
         Console.WriteLine(" ?> Working on objs conversion");
 
         ConvertAllB3dm(sourcePath, destPath, lods);
+
+        // Give the tileset root renderable content. The root tile spans the whole model but, in an
+        // octree/multi-tile layout, its geometry lives only in the child tiles, leaving the root
+        // empty (content: null). An empty root is legal per the 3D Tiles spec, but several renderers
+        // (e.g. giro3d's 3d-tiles-renderer, which hardcodes LOAD_ROOT_SIBLINGS) will not descend into
+        // the children of a content-less root, so the whole model never appears. Converting the
+        // coarsest decimated whole-model mesh into "root.b3dm" gives the root a lightweight, complete
+        // representation that is then refined (REPLACE) by the finer child tiles.
+        string? rootContentUri = null;
+        if (rootSourceObj != null && File.Exists(rootSourceObj))
+        {
+            try
+            {
+                var rootB3dm = Path.Combine(destPath, "root.b3dm");
+                Utils.ConvertB3dm(rootSourceObj, rootB3dm);
+                rootContentUri = "root.b3dm";
+                Console.WriteLine($" ?> Generated root content from '{Path.GetFileName(rootSourceObj)}'");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($" !> Could not generate root content ({ex.Message}); the root tile will be empty.");
+            }
+        }
 
         Console.WriteLine(" -> Generating tileset.json");
 
@@ -52,8 +75,13 @@ public static partial class StagesFacade
             Root = new TileElement
             {
                 GeometricError = baseError,
-                Refine = "ADD",
+                // Use REPLACE only when the root has actual content (coarse whole-model mesh):
+                // the root is superseded by the finer child tiles so the two never render on top
+                // of each other. Fall back to ADD when root content generation failed or was not
+                // requested, so children are still rendered additively from a content-less root.
+                Refine = rootContentUri != null ? "REPLACE" : "ADD",
                 Transform = rootTransform,
+                Content = rootContentUri != null ? new Content { Uri = rootContentUri } : null,
             }
         };
 

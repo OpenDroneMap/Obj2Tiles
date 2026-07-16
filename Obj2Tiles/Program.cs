@@ -90,17 +90,47 @@ namespace Obj2Tiles
                 Console.WriteLine();
                 Console.WriteLine($" => Tiling stage {(gpsCoords != null ? $"with GPS coords {gpsCoords}" : "")}");
 
-                var baseError = opts.BaseError;
+                // Geometric error must be expressed in the model's own coordinate units because it
+                // drives the screen-space-error refinement of every 3D Tiles renderer. A fixed value
+                // is meaningless for models that are not that size, so when the caller does not force
+                // one (--error 0, the default) derive it from the model's bounding box diagonal.
+                var b = decimateRes.Bounds;
+                var modelDiagonal = Math.Sqrt(b.Width * b.Width + b.Height * b.Height + b.Depth * b.Depth);
+                var baseError = opts.BaseError > 0 ? opts.BaseError : modelDiagonal;
+                if (!(baseError > 0) || double.IsInfinity(baseError)) baseError = 1.0;
+
+                // Coarsest decimated whole-model mesh, used to give the tileset root renderable content
+                // (an empty root tile leaves the model invisible in renderers that do not descend into
+                // the children of a content-less root). Run it through the split stage with 0 divisions,
+                // which keeps it as a single mesh but compresses its textures, so the bootstrap root tile
+                // stays small instead of embedding the full-resolution source textures.
+                string? rootSourceObj = null;
+                if (decimateRes.DestFiles.Length > 0)
+                {
+                    rootSourceObj = decimateRes.DestFiles[^1];
+                    try
+                    {
+                        var rootTempDir = createTempFolder($"{pipelineId}-obj2tiles-root");
+                        await StagesFacade.Split(rootSourceObj, rootTempDir, 0);
+                        var compressedRoot = Directory.GetFiles(rootTempDir, "*.obj").FirstOrDefault();
+                        if (compressedRoot != null)
+                            rootSourceObj = compressedRoot;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($" !> Could not compress root mesh ({ex.Message}); using full-resolution coarsest mesh.");
+                    }
+                }
 
                 Console.WriteLine();
-                Console.WriteLine($" => Tiling stage with baseError {baseError}");
+                Console.WriteLine($" => Tiling stage with baseError {baseError:0.000}");
 
                 sw.Restart();
 
                 if (opts.LocalMode && (opts.Latitude != null || opts.Longitude != null))
                     Console.WriteLine(" !> Warning: --local overrides --lat/--lon. ECEF transform will not be applied.");
 
-                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, opts.BaseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree);
+                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree, rootSourceObj);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
             }
