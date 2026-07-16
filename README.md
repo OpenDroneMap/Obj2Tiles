@@ -24,8 +24,10 @@ You can download precompiled binaries for Windows, Linux and macOS from https://
 ## Usage
 
 ```
-Obj2Tiles [options] <input.obj> <output-folder>
+Obj2Tiles [options] <input.obj> <output>
 ```
+
+`<output>` is either a folder (a loose `tileset.json` + tiles tree) or a path ending in `.3tz`, which produces a single [3D Tiles Archive](#output-format) file.
 
 ## Command line parameters
 
@@ -34,7 +36,7 @@ Obj2Tiles [options] <input.obj> <output-folder>
 | Parameter | Default | Description | Example |
 |-----------|---------|-------------|---------|
 | `Input` (pos. 0) |  | Input OBJ file (required) | `model.obj` |
-| `Output` (pos. 1) |  | Output folder (required) | `./tileset-output` |
+| `Output` (pos. 1) |  | Output folder, or a `.3tz` file for a single [3D Tiles Archive](#output-format) (required) | `./tileset-output` or `model.3tz` |
 
 ### Pipeline Control
 
@@ -64,6 +66,26 @@ Obj2Tiles [options] <input.obj> <output-folder>
 | `--scale` | `1` | Scale factor for local geometry (e.g. `1200.0/3937.0` for survey feet). Does NOT affect altitude or ECEF position | `--scale 0.3048` |
 | `--local` | `false` | Local mode: no ECEF geo-referencing, uses an identity matrix. Use when you don't need globe placement | `--local` |
 | `--y-up-to-z-up` | `false` | Apply a 90° rotation around the X-axis to convert Y-up OBJ files to Z-up (3D Tiles convention) | `--y-up-to-z-up` |
+
+### Output format
+
+By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `root.b3dm`). It can instead pack everything into a single **3D Tiles Archive** (`.3tz`) file - a ZIP container defined by the [3TZ specification](https://github.com/erikdahlstrom/3tz-specification). The archive embeds a trailing `@3dtilesIndex1@` index so viewers can random-access individual tiles without unpacking it. `.3tz` output is selected automatically when the output path ends with `.3tz`, or explicitly with `--3tz`.
+
+| Parameter | Default | Description | Example |
+|-----------|---------|-------------|---------|
+| `--3tz` | `false` | Produce a single `.3tz` archive instead of a folder tree (implied by a `.3tz` output path). When set without a `.3tz` extension, the archive is written to `<output>.3tz` | `--3tz` |
+| `--3tz-compression` | `6` | DEFLATE level for `.3tz` content, `0`-`9` (gzip-style), see table below. The index is always stored uncompressed | `--3tz-compression 9` |
+
+**Compression levels (`--3tz-compression`):**
+
+| Value | Effect |
+|-------|--------|
+| `0` | Stored (no compression) - fastest reads, largest file |
+| `1`-`3` | Fastest DEFLATE |
+| `4`-`6` | Balanced DEFLATE (default `6`) |
+| `7`-`9` | Smallest DEFLATE |
+
+> Notes: `.3tz` output requires the full Tiling stage (it cannot be combined with `--stage Decimation`/`Splitting`). Archives and individual files must stay below 4 GB (ZIP64 is not emitted). **Zstandard** compression (allowed by the 3TZ spec) is planned for a future release.
 
 ### Other
 
@@ -143,6 +165,8 @@ The tiling stage places the model on the globe using an **ECEF** (Earth-Centered
 - OBJ files typically use Y-up. Bounding volumes in `tileset.json` perform a Y↔Z swap internally (3D Tiles uses Z-up). If the model appears flipped, try `--y-up-to-z-up` for an additional 90° X-axis rotation.
 - `--local` takes precedence over `--lat`/`--lon` (a warning is printed if both are specified).
 
+**Output format:** the tileset is written either as a loose folder tree or as a single `.3tz` archive - see [Output format](#output-format).
+
 ## Examples
 
 You can download a test OBJ file [here](https://github.com/DroneDB/test_data/raw/master/brighton/odm_texturing.zip)
@@ -154,6 +178,14 @@ Run all pipeline stages and generate `tileset.json` in the output folder:
 
 ```bash
 Obj2Tiles model.obj ./output
+```
+
+### 3D Tiles Archive (.3tz)
+
+Pack the whole tileset into a single archive (selected by the `.3tz` extension) with maximum compression:
+
+```bash
+Obj2Tiles --3tz-compression 9 model.obj ./model.3tz
 ```
 
 ### Octree with texture downscaling (recommended for large models)
