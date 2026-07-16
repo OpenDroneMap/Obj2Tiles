@@ -62,6 +62,12 @@ public sealed class Options
 
     [Option("lod-texture-scale", Required = false, HelpText = "Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous resolution by this factor. E.g. 0.5 gives LOD-1 at 1/2 resolution, LOD-2 at 1/4, etc. Default 1.0 (no downscaling).", Default = 1.0)]
     public double LodTextureScale { get; set; }
+
+    [Option("3tz", Required = false, HelpText = "Produce a single 3D Tiles Archive (.3tz) instead of a loose folder tree. Also enabled automatically when the output path ends with .3tz.", Default = false)]
+    public bool ThreeTz { get; set; }
+
+    [Option("3tz-compression", Required = false, HelpText = "DEFLATE level for .3tz output, 0-9 (gzip-style): 0 = stored (no compression), 1-3 = fastest, 4-6 = balanced, 7-9 = smallest. The index is always stored. Zstandard support is planned.", Default = 6)]
+    public int ThreeTzCompression { get; set; }
 }
 
 public enum Stage

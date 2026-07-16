@@ -9,6 +9,7 @@ using Obj2Tiles.Library;
 using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Stages;
 using Obj2Tiles.Stages.Model;
+using Obj2Tiles.Tiles;
 
 namespace Obj2Tiles
 {
@@ -35,7 +36,29 @@ namespace Obj2Tiles
             opts.Output = Path.GetFullPath(opts.Output);
             opts.Input = Path.GetFullPath(opts.Input);
 
-            Directory.CreateDirectory(opts.Output);
+            // The output can be a loose folder tree or a single .3tz 3D Tiles Archive. The archive form is
+            // selected by a .3tz extension on the output path or by the explicit --3tz flag; in that case the
+            // tileset is written to a temporary folder and packed into the archive once tiling completes.
+            var produce3tz = opts.Output.EndsWith(".3tz", StringComparison.OrdinalIgnoreCase) || opts.ThreeTz;
+            string? archivePath = null;
+            string tempBase;
+
+            if (produce3tz)
+            {
+                archivePath = opts.Output.EndsWith(".3tz", StringComparison.OrdinalIgnoreCase)
+                    ? opts.Output
+                    : opts.Output.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + ".3tz";
+
+                var archiveParent = Path.GetDirectoryName(archivePath);
+                if (!string.IsNullOrEmpty(archiveParent))
+                    Directory.CreateDirectory(archiveParent);
+                tempBase = string.IsNullOrEmpty(archiveParent) ? Directory.GetCurrentDirectory() : archiveParent;
+            }
+            else
+            {
+                Directory.CreateDirectory(opts.Output);
+                tempBase = opts.Output;
+            }
 
             var pipelineId = Guid.NewGuid().ToString();
             var sw = new Stopwatch();
@@ -43,7 +66,11 @@ namespace Obj2Tiles
 
             Func<string, string> createTempFolder = opts.UseSystemTempFolder
                 ? s => CreateTempFolder(s, Path.GetTempPath())
-                : s => CreateTempFolder(s, Path.Combine(opts.Output, ".temp"));
+                : s => CreateTempFolder(s, Path.Combine(tempBase, ".temp"));
+
+            // Where the tiling stage writes the tileset: the output folder directly, or a temp folder that is
+            // then packed into the .3tz archive.
+            var tilesetOutput = produce3tz ? createTempFolder($"{pipelineId}-obj2tiles-tileset") : opts.Output;
 
             string? destFolderDecimation = null;
             string? destFolderSplit = null;
@@ -130,9 +157,18 @@ namespace Obj2Tiles
                 if (opts.LocalMode && (opts.Latitude != null || opts.Longitude != null))
                     Console.WriteLine(" !> Warning: --local overrides --lat/--lon. ECEF transform will not be applied.");
 
-                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree, rootSourceObj);
+                StagesFacade.Tile(destFolderSplit, tilesetOutput, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree, rootSourceObj);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
+
+                if (produce3tz)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($" => Packing 3D Tiles Archive '{archivePath}'");
+                    var compressionLevel = ThreeTzArchive.ResolveCompressionLevel(opts.ThreeTzCompression);
+                    var entryCount = ThreeTzArchive.CreateFromDirectory(tilesetOutput, archivePath!, compressionLevel);
+                    Console.WriteLine($" ?> 3TZ archive created with {entryCount} entries");
+                }
             }
             catch (Exception ex)
             {
@@ -143,7 +179,7 @@ namespace Obj2Tiles
                 Console.WriteLine();
                 Console.WriteLine(" => Pipeline completed in {0}", swg.Elapsed);
 
-                var tmpFolder = Path.Combine(opts.Output, ".temp");
+                var tmpFolder = Path.Combine(tempBase, ".temp");
 
                 if (opts.KeepIntermediateFiles)
                 {
@@ -162,6 +198,9 @@ namespace Obj2Tiles
 
                     if (destFolderSplit != null && destFolderSplit != opts.Output)
                         Directory.Delete(destFolderSplit, true);
+
+                    if (produce3tz && Directory.Exists(tilesetOutput))
+                        Directory.Delete(tilesetOutput, true);
 
                     if (Directory.Exists(tmpFolder))
                         Directory.Delete(tmpFolder, true);
@@ -201,6 +240,19 @@ namespace Obj2Tiles
             if (opts.Divisions < 0)
             {
                 Console.WriteLine(" !> Divisions must be non-negative");
+                return false;
+            }
+
+            var wants3tz = opts.Output.EndsWith(".3tz", StringComparison.OrdinalIgnoreCase) || opts.ThreeTz;
+            if (wants3tz && opts.StopAt != Stage.Tiling)
+            {
+                Console.WriteLine(" !> 3TZ output requires the full Tiling stage (do not set --stage to Decimation or Splitting)");
+                return false;
+            }
+
+            if (opts.ThreeTzCompression is < 0 or > 9)
+            {
+                Console.WriteLine(" !> --3tz-compression must be between 0 and 9");
                 return false;
             }
 
