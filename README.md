@@ -6,16 +6,14 @@
 ![languages](https://img.shields.io/github/languages/top/HeDo88TH/Obj2Tiles)
 [![Build & Test](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml)
 [![Publish](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml)
+![Discord](https://img.shields.io/discord/1491016144310767670?label=Discord&logo=discord&color=5865F2)
 
 Obj2Tiles is a fully-featured tool to convert OBJ files to 3D Tiles format.
 It runs a three-stage pipeline: **Decimation** → **Splitting** → **Tiling**, creating multiple LODs, splitting the mesh into spatial tiles, and repacking textures.
 
-### Vertex Colors
+## Community
 
-Obj2Tiles supports OBJ files with per-vertex colors (extended vertex format: `v x y z r g b`). Vertex colors are:
-- **Parsed** from OBJ files by all three internal parsers (splitting, decimation, and glTF conversion stages)
-- **Preserved** through mesh splitting (with correct interpolation at edge intersections) and LOD decimation
-- **Exported** to glTF/GLB as `COLOR_0` attribute with automatic sRGB → linear RGB conversion per the glTF specification
+**[Join the Discord](https://discord.gg/e9M3vBvzge)** server to get help, share feedback, discuss features, and connect with other users:
 
 ## Installation
 
