@@ -64,9 +64,12 @@ namespace Obj2Tiles
             var sw = new Stopwatch();
             var swg = Stopwatch.StartNew();
 
-            Func<string, string> createTempFolder = opts.UseSystemTempFolder
-                ? s => CreateTempFolder(s, Path.GetTempPath())
-                : s => CreateTempFolder(s, Path.Combine(tempBase, ".temp"));
+            // Actual base directory for intermediate temp folders, used for cleanup and user messages.
+            var actualTempBase = opts.UseSystemTempFolder
+                ? Path.GetTempPath()
+                : Path.Combine(tempBase, ".temp");
+
+            Func<string, string> createTempFolder = s => CreateTempFolder(s, actualTempBase);
 
             // Where the tiling stage writes the tileset: the output folder directly, or a temp folder that is
             // then packed into the .3tz archive.
@@ -179,7 +182,7 @@ namespace Obj2Tiles
                 Console.WriteLine();
                 Console.WriteLine(" => Pipeline completed in {0}", swg.Elapsed);
 
-                var tmpFolder = Path.Combine(tempBase, ".temp");
+                var tmpFolder = actualTempBase;
 
                 if (opts.KeepIntermediateFiles)
                 {
