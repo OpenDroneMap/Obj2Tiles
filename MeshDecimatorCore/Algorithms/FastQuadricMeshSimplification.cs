@@ -511,7 +511,16 @@ namespace MeshDecimatorCore.Algorithms
             if (vertColors != null)
             {
                 var c = vertColors.Data;
-                c[dst] = c[i0] * fu + c[i1] * fv + c[i2] * fw;
+                // The quadric-optimized merge point can fall outside the source
+                // triangle, making the barycentric weights negative or > 1 and
+                // extrapolating colors beyond [0,1]. Clamp so vertex colors stay
+                // valid (glTF COLOR_0 accessors must be in the [0,1] range).
+                var col = c[i0] * fu + c[i1] * fv + c[i2] * fw;
+                c[dst] = new Vector4(
+                    MathHelper.Clamp01(col.x),
+                    MathHelper.Clamp01(col.y),
+                    MathHelper.Clamp01(col.z),
+                    MathHelper.Clamp01(col.w));
             }
         }
         #endregion

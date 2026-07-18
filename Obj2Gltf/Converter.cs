@@ -657,9 +657,16 @@ namespace SilentWave.Obj2Gltf
 
         private static float SrgbChannelToLinear(float c)
         {
+            float linear;
             if (c <= 0.04045f)
-                return c / 12.92f;
-            return (float)Math.Pow((c + 0.055) / 1.055, 2.4);
+                linear = c / 12.92f;
+            else
+                linear = (float)Math.Pow((c + 0.055) / 1.055, 2.4);
+
+            // glTF COLOR_0 accessors with float components must be in [0,1].
+            // Clamp so a source vertex color slightly outside the range (e.g. from
+            // mesh decimation) never produces an out-of-range accessor element.
+            return linear < 0f ? 0f : (linear > 1f ? 1f : linear);
         }
 
         #endregion sRGB to Linear
