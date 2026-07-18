@@ -175,12 +175,17 @@ namespace Obj2Tiles
             }
             catch (Exception ex)
             {
-                Console.WriteLine(" !> Exception: {0}", ex.Message);
+                // Signal failure to the caller: without a non-zero exit code a failed conversion
+                // (e.g. a missing .mtl dependency) would look successful to batch/CI callers even
+                // though no output was produced.
+                Console.Error.WriteLine(" !> Exception: {0}", ex.Message);
+                Environment.ExitCode = 1;
             }
             finally
             {
                 Console.WriteLine();
-                Console.WriteLine(" => Pipeline completed in {0}", swg.Elapsed);
+                var outcome = Environment.ExitCode == 0 ? "completed" : "failed";
+                Console.WriteLine(" => Pipeline {0} in {1}", outcome, swg.Elapsed);
 
                 var tmpFolder = actualTempBase;
 
