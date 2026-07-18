@@ -4,3 +4,6 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .vs/
+test_output/
+test-output/
+test-output2/
