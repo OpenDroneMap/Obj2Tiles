@@ -164,9 +164,24 @@ namespace SilentWave.Obj2Gltf
             var t = new Gltf.Texture
             {
                 Name = textureFilename,
-                Source = imageIndex,
                 Sampler = 0
             };
+
+            // WebP textures are referenced through EXT_texture_webp. With no PNG/JPEG fallback the
+            // base "source" is omitted and the extension is marked as required.
+            if (textureFilename.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+            {
+                t.Extensions = new TextureExtensions
+                {
+                    EXT_texture_webp = new ExtTextureWebp { Source = imageIndex }
+                };
+                gltfModel.UseExtension("EXT_texture_webp", required: true);
+            }
+            else
+            {
+                t.Source = imageIndex;
+            }
+
             gltfModel.Textures.Add(t);
             return textureIndex;
         }

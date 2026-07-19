@@ -23,6 +23,8 @@ namespace SilentWave.Obj2Gltf
                 case ".JPEG":
                 case ".JPG":
                     return "image/jpeg";
+                case ".WEBP":
+                    return "image/webp";
                 case ".GIF":
                     return "image/gif";
                 default:

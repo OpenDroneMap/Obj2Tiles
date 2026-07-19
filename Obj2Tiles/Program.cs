@@ -17,7 +17,15 @@ namespace Obj2Tiles
     {
         private static async Task Main(string[] args)
         {
-            var oResult = await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(Run);
+            // Accept enum option values case-insensitively (e.g. --texture-format webp) for a
+            // friendlier CLI; option names keep their default (case-insensitive) handling.
+            using var parser = new Parser(with =>
+            {
+                with.CaseInsensitiveEnumValues = true;
+                with.HelpWriter = Console.Error;
+            });
+
+            var oResult = await parser.ParseArguments<Options>(args).WithParsedAsync(Run);
 
             if (oResult.Tag == ParserResultType.NotParsed)
             {
@@ -31,7 +39,13 @@ namespace Obj2Tiles
             Console.WriteLine(" *** OBJ to Tiles ***");
             Console.WriteLine();
 
-            if (!CheckOptions(opts)) return;
+            // Invalid options are a failure: signal it to the caller so batch/CI runs do not
+            // mistake a rejected configuration for a successful conversion.
+            if (!CheckOptions(opts))
+            {
+                Environment.ExitCode = 1;
+                return;
+            }
 
             opts.Output = Path.GetFullPath(opts.Output);
             opts.Input = Path.GetFullPath(opts.Input);
@@ -106,7 +120,8 @@ namespace Obj2Tiles
                 Console.WriteLine($" ?> Keep original textures: {opts.KeepOriginalTextures}, Split strategy: {opts.SplitPointStrategy}");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
-                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.Octree, (float)opts.LodTextureScale);
+                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.Octree, (float)opts.LodTextureScale,
+                    opts.MaxTextureSize, opts.TextureQuality, opts.TextureFormat);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 
@@ -141,7 +156,12 @@ namespace Obj2Tiles
                     try
                     {
                         var rootTempDir = createTempFolder($"{pipelineId}-obj2tiles-root");
-                        await StagesFacade.Split(rootSourceObj, rootTempDir, 0);
+                        // The root is a bootstrap tile shown from far away, so downscale its textures at
+                        // least as aggressively as the coarsest LOD and honour the absolute size cap.
+                        var rootDownscale = (float)Math.Pow(opts.LodTextureScale, Math.Max(0, opts.LODs - 1));
+                        await StagesFacade.Split(rootSourceObj, rootTempDir, 0,
+                            textureDownscale: rootDownscale, maxTextureSize: opts.MaxTextureSize, textureQuality: opts.TextureQuality,
+                            textureFormat: opts.TextureFormat);
                         var compressedRoot = Directory.GetFiles(rootTempDir, "*.obj").FirstOrDefault();
                         if (compressedRoot != null)
                             rootSourceObj = compressedRoot;
@@ -261,6 +281,24 @@ namespace Obj2Tiles
             if (opts.ThreeTzCompression is < 0 or > 9)
             {
                 Console.WriteLine(" !> --3tz-compression must be between 0 and 9");
+                return false;
+            }
+
+            if (opts.MaxTextureSize < 0)
+            {
+                Console.WriteLine(" !> --max-texture-size must be non-negative (0 disables the cap)");
+                return false;
+            }
+
+            if (opts.TextureQuality is < 1 or > 100)
+            {
+                Console.WriteLine(" !> --texture-quality must be between 1 and 100");
+                return false;
+            }
+
+            if (opts.LodTextureScale is <= 0 or > 1)
+            {
+                Console.WriteLine(" !> --lod-texture-scale must be in the (0, 1] range");
                 return false;
             }
 
