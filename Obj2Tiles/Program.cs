@@ -230,7 +230,7 @@ namespace Obj2Tiles
                     if (produce3tz && Directory.Exists(tilesetOutput))
                         Directory.Delete(tilesetOutput, true);
 
-                    if (Directory.Exists(tmpFolder))
+                    if (!opts.UseSystemTempFolder && Directory.Exists(tmpFolder))
                         Directory.Delete(tmpFolder, true);
 
                     Console.WriteLine(" ?> Cleaning up ok");
