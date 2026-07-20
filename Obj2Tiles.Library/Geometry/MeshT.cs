@@ -690,9 +690,9 @@ public class MeshT : IMesh
             if (packRect.Width == 0)
             {
                 textureFileName = material.Texture != null
-                    ? $"{Name}-texture-diffuse-{material.Name}{AtlasExtension(material.Texture)}" : null;
+                    ? $"{Name}-texture-diffuse-{materialIndex}-{material.Name}{AtlasExtension(material.Texture)}" : null;
                 normalMapFileName = material.NormalMap != null
-                    ? $"{Name}-texture-normal-{material.Name}{AtlasExtension(material.NormalMap)}" : null;
+                    ? $"{Name}-texture-normal-{materialIndex}-{material.Name}{AtlasExtension(material.NormalMap)}" : null;
 
                 if (material.Texture != null) {
                     newPathTexture = Path.Combine(targetFolder, textureFileName!);
@@ -794,13 +794,13 @@ public class MeshT : IMesh
         // ---------- saving ----------
         if (material.Texture != null)
         {
-            textureFileName = $"{Name}-texture-diffuse-{material.Name}{AtlasExtension(material.Texture)}";
+            textureFileName = $"{Name}-texture-diffuse-{materialIndex}-{material.Name}{AtlasExtension(material.Texture)}";
             newPathTexture = Path.Combine(targetFolder, textureFileName);
         }
 
         if (material.NormalMap != null)
         {
-            normalMapFileName = $"{Name}-texture-normal-{material.Name}{AtlasExtension(material.NormalMap)}";
+            normalMapFileName = $"{Name}-texture-normal-{materialIndex}-{material.Name}{AtlasExtension(material.NormalMap)}";
             newPathNormalMap = Path.Combine(targetFolder, normalMapFileName);
         }
 
@@ -1528,5 +1528,6 @@ public enum TexturesStrategy
 public enum TextureFormat
 {
     Jpeg,
-    Webp
+    Webp,
+    Ktx2
 }
