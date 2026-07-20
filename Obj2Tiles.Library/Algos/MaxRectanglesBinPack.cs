@@ -1,7 +1,7 @@
 ﻿/*
     Based on the Public Domain MaxRectanglesBinPack.cpp source by Jukka Jylänki
     https://github.com/juj/RectangleBinPack/
- 
+
     Originally Ported to C# by Sven Magnus
     Updated to .Net 4.5 by Stefan Gordon
 */
@@ -93,6 +93,59 @@ namespace Obj2Tiles.Library.Algos
 
             usedRectangles.Add(newNode);
             return newNode;
+        }
+
+        /// <summary>
+        /// Packs a whole set of rectangles at once using global best-fit selection: at each step the
+        /// rectangle+position pair with the best score across all still-unplaced rectangles is chosen.
+        /// This yields a higher packing density (occupancy) than inserting one rectangle at a time, at
+        /// the cost of extra scoring work. Ported from juj/RectangleBinPack MaxRectsBinPack::Insert.
+        /// </summary>
+        /// <param name="rects">The rectangle sizes (width, height) to pack.</param>
+        /// <param name="method">The free-rectangle choice heuristic.</param>
+        /// <returns>
+        /// An array parallel to <paramref name="rects"/>: element i holds the placement of rects[i],
+        /// or <c>null</c> if that rectangle could not be placed.
+        /// </returns>
+        public Rectangle?[] Insert(IReadOnlyList<(int Width, int Height)> rects, FreeRectangleChoiceHeuristic method)
+        {
+            var result = new Rectangle?[rects.Count];
+            var placed = new bool[rects.Count];
+            var remaining = rects.Count;
+
+            while (remaining > 0)
+            {
+                var bestScore1 = int.MaxValue;
+                var bestScore2 = int.MaxValue;
+                var bestIndex = -1;
+                var bestNode = new Rectangle();
+
+                for (var i = 0; i < rects.Count; ++i)
+                {
+                    if (placed[i]) continue;
+
+                    var node = ScoreRectangle(rects[i].Width, rects[i].Height, method, out var score1, out var score2);
+                    if (node.Height == 0) continue; // does not fit anywhere right now
+
+                    if (score1 < bestScore1 || (score1 == bestScore1 && score2 < bestScore2))
+                    {
+                        bestScore1 = score1;
+                        bestScore2 = score2;
+                        bestNode = node;
+                        bestIndex = i;
+                    }
+                }
+
+                if (bestIndex == -1)
+                    break; // none of the remaining rectangles fit
+
+                PlaceRectangle(bestNode);
+                result[bestIndex] = bestNode;
+                placed[bestIndex] = true;
+                remaining--;
+            }
+
+            return result;
         }
 
         private void PlaceRectangle(Rectangle node)

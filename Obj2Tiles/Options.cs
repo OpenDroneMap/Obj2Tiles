@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CommandLine;
+using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Stages;
 
 namespace Obj2Tiles;
@@ -60,8 +61,32 @@ public sealed class Options
     [Option("octree", Required = false, HelpText = "Use octree spatial subdivision: each LOD gets one additional division level relative to the next coarser LOD, producing a proper tile hierarchy instead of same-count tiles per LOD.", Default = false)]
     public bool Octree { get; set; }
 
-    [Option("lod-texture-scale", Required = false, HelpText = "Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous resolution by this factor. E.g. 0.5 gives LOD-1 at 1/2 resolution, LOD-2 at 1/4, etc. Default 1.0 (no downscaling).", Default = 1.0)]
+    [Option("lod-texture-scale", Required = false, HelpText = "Per-LOD texture downscale factor. LOD-0 keeps full resolution (subject to --max-texture-size); each subsequent LOD multiplies the previous resolution by this factor. E.g. 0.5 gives LOD-1 at 1/2 resolution, LOD-2 at 1/4, etc. Use 1.0 to disable per-LOD downscaling.", Default = 0.5)]
     public double LodTextureScale { get; set; }
+
+    [Option("max-texture-size", Required = false, HelpText = "Maximum texture resolution (per side, in pixels) used when repacking/compressing atlases. Larger source textures are downscaled to fit, which bounds the dominant LOD-0 texture cost. 0 disables the cap.", Default = 4096)]
+    public int MaxTextureSize { get; set; }
+
+    [Option("texture-quality", Required = false, HelpText = "JPEG quality (1-100) for compressed textures (RepackCompressed and the tileset root). Higher is better quality but larger.", Default = 75)]
+    public int TextureQuality { get; set; }
+
+    [Option("texture-format", Required = false, HelpText = "Output image format for repacked/compressed textures: Jpeg (default), Webp or Ktx2. Webp emits the EXT_texture_webp glTF extension (25-35% smaller than JPEG). Ktx2 encodes GPU-compressed Basis Universal textures (KHR_texture_basisu), cutting GPU/VRAM usage ~4-8x, using the bundled libktx native library (no separate tool required); make sure your renderer supports the chosen format.", Default = TextureFormat.Jpeg)]
+    public TextureFormat TextureFormat { get; set; }
+
+    [Option("ktx2-quality", Required = false, HelpText = "KTX2 ETC1S/BasisLZ quality level (1-255, higher is better quality and larger). Reinterpreted as UASTC quality (0-4) when --ktx2-uastc is set. Only used with --texture-format Ktx2.", Default = 128)]
+    public int Ktx2Quality { get; set; }
+
+    [Option("ktx2-uastc", Required = false, HelpText = "Use UASTC (higher quality, larger, transcodes to BC7/ASTC) instead of the default ETC1S/BasisLZ mode for KTX2 textures.", Default = false)]
+    public bool Ktx2Uastc { get; set; }
+
+    [Option("ktx-path", Required = false, HelpText = "Explicit path to the libktx native library (ktx.dll / libktx.so / libktx.dylib) or the directory containing it, used for --texture-format Ktx2. When omitted it is resolved from the OBJ2TILES_KTX environment variable, next to the executable (bundled), or on the system library path.", Default = null)]
+    public string? KtxPath { get; set; }
+
+    [Option("3tz", Required = false, HelpText = "Produce a single 3D Tiles Archive (.3tz) instead of a loose folder tree. Also enabled automatically when the output path ends with .3tz.", Default = false)]
+    public bool ThreeTz { get; set; }
+
+    [Option("3tz-compression", Required = false, HelpText = "DEFLATE level for .3tz output, 0-9 (gzip-style): 0 = stored (no compression), 1-3 = fastest, 4-6 = balanced, 7-9 = smallest. The index is always stored. Zstandard support is planned.", Default = 6)]
+    public int ThreeTzCompression { get; set; }
 }
 
 public enum Stage

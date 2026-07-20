@@ -12,12 +12,12 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static void Tile(string sourcePath, string destPath, int lods, double baseError, Dictionary<string, Box3>[] boundsMapper,
-        GpsCoords? coords = null, bool localMode = false, bool isOctree = false, string? rootSourceObj = null)
+        GpsCoords? coords = null, bool localMode = false, bool isOctree = false, string? rootSourceObj = null, GltfConverterOptions? gltfOptions = null)
     {
 
         Console.WriteLine(" ?> Working on objs conversion");
 
-        ConvertAllB3dm(sourcePath, destPath, lods);
+        ConvertAllB3dm(sourcePath, destPath, lods, gltfOptions);
 
         // Give the tileset root renderable content. The root tile spans the whole model but, in an
         // octree/multi-tile layout, its geometry lives only in the child tiles, leaving the root
@@ -32,7 +32,7 @@ public static partial class StagesFacade
             try
             {
                 var rootB3dm = Path.Combine(destPath, "root.b3dm");
-                Utils.ConvertB3dm(rootSourceObj, rootB3dm);
+                Utils.ConvertB3dm(rootSourceObj, rootB3dm, gltfOptions);
                 rootContentUri = "root.b3dm";
                 Console.WriteLine($" ?> Generated root content from '{Path.GetFileName(rootSourceObj)}'");
             }
@@ -215,7 +215,7 @@ public static partial class StagesFacade
 
     }
 
-    private static void ConvertAllB3dm(string sourcePath, string destPath, int lods)
+    private static void ConvertAllB3dm(string sourcePath, string destPath, int lods, GltfConverterOptions? gltfOptions = null)
     {
         var filesToConvert = new List<Tuple<string, string>>();
 
@@ -236,7 +236,7 @@ public static partial class StagesFacade
         Parallel.ForEach(filesToConvert, (file) =>
         {
             Console.WriteLine($" -> Converting to b3dm '{file.Item1}'");
-            Utils.ConvertB3dm(file.Item1, file.Item2);
+            Utils.ConvertB3dm(file.Item1, file.Item2, gltfOptions);
         });
     }
 

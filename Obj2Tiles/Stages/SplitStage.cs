@@ -9,7 +9,8 @@ public static partial class StagesFacade
 {
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
         bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter,
-        bool isOctree = false, float lodTextureScale = 1.0f)
+        bool isOctree = false, float lodTextureScale = 1.0f,
+        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg)
     {
         var results = new Dictionary<string, Box3>[sourceFiles.Length];
 
@@ -76,7 +77,7 @@ public static partial class StagesFacade
             int lodDivisions = isOctree ? divisions + sourceFiles.Length - index - 1 : divisions;
             float textureDownscale = index == 0 ? 1.0f : (float)Math.Pow(lodTextureScale, index);
 
-            tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint, textureDownscale));
+            tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint, textureDownscale, maxTextureSize, textureQuality, textureFormat));
         }
 
         await Task.WhenAll(tasks);
@@ -91,7 +92,9 @@ public static partial class StagesFacade
         bool zSplit = false,
         Box3? bounds = null,
         TexturesStrategy textureStrategy = TexturesStrategy.Repack,
-        SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter)
+        SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter,
+        float textureDownscale = 1.0f,
+        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg)
     {
         Func<IMesh, Vertex3> getSplitPoint = splitPointStrategy switch
         {
@@ -101,7 +104,7 @@ public static partial class StagesFacade
             _ => throw new ArgumentOutOfRangeException(nameof(splitPointStrategy))
         };
 
-        return await Split(sourcePath, destPath, divisions, zSplit, textureStrategy, splitPointStrategy, getSplitPoint);
+        return await Split(sourcePath, destPath, divisions, zSplit, textureStrategy, splitPointStrategy, getSplitPoint, textureDownscale, maxTextureSize, textureQuality, textureFormat);
     }
 
     private static async Task<Dictionary<string, Box3>> Split(string sourcePath, string destPath, int divisions,
@@ -109,7 +112,8 @@ public static partial class StagesFacade
         TexturesStrategy textureStrategy,
         SplitPointStrategy splitPointStrategy,
         Func<IMesh, Vertex3> getSplitPoint,
-        float textureDownscale = 1.0f)
+        float textureDownscale = 1.0f,
+        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg)
     {
         var sw = new Stopwatch();
         var tilesBounds = new Dictionary<string, Box3>();
@@ -129,7 +133,13 @@ public static partial class StagesFacade
             Console.WriteLine(" -> Skipping split stage, just compressing textures and cleaning up the mesh");
 
             if (mesh is MeshT t)
+            {
                 t.TexturesStrategy = TexturesStrategy.Compress;
+                t.TextureDownscale = textureDownscale;
+                t.MaxTextureSize = maxTextureSize;
+                t.TextureQuality = textureQuality;
+                t.TextureFormat = textureFormat;
+            }
 
             mesh.WriteObj(Path.Combine(destPath, $"{mesh.Name}.obj"));
 
@@ -184,6 +194,9 @@ public static partial class StagesFacade
             {
                 t.TexturesStrategy = textureStrategy;
                 t.TextureDownscale = textureDownscale;
+                t.MaxTextureSize = maxTextureSize;
+                t.TextureQuality = textureQuality;
+                t.TextureFormat = textureFormat;
             }
 
             var tilePath = Path.Combine(destPath, $"{m.Name}.obj");

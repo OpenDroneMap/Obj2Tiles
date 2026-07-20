@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -9,6 +9,8 @@ using Obj2Tiles.Library;
 using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Stages;
 using Obj2Tiles.Stages.Model;
+using Obj2Tiles.Tiles;
+using SilentWave.Obj2Gltf;
 
 namespace Obj2Tiles
 {
@@ -16,7 +18,15 @@ namespace Obj2Tiles
     {
         private static async Task Main(string[] args)
         {
-            var oResult = await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(Run);
+            // Accept enum option values case-insensitively (e.g. --texture-format webp) for a
+            // friendlier CLI; option names keep their default (case-insensitive) handling.
+            using var parser = new Parser(with =>
+            {
+                with.CaseInsensitiveEnumValues = true;
+                with.HelpWriter = Console.Error;
+            });
+
+            var oResult = await parser.ParseArguments<Options>(args).WithParsedAsync(Run);
 
             if (oResult.Tag == ParserResultType.NotParsed)
             {
@@ -30,20 +40,55 @@ namespace Obj2Tiles
             Console.WriteLine(" *** OBJ to Tiles ***");
             Console.WriteLine();
 
-            if (!CheckOptions(opts)) return;
+            // Invalid options are a failure: signal it to the caller so batch/CI runs do not
+            // mistake a rejected configuration for a successful conversion.
+            if (!CheckOptions(opts))
+            {
+                Environment.ExitCode = 1;
+                return;
+            }
 
             opts.Output = Path.GetFullPath(opts.Output);
             opts.Input = Path.GetFullPath(opts.Input);
 
-            Directory.CreateDirectory(opts.Output);
+            // The output can be a loose folder tree or a single .3tz 3D Tiles Archive. The archive form is
+            // selected by a .3tz extension on the output path or by the explicit --3tz flag; in that case the
+            // tileset is written to a temporary folder and packed into the archive once tiling completes.
+            var produce3tz = opts.Output.EndsWith(".3tz", StringComparison.OrdinalIgnoreCase) || opts.ThreeTz;
+            string? archivePath = null;
+            string tempBase;
+
+            if (produce3tz)
+            {
+                archivePath = opts.Output.EndsWith(".3tz", StringComparison.OrdinalIgnoreCase)
+                    ? opts.Output
+                    : opts.Output.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + ".3tz";
+
+                var archiveParent = Path.GetDirectoryName(archivePath);
+                if (!string.IsNullOrEmpty(archiveParent))
+                    Directory.CreateDirectory(archiveParent);
+                tempBase = string.IsNullOrEmpty(archiveParent) ? Directory.GetCurrentDirectory() : archiveParent;
+            }
+            else
+            {
+                Directory.CreateDirectory(opts.Output);
+                tempBase = opts.Output;
+            }
 
             var pipelineId = Guid.NewGuid().ToString();
             var sw = new Stopwatch();
             var swg = Stopwatch.StartNew();
 
-            Func<string, string> createTempFolder = opts.UseSystemTempFolder
-                ? s => CreateTempFolder(s, Path.GetTempPath())
-                : s => CreateTempFolder(s, Path.Combine(opts.Output, ".temp"));
+            // Actual base directory for intermediate temp folders, used for cleanup and user messages.
+            var actualTempBase = opts.UseSystemTempFolder
+                ? Path.GetTempPath()
+                : Path.Combine(tempBase, ".temp");
+
+            Func<string, string> createTempFolder = s => CreateTempFolder(s, actualTempBase);
+
+            // Where the tiling stage writes the tileset: the output folder directly, or a temp folder that is
+            // then packed into the .3tz archive.
+            var tilesetOutput = produce3tz ? createTempFolder($"{pipelineId}-obj2tiles-tileset") : opts.Output;
 
             string? destFolderDecimation = null;
             string? destFolderSplit = null;
@@ -76,7 +121,8 @@ namespace Obj2Tiles
                 Console.WriteLine($" ?> Keep original textures: {opts.KeepOriginalTextures}, Split strategy: {opts.SplitPointStrategy}");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
-                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.Octree, (float)opts.LodTextureScale);
+                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.Octree, (float)opts.LodTextureScale,
+                    opts.MaxTextureSize, opts.TextureQuality, opts.TextureFormat);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 
@@ -111,7 +157,25 @@ namespace Obj2Tiles
                     try
                     {
                         var rootTempDir = createTempFolder($"{pipelineId}-obj2tiles-root");
-                        await StagesFacade.Split(rootSourceObj, rootTempDir, 0);
+                        // The root is a bootstrap tile shown from far away, so downscale its textures at
+                        // least as aggressively as the coarsest LOD and honour the absolute size cap.
+                        var rootDownscale = (float)Math.Pow(opts.LodTextureScale, Math.Max(0, opts.LODs - 1));
+                        // The root spans the whole model as a single (un-split) mesh, so without an
+                        // absolute cap a texture-heavy source (e.g. an ODM model with dozens of
+                        // 8192x8192 textures) yields a root tile that decodes to hundreds of MB of GPU
+                        // memory. That single tile can exceed a web viewer's tile-cache budget and stall
+                        // progressive loading, leaving the model invisible. Since the root is only shown
+                        // from far away (or briefly, while finer LODs stream in) its texture detail is
+                        // irrelevant, so cap it hard here regardless of --max-texture-size (honouring a
+                        // smaller user cap when one is set). 256px keeps the root - the first tile the
+                        // viewer downloads - small (a few MB) without any visible loss at overview zoom.
+                        const int rootTextureSizeCap = 256;
+                        var rootMaxTextureSize = opts.MaxTextureSize > 0
+                            ? Math.Min(opts.MaxTextureSize, rootTextureSizeCap)
+                            : rootTextureSizeCap;
+                        await StagesFacade.Split(rootSourceObj, rootTempDir, 0,
+                            textureDownscale: rootDownscale, maxTextureSize: rootMaxTextureSize, textureQuality: opts.TextureQuality,
+                            textureFormat: opts.TextureFormat);
                         var compressedRoot = Directory.GetFiles(rootTempDir, "*.obj").FirstOrDefault();
                         if (compressedRoot != null)
                             rootSourceObj = compressedRoot;
@@ -130,20 +194,49 @@ namespace Obj2Tiles
                 if (opts.LocalMode && (opts.Latitude != null || opts.Longitude != null))
                     Console.WriteLine(" !> Warning: --local overrides --lat/--lon. ECEF transform will not be applied.");
 
-                StagesFacade.Tile(destFolderSplit, opts.Output, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree, rootSourceObj);
+                // Build glTF conversion options. KTX2 (Basis Universal) textures cut GPU/VRAM usage
+                // several-fold versus decoded JPEG/WebP, which is the dominant cost for texture-heavy
+                // tilesets; they are produced here in-process via the bundled libktx native library (P/Invoke).
+                GltfConverterOptions? gltfOptions = null;
+                if (opts.TextureFormat == TextureFormat.Ktx2)
+                {
+                    gltfOptions = new GltfConverterOptions
+                    {
+                        EncodeKtx2 = true,
+                        Ktx2Uastc = opts.Ktx2Uastc,
+                        Ktx2QualityLevel = opts.Ktx2Quality,
+                        KtxToolPath = opts.KtxPath
+                    };
+                }
+
+                StagesFacade.Tile(destFolderSplit, tilesetOutput, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree, rootSourceObj, gltfOptions);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
+
+                if (produce3tz)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($" => Packing 3D Tiles Archive '{archivePath}'");
+                    var compressionLevel = ThreeTzArchive.ResolveCompressionLevel(opts.ThreeTzCompression);
+                    var entryCount = ThreeTzArchive.CreateFromDirectory(tilesetOutput, archivePath!, compressionLevel);
+                    Console.WriteLine($" ?> 3TZ archive created with {entryCount} entries");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(" !> Exception: {0}", ex.Message);
+                // Signal failure to the caller: without a non-zero exit code a failed conversion
+                // (e.g. a missing .mtl dependency) would look successful to batch/CI callers even
+                // though no output was produced.
+                Console.Error.WriteLine(" !> Exception: {0}", ex.Message);
+                Environment.ExitCode = 1;
             }
             finally
             {
                 Console.WriteLine();
-                Console.WriteLine(" => Pipeline completed in {0}", swg.Elapsed);
+                var outcome = Environment.ExitCode == 0 ? "completed" : "failed";
+                Console.WriteLine(" => Pipeline {0} in {1}", outcome, swg.Elapsed);
 
-                var tmpFolder = Path.Combine(opts.Output, ".temp");
+                var tmpFolder = actualTempBase;
 
                 if (opts.KeepIntermediateFiles)
                 {
@@ -163,7 +256,10 @@ namespace Obj2Tiles
                     if (destFolderSplit != null && destFolderSplit != opts.Output)
                         Directory.Delete(destFolderSplit, true);
 
-                    if (Directory.Exists(tmpFolder))
+                    if (produce3tz && Directory.Exists(tilesetOutput))
+                        Directory.Delete(tilesetOutput, true);
+
+                    if (!opts.UseSystemTempFolder && Directory.Exists(tmpFolder))
                         Directory.Delete(tmpFolder, true);
 
                     Console.WriteLine(" ?> Cleaning up ok");
@@ -201,6 +297,37 @@ namespace Obj2Tiles
             if (opts.Divisions < 0)
             {
                 Console.WriteLine(" !> Divisions must be non-negative");
+                return false;
+            }
+
+            var wants3tz = opts.Output.EndsWith(".3tz", StringComparison.OrdinalIgnoreCase) || opts.ThreeTz;
+            if (wants3tz && opts.StopAt != Stage.Tiling)
+            {
+                Console.WriteLine(" !> 3TZ output requires the full Tiling stage (do not set --stage to Decimation or Splitting)");
+                return false;
+            }
+
+            if (opts.ThreeTzCompression is < 0 or > 9)
+            {
+                Console.WriteLine(" !> --3tz-compression must be between 0 and 9");
+                return false;
+            }
+
+            if (opts.MaxTextureSize < 0)
+            {
+                Console.WriteLine(" !> --max-texture-size must be non-negative (0 disables the cap)");
+                return false;
+            }
+
+            if (opts.TextureQuality is < 1 or > 100)
+            {
+                Console.WriteLine(" !> --texture-quality must be between 1 and 100");
+                return false;
+            }
+
+            if (opts.LodTextureScale is <= 0 or > 1)
+            {
+                Console.WriteLine(" !> --lod-texture-scale must be in the (0, 1] range");
                 return false;
             }
 

@@ -19,8 +19,51 @@ namespace SilentWave.Obj2Gltf.Gltf
         [JsonProperty("sampler")]
         public int Sampler { get; set; }
         /// <summary>
-        /// The index of the image used by this texture.
+        /// The index of the image used by this texture. May be omitted when the image is provided
+        /// exclusively through an extension (e.g. EXT_texture_webp with no fallback).
         /// </summary>
+        [JsonProperty("source")]
+        public int? Source { get; set; }
+        /// <summary>
+        /// Optional texture-level extensions (e.g. EXT_texture_webp).
+        /// </summary>
+        [JsonProperty("extensions")]
+        public TextureExtensions Extensions { get; set; }
+    }
+
+    /// <summary>
+    /// Texture-level glTF extensions container.
+    /// </summary>
+    public class TextureExtensions
+    {
+        /// <summary>
+        /// The EXT_texture_webp extension, when the texture image is a WebP.
+        /// </summary>
+        [JsonProperty("EXT_texture_webp")]
+        public ExtTextureWebp EXT_texture_webp { get; set; }
+        /// <summary>
+        /// The KHR_texture_basisu extension, when the texture image is a KTX2 (Basis Universal) file.
+        /// </summary>
+        [JsonProperty("KHR_texture_basisu")]
+        public KhrTextureBasisu KHR_texture_basisu { get; set; }
+    }
+
+    /// <summary>
+    /// EXT_texture_webp extension payload: the index of the WebP image source.
+    /// </summary>
+    public class ExtTextureWebp
+    {
+        /// <summary>The index of the WebP image used by this texture.</summary>
+        [JsonProperty("source")]
+        public int Source { get; set; }
+    }
+
+    /// <summary>
+    /// KHR_texture_basisu extension payload: the index of the KTX2 image source.
+    /// </summary>
+    public class KhrTextureBasisu
+    {
+        /// <summary>The index of the KTX2 image used by this texture.</summary>
         [JsonProperty("source")]
         public int Source { get; set; }
     }
