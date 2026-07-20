@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -196,7 +196,7 @@ namespace Obj2Tiles
 
                 // Build glTF conversion options. KTX2 (Basis Universal) textures cut GPU/VRAM usage
                 // several-fold versus decoded JPEG/WebP, which is the dominant cost for texture-heavy
-                // tilesets; they are produced here via the KTX-Software "ktx" tool.
+                // tilesets; they are produced here in-process via the bundled libktx native library (P/Invoke).
                 GltfConverterOptions? gltfOptions = null;
                 if (opts.TextureFormat == TextureFormat.Ktx2)
                 {
