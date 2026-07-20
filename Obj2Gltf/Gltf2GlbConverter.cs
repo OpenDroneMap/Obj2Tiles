@@ -25,6 +25,8 @@ namespace SilentWave.Obj2Gltf
                     return "image/jpeg";
                 case ".WEBP":
                     return "image/webp";
+                case ".KTX2":
+                    return "image/ktx2";
                 case ".GIF":
                     return "image/gif";
                 default:

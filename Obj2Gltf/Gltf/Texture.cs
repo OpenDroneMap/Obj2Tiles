@@ -41,6 +41,11 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// </summary>
         [JsonProperty("EXT_texture_webp")]
         public ExtTextureWebp EXT_texture_webp { get; set; }
+        /// <summary>
+        /// The KHR_texture_basisu extension, when the texture image is a KTX2 (Basis Universal) file.
+        /// </summary>
+        [JsonProperty("KHR_texture_basisu")]
+        public KhrTextureBasisu KHR_texture_basisu { get; set; }
     }
 
     /// <summary>
@@ -49,6 +54,16 @@ namespace SilentWave.Obj2Gltf.Gltf
     public class ExtTextureWebp
     {
         /// <summary>The index of the WebP image used by this texture.</summary>
+        [JsonProperty("source")]
+        public int Source { get; set; }
+    }
+
+    /// <summary>
+    /// KHR_texture_basisu extension payload: the index of the KTX2 image source.
+    /// </summary>
+    public class KhrTextureBasisu
+    {
+        /// <summary>The index of the KTX2 image used by this texture.</summary>
         [JsonProperty("source")]
         public int Source { get; set; }
     }

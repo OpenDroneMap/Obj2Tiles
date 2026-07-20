@@ -22,4 +22,31 @@
       <PackageReference Include="CommandLineParser" Version="2.9.1" />
     </ItemGroup>
 
+    <!--
+      Bundle the native KTX-Software library (libktx) that matches the target runtime, next to the
+      published executable, so KTX2 (KHR_texture_basisu) encoding works out of the box on every
+      supported platform without a separate ktx tool. The Ktx2Encoder P/Invokes "ktx" and resolves it
+      next to the executable (AppContext.BaseDirectory) among other locations.
+
+      The vendored libraries live in native/<rid>/ and are only copied when publishing for a specific
+      runtime; a plain `dotnet build` (no RID) resolves libktx from OBJ2TILES_KTX / PATH instead.
+
+      Sources (KTX-Software v4.4.2, Apache-2.0):
+        win-x64      ktx.dll     <- KTX-Software-4.4.2-Windows-x64.exe    (bin/ktx.dll)
+        win-arm64    ktx.dll     <- KTX-Software-4.4.2-Windows-arm64.exe  (bin/ktx.dll)
+        linux-x64    libktx.so   <- KTX-Software-4.4.2-Linux-x86_64.tar.bz2  (lib/libktx.so.4.4.2)
+        linux-arm64  libktx.so   <- KTX-Software-4.4.2-Linux-arm64.tar.bz2   (lib/libktx.so.4.4.2)
+        osx-x64      libktx.dylib<- KTX-Software-4.4.2-Darwin-x86_64.pkg   (lib/libktx.4.4.2.dylib)
+
+      To refresh these libraries (download + verify + extract for all RIDs), run:
+        pwsh native/update-libktx.ps1            (use -Version to bump; -? for help)
+    -->
+    <ItemGroup Condition="'$(RuntimeIdentifier)' != '' And Exists('$(MSBuildProjectDirectory)/native/$(RuntimeIdentifier)')">
+      <None Include="native/$(RuntimeIdentifier)/*">
+        <Link>%(Filename)%(Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

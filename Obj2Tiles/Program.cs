@@ -10,6 +10,7 @@ using Obj2Tiles.Library.Geometry;
 using Obj2Tiles.Stages;
 using Obj2Tiles.Stages.Model;
 using Obj2Tiles.Tiles;
+using SilentWave.Obj2Gltf;
 
 namespace Obj2Tiles
 {
@@ -159,8 +160,21 @@ namespace Obj2Tiles
                         // The root is a bootstrap tile shown from far away, so downscale its textures at
                         // least as aggressively as the coarsest LOD and honour the absolute size cap.
                         var rootDownscale = (float)Math.Pow(opts.LodTextureScale, Math.Max(0, opts.LODs - 1));
+                        // The root spans the whole model as a single (un-split) mesh, so without an
+                        // absolute cap a texture-heavy source (e.g. an ODM model with dozens of
+                        // 8192x8192 textures) yields a root tile that decodes to hundreds of MB of GPU
+                        // memory. That single tile can exceed a web viewer's tile-cache budget and stall
+                        // progressive loading, leaving the model invisible. Since the root is only shown
+                        // from far away (or briefly, while finer LODs stream in) its texture detail is
+                        // irrelevant, so cap it hard here regardless of --max-texture-size (honouring a
+                        // smaller user cap when one is set). 256px keeps the root - the first tile the
+                        // viewer downloads - small (a few MB) without any visible loss at overview zoom.
+                        const int rootTextureSizeCap = 256;
+                        var rootMaxTextureSize = opts.MaxTextureSize > 0
+                            ? Math.Min(opts.MaxTextureSize, rootTextureSizeCap)
+                            : rootTextureSizeCap;
                         await StagesFacade.Split(rootSourceObj, rootTempDir, 0,
-                            textureDownscale: rootDownscale, maxTextureSize: opts.MaxTextureSize, textureQuality: opts.TextureQuality,
+                            textureDownscale: rootDownscale, maxTextureSize: rootMaxTextureSize, textureQuality: opts.TextureQuality,
                             textureFormat: opts.TextureFormat);
                         var compressedRoot = Directory.GetFiles(rootTempDir, "*.obj").FirstOrDefault();
                         if (compressedRoot != null)
@@ -180,7 +194,22 @@ namespace Obj2Tiles
                 if (opts.LocalMode && (opts.Latitude != null || opts.Longitude != null))
                     Console.WriteLine(" !> Warning: --local overrides --lat/--lon. ECEF transform will not be applied.");
 
-                StagesFacade.Tile(destFolderSplit, tilesetOutput, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree, rootSourceObj);
+                // Build glTF conversion options. KTX2 (Basis Universal) textures cut GPU/VRAM usage
+                // several-fold versus decoded JPEG/WebP, which is the dominant cost for texture-heavy
+                // tilesets; they are produced here via the KTX-Software "ktx" tool.
+                GltfConverterOptions? gltfOptions = null;
+                if (opts.TextureFormat == TextureFormat.Ktx2)
+                {
+                    gltfOptions = new GltfConverterOptions
+                    {
+                        EncodeKtx2 = true,
+                        Ktx2Uastc = opts.Ktx2Uastc,
+                        Ktx2QualityLevel = opts.Ktx2Quality,
+                        KtxToolPath = opts.KtxPath
+                    };
+                }
+
+                StagesFacade.Tile(destFolderSplit, tilesetOutput, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree, rootSourceObj, gltfOptions);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
 

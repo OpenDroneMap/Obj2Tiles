@@ -173,7 +173,7 @@ public static class Utils
             ]
         };
     }
-    
+
     public static void CopyObjDependencies(string input, string output)
     {
         var objFolder = Path.GetDirectoryName(Path.GetFullPath(input)) ?? string.Empty;
@@ -223,7 +223,7 @@ public static class Utils
             }
         }
     }
-    
+
     // Guards against path traversal: ensures destPath resolves inside the output folder.
     private static bool IsWithinOutput(string outputFull, string destPath)
     {
@@ -232,7 +232,7 @@ public static class Utils
                full.StartsWith(outputFull + Path.DirectorySeparatorChar, StringComparison.Ordinal);
     }
 
-    public static void ConvertB3dm(string objPath, string destPath)
+    public static void ConvertB3dm(string objPath, string destPath, GltfConverterOptions? gltfOptions = null)
     {
         var dir = Path.GetDirectoryName(objPath);
         var name = Path.GetFileNameWithoutExtension(objPath);
@@ -240,7 +240,7 @@ public static class Utils
         var converter = Converter.MakeDefault();
         var outputFile = dir != null ? Path.Combine(dir, $"{name}.gltf") : $"{name}.gltf";
 
-        converter.Convert(objPath, outputFile);
+        converter.Convert(objPath, outputFile, gltfOptions);
 
         var glbConv = new Gltf2GlbConverter();
         glbConv.Convert(new Gltf2GlbOptions(outputFile));

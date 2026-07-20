@@ -70,8 +70,17 @@ public sealed class Options
     [Option("texture-quality", Required = false, HelpText = "JPEG quality (1-100) for compressed textures (RepackCompressed and the tileset root). Higher is better quality but larger.", Default = 75)]
     public int TextureQuality { get; set; }
 
-    [Option("texture-format", Required = false, HelpText = "Output image format for repacked/compressed textures: Jpeg (default) or Webp. Webp emits the EXT_texture_webp glTF extension and is typically 25-35% smaller than JPEG; make sure your renderer supports it.", Default = TextureFormat.Jpeg)]
+    [Option("texture-format", Required = false, HelpText = "Output image format for repacked/compressed textures: Jpeg (default), Webp or Ktx2. Webp emits the EXT_texture_webp glTF extension (25-35% smaller than JPEG). Ktx2 encodes GPU-compressed Basis Universal textures (KHR_texture_basisu), cutting GPU/VRAM usage ~4-8x, and requires the KTX-Software 'ktx' tool; make sure your renderer supports the chosen format.", Default = TextureFormat.Jpeg)]
     public TextureFormat TextureFormat { get; set; }
+
+    [Option("ktx2-quality", Required = false, HelpText = "KTX2 ETC1S/BasisLZ quality level (1-255, higher is better quality and larger). Reinterpreted as UASTC quality (0-4) when --ktx2-uastc is set. Only used with --texture-format Ktx2.", Default = 128)]
+    public int Ktx2Quality { get; set; }
+
+    [Option("ktx2-uastc", Required = false, HelpText = "Use UASTC (higher quality, larger, transcodes to BC7/ASTC) instead of the default ETC1S/BasisLZ mode for KTX2 textures.", Default = false)]
+    public bool Ktx2Uastc { get; set; }
+
+    [Option("ktx-path", Required = false, HelpText = "Explicit path to the KTX-Software 'ktx' executable used for --texture-format Ktx2. When omitted it is resolved from the OBJ2TILES_KTX environment variable, next to the executable, or on PATH.", Default = null)]
+    public string? KtxPath { get; set; }
 
     [Option("3tz", Required = false, HelpText = "Produce a single 3D Tiles Archive (.3tz) instead of a loose folder tree. Also enabled automatically when the output path ends with .3tz.", Default = false)]
     public bool ThreeTz { get; set; }

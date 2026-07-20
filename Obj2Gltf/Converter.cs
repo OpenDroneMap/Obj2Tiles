@@ -101,6 +101,12 @@ namespace SilentWave.Obj2Gltf
                 });
             }
 
+            if (options.EncodeKtx2 && gltfModel.Images.Count > 0)
+            {
+                var gltfDir = Path.GetDirectoryName(outputFile) ?? ".";
+                Ktx2.Ktx2GltfProcessor.Apply(gltfModel, gltfDir, options);
+            }
+
             WriteFile(gltfModel, outputFile);
         }
 

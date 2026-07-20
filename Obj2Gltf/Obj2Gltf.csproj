@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Source'">
@@ -51,7 +52,7 @@
 
 
   <Import Project=".\DisableSourceUnwanted.targets" Condition="'$(Configuration)'=='Source'" />
-  
+
 
   <Target Name="DisplayMessages" AfterTargets="Build">
     <Message Text="Project File Name = $(MSBuildProjectFile)" />
