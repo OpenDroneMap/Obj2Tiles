@@ -52,7 +52,20 @@ Obj2Tiles [options] <input.obj> <output>
 | `-g, --split-strategy` | `VertexBaricenter` | How the split point is computed: `AbsoluteCenter` (bounding box center), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy VertexMedian` |
 | `-k, --keeptextures` | `false` | Keep original textures instead of repacking them (not recommended) | `--keeptextures` |
 | `--octree` | `false` | Use octree spatial subdivision: each LOD gets one additional division level, producing a proper parent-child tile hierarchy instead of per-tile LOD chains. Combine with `--zsplit` for a true 8-way octree | `--octree --zsplit` |
-| `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses bicubic resampling; LOD-0 is PNG, coarser LODs are JPEG at quality 75 | `--lod-texture-scale 0.5` |
+| `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses bicubic resampling | `--lod-texture-scale 0.5` |
+
+### Textures
+
+Controls how repacked texture atlases are encoded.
+
+| Parameter | Default | Description | Example |
+|-----------|---------|-------------|---------|
+| `--texture-format` | `Jpeg` | Output format for repacked textures: `Jpeg` (default), `Webp` (25-35% smaller, emits `EXT_texture_webp`), or `Ktx2` (GPU-compressed Basis Universal, emits `KHR_texture_basisu`, cuts VRAM 4-8x - see [KTX2 GPU Texture Compression](#ktx2-gpu-texture-compression)) | `--texture-format Ktx2` |
+| `--texture-quality` | `75` | JPEG/WebP quality (1-100). Higher is better quality but larger files. Only for `Jpeg` and `Webp` formats | `--texture-quality 90` |
+| `--max-texture-size` | `4096` | Maximum texture atlas resolution per side (pixels). Source textures larger than this are downscaled. `0` disables the cap | `--max-texture-size 2048` |
+| `--ktx2-quality` | `128` | KTX2 ETC1S/BasisLZ quality (1-255; higher = better quality, larger files). Reinterpreted as UASTC quality (0-4) when `--ktx2-uastc` is set. Only used with `--texture-format Ktx2` | `--ktx2-quality 200` |
+| `--ktx2-uastc` | `false` | Use UASTC instead of ETC1S/BasisLZ for KTX2 textures. UASTC transcodes to BC7/ASTC for near-lossless quality at ~3x the size of ETC1S. Only used with `--texture-format Ktx2` | `--ktx2-uastc` |
+| `--ktx-path` |  | Path to the libktx native library or its directory. When omitted, resolved from `OBJ2TILES_KTX`, then the executable directory (where the bundled lib lives), then system `PATH`. Only used with `--texture-format Ktx2` | `--ktx-path /usr/lib/libktx.so` |
 
 ### Geo-referencing
 
@@ -89,7 +102,7 @@ By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `r
 
 | Parameter | Default | Description | Example |
 |-----------|---------|-------------|---------|
-| `-e, --error` | `100` | Base geometric error value for the root tile in `tileset.json` | `--error 500` |
+| `-e, --error` | `0` (auto) | Base geometric error for the root tile in `tileset.json`. When `0` (default) it is derived automatically from the model's bounding box diagonal | `--error 500` |
 | `--use-system-temp` | `false` | Use the system temp folder for intermediate files instead of the output folder | `--use-system-temp` |
 | `--keep-intermediate` | `false` | Keep intermediate files (decimated OBJs, split tiles) for debugging | `--keep-intermediate` |
 | `--help` |  | Display help screen | `--help` |
@@ -165,6 +178,61 @@ The tiling stage places the model on the globe using an **ECEF** (Earth-Centered
 
 **Output format:** the tileset is written either as a loose folder tree or as a single `.3tz` archive - see [Output format](#output-format).
 
+## KTX2 GPU Texture Compression
+
+The `--texture-format Ktx2` option encodes every texture atlas as **KTX2 with Basis Universal supercompression** ([KHR_texture_basisu](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_basisu/README.md)) instead of JPEG. This lets the GPU decompress and store the texture natively, reducing VRAM usage by 4-8x and cutting draw-call overhead compared to JPEG atlases.
+
+**Two compression modes:**
+
+| Mode | Flag | Quality range | Transcodes to | Best for |
+|------|------|---------------|---------------|----------|
+| **ETC1S / BasisLZ** (default) | *(none)* | `--ktx2-quality 1-255` | ETC2, BC1/BC3, PVRTC | Smallest files, maximum hardware compatibility |
+| **UASTC** | `--ktx2-uastc` | `--ktx2-quality 0-4` | BC7, ASTC, ETC2 | Near-lossless quality, ~3x larger than ETC1S |
+
+**Renderer requirements:**
+
+Not all renderers support `KHR_texture_basisu`. Verified to work: CesiumJS, CesiumNative, Babylon.js, three.js (with `KTX2Loader`), and most WebGPU-capable renderers. Use `--texture-format Jpeg` (the default) for environments where `KHR_texture_basisu` support is uncertain.
+
+### Bundled native library (libktx)
+
+Encoding runs **in-process** via the KTX-Software C library (libktx v4.4.2, Apache-2.0) through P/Invoke - no external tool is executed and no installation is required. The published single-file binaries bundle the matching native library for each platform:
+
+| Platform | File | Size |
+|----------|------|------|
+| Windows x64 | `ktx.dll` | 2.31 MB |
+| Windows ARM64 | `ktx.dll` | 1.94 MB |
+| Linux x64 | `libktx.so` | 3.25 MB |
+| Linux ARM64 | `libktx.so` | 2.91 MB |
+| macOS x64 | `libktx.dylib` | 2.67 MB |
+
+For `dotnet build` without a RID (development builds), the library is resolved in order from: `--ktx-path` / `OBJ2TILES_KTX` environment variable, the executable directory, and finally the system `PATH`.
+
+### Updating libktx
+
+To refresh the vendored libraries to a new KTX-Software release, run the PowerShell script bundled in the repository:
+
+```powershell
+# Refresh all 5 platforms to the default version
+pwsh Obj2Tiles/native/update-libktx.ps1
+
+# Bump to a new version
+pwsh Obj2Tiles/native/update-libktx.ps1 -Version 4.5.0
+
+# Refresh only Linux and macOS (no 7-Zip required)
+pwsh Obj2Tiles/native/update-libktx.ps1 -Rid linux-x64,linux-arm64,osx-x64
+
+# Skip checksum verification
+pwsh Obj2Tiles/native/update-libktx.ps1 -SkipChecksum
+```
+
+**Requirements:**
+- PowerShell 7+ (`pwsh`) - available on Windows, Linux, and macOS
+- `tar` (included with Windows 10+, Linux, macOS) - used for Linux tarballs and the macOS `.pkg`
+- **7-Zip** - required only for the Windows NSIS `.exe` installers. Install with `winget install 7zip.7zip`, `choco install 7zip`, `apt-get install p7zip-full`, or `brew install p7zip`
+- Optional: set `$env:GITHUB_TOKEN` to raise the anonymous GitHub API rate limit
+
+The script queries the GitHub release API to resolve download URLs and SHA-256 digests, downloads each platform asset, verifies integrity, extracts the native library, and copies it into `Obj2Tiles/native/<rid>/` with the correct filename. After updating, rebuild and re-publish to include the new library in the single-file executable. Also update the source-mapping comment in `Obj2Tiles/Obj2Tiles.csproj`.
+
 ## Examples
 
 You can download a test OBJ file [here](https://github.com/DroneDB/test_data/raw/master/brighton/odm_texturing.zip)
@@ -184,6 +252,26 @@ Pack the whole tileset into a single archive (selected by the `.3tz` extension) 
 
 ```bash
 Obj2Tiles --3tz-compression 9 model.obj ./model.3tz
+```
+
+### KTX2 GPU-compressed textures
+
+Encode every texture atlas as Basis Universal KTX2 for minimal VRAM consumption (ETC1S mode, quality 192):
+
+```bash
+Obj2Tiles --texture-format Ktx2 --ktx2-quality 192 --local model.obj ./output
+```
+
+UASTC mode for near-lossless quality targeting BC7/ASTC renderers (larger files):
+
+```bash
+Obj2Tiles --texture-format Ktx2 --ktx2-uastc --ktx2-quality 3 --local model.obj ./output
+```
+
+Cap atlas size to 2048 px and raise JPEG quality for the default format:
+
+```bash
+Obj2Tiles --max-texture-size 2048 --texture-quality 90 --local model.obj ./output
 ```
 
 ### Octree with texture downscaling (recommended for large models)
