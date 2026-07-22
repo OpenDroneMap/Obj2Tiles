@@ -35,7 +35,7 @@ public class MeshUtils
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
                 continue;
 
-            var segs = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var segs = line.TrimStart().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             switch (segs[0])
             {

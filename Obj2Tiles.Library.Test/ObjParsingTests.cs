@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using NUnit.Framework;
+using Obj2Tiles.Common;
 using Obj2Tiles.Library.Geometry;
 using Shouldly;
 
@@ -202,6 +203,65 @@ public class ObjParsingTests
         // mtllib points to a non-existent file → should throw (not "Access denied")
         Should.Throw<FileNotFoundException>(() =>
             MeshUtils.LoadMesh(Path.Combine(TestDataPath, "mtllib-missing.obj")));
+    }
+
+    // --- Leading whitespace handling ---
+
+    [Test]
+    public void LoadMesh_LeadingWhitespaceOnMtlLib_DoesNotThrow()
+    {
+        // OBJ files from some exporters (e.g., WebODM/ODM) may have leading whitespace
+        // (tabs or spaces) before directive keywords. The parser splits on spaces only,
+        // so a leading tab causes "mtllib" to become "\tmtllib" which does not match
+        // the switch case, leaving materialsDict empty and every "usemtl" throwing
+        // "Material X not found".
+        using var area = new TestArea("LeadingWhitespaceMtlLib");
+        var mtl = Path.Combine(area.TestFolder, "model.mtl");
+        File.WriteAllText(mtl, "newmtl matA\n");
+
+        var obj = Path.Combine(area.TestFolder, "model.obj");
+        File.WriteAllText(obj,
+            "\tmtllib model.mtl\r\n" +     // leading tab
+            "v 0 0 0\r\n" +
+            "vt 0 0\r\n" +
+            "v 1 0 0\r\n" +
+            "vt 1 0\r\n" +
+            "v 0 1 0\r\n" +
+            "vt 0 1\r\n" +
+            "\tusemtl matA\r\n" +         // leading tab
+            "f 1/1 2/2 3/3\r\n");
+
+        var mesh = MeshUtils.LoadMesh(obj);
+
+        mesh.ShouldBeOfType<MeshT>();
+        mesh.FacesCount.ShouldBe(1);
+    }
+
+    [Test]
+    public void LoadMesh_LeadingWhitespaceOnAllKeywords_ParsesCorrectly()
+    {
+        // Ensure leading whitespace (tabs, spaces) is handled for all directive types
+        using var area = new TestArea("LeadingWhitespaceAll");
+        var obj = Path.Combine(area.TestFolder, "model.obj");
+        File.WriteAllText(obj,
+            "\tv 0 0 0\r\n" +             // leading tab on vertex
+            "    vt 0 0\r\n" +            // leading spaces on texcoord
+            "\tv 1 0 0\r\n" +             // leading tab
+            "    vt 1 0\r\n" +
+            "\tv 0 1 0\r\n" +             // leading tab
+            "    vt 0 1\r\n" +
+            "\t\tvn 0 1 0\r\n" +          // leading tabs on normal (skipped, but should not crash)
+            "f 1/1 2/2 3/3\r\n" +         // normal face
+            "\t\tv 0.5 0.5 0\r\n" +       // leading tabs on vertex
+            "\t\tvt 0.5 0.5\r\n" +
+            "\t\tf 1/1 2/2 4/4\r\n");     // leading tabs on face
+
+        var mesh = MeshUtils.LoadMesh(obj);
+
+        mesh.ShouldBeOfType<MeshT>();
+        // Without TrimStart, the second face (leading tabs) would be silently skipped.
+        // With the fix, both faces are parsed.
+        mesh.FacesCount.ShouldBe(2);
     }
 
     // --- Normals parsing (Fixed: segs.Length condition) ---
