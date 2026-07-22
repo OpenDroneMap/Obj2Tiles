@@ -135,13 +135,13 @@ For every decimated mesh, the program splits it recursively along the X and Y ax
 
 **Octree mode** (`--octree`):
 
-By default, every LOD produces the same number of tiles arranged as per-tile chains in `tileset.json`. With `--octree`, each LOD receives one additional division level compared to the next coarser LOD:
+By default, every LOD produces the same number of tiles arranged as per-tile chains in `tileset.json`. With `--octree`, each LOD receives one additional division level compared to the next coarser LOD. The per-LOD split depth formula is `lodDivisions = divisions + lods - index - 1` (fine LODs get deeper splits). The grid at depth D is $(2^D)^2$ tiles:
 
-| LOD | Grid size (`--divisions 2`, 3 LODs) | Tiles (XY) |
-|-----|-------------------------------------|------------|
-| 0 (finest) | 4x4 | 16 |
-| 1 | 3x3 | 9 |
-| 2 (coarsest) | 2x2 | 4 |
+| LOD | LOD depth (`--divisions 2`, 3 LODs) | Grid | Tiles (XY) |
+|-----|-------------------------------------|------|------------|
+| 0 (finest) | 2+3-0-1 = 4 | 16x16 | 256 |
+| 1 | 2+3-1-1 = 3 | 8x8 | 64 |
+| 2 (coarsest) | 2+3-2-1 = 2 | 4x4 | 16 |
 
 Coarser tiles become spatial parents of finer ones in `tileset.json`, producing a proper tree hierarchy. Combine `--octree` with `--zsplit` for a true 8-way octree.
 
