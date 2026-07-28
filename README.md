@@ -49,8 +49,9 @@ Obj2Tiles [options] <input.obj> <output>
 |-----------|---------|-------------|---------|
 | `-d, --divisions` | `2` | Recursion depth for binary splitting along each axis. Each level doubles the grid, producing `(2^divisions)^2` tiles along XY (or `(2^divisions)^3` with `--zsplit`). For example, `--divisions 2` gives a 4x4 grid (16 tiles) and `--divisions 3` gives 8x8 (64 tiles) | `--divisions 3` |
 | `-z, --zsplit` | `false` | Also split along the Z-axis (not just X and Y) | `--zsplit` |
-| `-g, --split-strategy` | `VertexBaricenter` | How the split point is computed: `AbsoluteCenter` (bounding box center), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy VertexMedian` |
+| `-g, --split-strategy` | `VertexBaricenter` | How the split grid is computed: `AbsoluteCenter` (local bounding-box center), `GlobalBounding` (one global square grid from the source AABB), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy GlobalBounding` |
 | `-k, --keeptextures` | `false` | Keep original textures instead of repacking them (not recommended) | `--keeptextures` |
+| `--single-material-per-part` | `false` | Force every sliced part to emit one material and at most one atlas per supported map (base color and normal). This necessarily repacks textures, including when used with `--keeptextures` | `--single-material-per-part` |
 | `--octree` | `false` | Use octree spatial subdivision: each LOD gets one additional division level, producing a proper parent-child tile hierarchy instead of per-tile LOD chains. Combine with `--zsplit` for a true 8-way octree | `--octree --zsplit` |
 | `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses bicubic resampling | `--lod-texture-scale 0.5` |
 
@@ -131,7 +132,16 @@ For every decimated mesh, the program splits it recursively along the X and Y ax
 
 - **`VertexBaricenter`** (default): split point is the barycenter of the sub-mesh vertices. Adapts to geometry concentration, producing balanced tiles.
 - **`AbsoluteCenter`**: split point is the bounding box center. Produces a spatially uniform grid but may yield uneven tiles for non-uniform geometry.
+- **`GlobalBounding`**: creates a square XY bounding box from the LOD-0 source AABB, centered on the source and sized to its longest XY side. Every recursion level subdivides those same global cells into smaller squares, so all LODs use one stable grid. With `--zsplit`, Z uses the source AABB depth.
 - **`VertexMedian`**: split point is the vertex median. Most balanced of all strategies - robust to outliers and skewed distributions. Uses a *pre-computed split plan* from LOD-0 vertices so all LODs share the same split points without redundant computation.
+
+**Single-material tiles** (`--single-material-per-part`):
+
+When source meshes come with UDIM meshes that are scattered all over the place, sliced meshes can receive a lot of materials (and thereby also textures) each.
+
+When enabling this, each sliced mesh combines all of its used materials into one material, texture inputs are packed into one single atlas. In most scenarios, this may reduce overall resolution, can however be counteracted by using a higher `--max-texture-size`.
+
+The option works with every split strategy, LOD mode, texture format, and `--keeptextures` (where lossless PNG atlases are used because combining sources requires repacking).
 
 **Octree mode** (`--octree`):
 
@@ -320,6 +330,14 @@ Use the median-based split strategy for the most balanced tiles:
 
 ```bash
 Obj2Tiles --split-strategy VertexMedian --lods 4 --divisions 2 --local model.obj ./output
+```
+
+### Stable global square grid with one material per tile
+
+Split all LODs against one source-derived square grid and combine every tile's material maps:
+
+```bash
+Obj2Tiles --split-strategy GlobalBounding --single-material-per-part --divisions 3 --local model.obj ./output
 ```
 
 ### Survey feet to meters

@@ -10,7 +10,8 @@ public static partial class StagesFacade
     public static async Task<Dictionary<string, Box3>[]> Split(string[] sourceFiles, string destFolder, int divisions,
         bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter,
         bool isOctree = false, float lodTextureScale = 1.0f,
-        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg)
+        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg,
+        bool singleMaterialPerPart = false)
     {
         var results = new Dictionary<string, Box3>[sourceFiles.Length];
 
@@ -24,44 +25,56 @@ public static partial class StagesFacade
         var mesh0 = MeshUtils.LoadMesh(sourceFiles[0], out _);
         var vertices0 = mesh0.Vertices.ToArray();
 
-        Func<Vertex3[], Vertex3> computeCenter = splitPointStrategy switch
-        {
-            SplitPointStrategy.AbsoluteCenter => ComputeBoundsCenter,
-            SplitPointStrategy.VertexBaricenter => ComputeBaricenter,
-            SplitPointStrategy.VertexMedian => ComputeMedian,
-            _ => throw new ArgumentOutOfRangeException(nameof(splitPointStrategy))
-        };
-
         var splitPlan = new Dictionary<string, Vertex3>();
-        if (splitPointStrategy == SplitPointStrategy.VertexMedian)
+        Box3? globalBounds = null;
+        Func<IMesh, Vertex3> replaySplitPoint;
+
+        if (splitPointStrategy == SplitPointStrategy.GlobalBounding)
         {
-            if (zsplit)
-                PreComputeSplitPlanXYZBalanced(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
-            else
-                PreComputeSplitPlanXYBalanced(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
+            var squareBounds = CreateGlobalSquareBounds(mesh0.Bounds);
+            globalBounds = squareBounds;
+            replaySplitPoint = _ => squareBounds.Center;
+            Console.WriteLine($" ?> Global square bounds: {squareBounds}");
         }
         else
         {
-            if (zsplit)
-                PreComputeSplitPlanXYZ(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
+            Func<Vertex3[], Vertex3> computeCenter = splitPointStrategy switch
+            {
+                SplitPointStrategy.AbsoluteCenter => ComputeBoundsCenter,
+                SplitPointStrategy.VertexBaricenter => ComputeBaricenter,
+                SplitPointStrategy.VertexMedian => ComputeMedian,
+                _ => throw new ArgumentOutOfRangeException(nameof(splitPointStrategy))
+            };
+
+            if (splitPointStrategy == SplitPointStrategy.VertexMedian)
+            {
+                if (zsplit)
+                    PreComputeSplitPlanXYZBalanced(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
+                else
+                    PreComputeSplitPlanXYBalanced(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
+            }
             else
-                PreComputeSplitPlanXY(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
+            {
+                if (zsplit)
+                    PreComputeSplitPlanXYZ(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
+                else
+                    PreComputeSplitPlanXY(vertices0, "Mesh", maxDivisions, computeCenter, splitPlan);
+            }
+
+            Func<IMesh, Vertex3> baseSplitPoint = splitPointStrategy switch
+            {
+                SplitPointStrategy.AbsoluteCenter => m => m.Bounds.Center,
+                SplitPointStrategy.VertexBaricenter => m => m.GetVertexBaricenter(),
+                SplitPointStrategy.VertexMedian => m => m.GetVertexMedian(),
+                _ => throw new ArgumentOutOfRangeException(nameof(splitPointStrategy))
+            };
+
+            replaySplitPoint = m =>
+                splitPlan.TryGetValue(m.Name, out var pt) ? pt : baseSplitPoint(m);
         }
 
         sw.Stop();
         Console.WriteLine($" ?> Split plan computed: {splitPlan.Count} split points in {sw.ElapsedMilliseconds}ms");
-
-        // Replay function — all LODs use the same pre-computed split points
-        Func<IMesh, Vertex3> baseSplitPoint = splitPointStrategy switch
-        {
-            SplitPointStrategy.AbsoluteCenter => m => m.Bounds.Center,
-            SplitPointStrategy.VertexBaricenter => m => m.GetVertexBaricenter(),
-            SplitPointStrategy.VertexMedian => m => m.GetVertexMedian(),
-            _ => throw new ArgumentOutOfRangeException(nameof(splitPointStrategy))
-        };
-
-        Func<IMesh, Vertex3> replaySplitPoint = m =>
-            splitPlan.TryGetValue(m.Name, out var pt) ? pt : baseSplitPoint(m);
 
         // Split all LODs in parallel using the pre-computed split plan.
         // In octree mode, the finest LOD (index=0) gets the most divisions; each coarser LOD gets one fewer.
@@ -77,7 +90,9 @@ public static partial class StagesFacade
             int lodDivisions = isOctree ? divisions + sourceFiles.Length - index - 1 : divisions;
             float textureDownscale = index == 0 ? 1.0f : (float)Math.Pow(lodTextureScale, index);
 
-            tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy, replaySplitPoint, textureDownscale, maxTextureSize, textureQuality, textureFormat));
+            tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy,
+                replaySplitPoint, globalBounds, textureDownscale, maxTextureSize, textureQuality, textureFormat,
+                singleMaterialPerPart));
         }
 
         await Task.WhenAll(tasks);
@@ -94,17 +109,21 @@ public static partial class StagesFacade
         TexturesStrategy textureStrategy = TexturesStrategy.Repack,
         SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter,
         float textureDownscale = 1.0f,
-        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg)
+        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg,
+        bool singleMaterialPerPart = false)
     {
         Func<IMesh, Vertex3> getSplitPoint = splitPointStrategy switch
         {
             SplitPointStrategy.AbsoluteCenter => m => m.Bounds.Center,
+            SplitPointStrategy.GlobalBounding => m => m.Bounds.Center,
             SplitPointStrategy.VertexBaricenter => m => m.GetVertexBaricenter(),
             SplitPointStrategy.VertexMedian => m => m.GetVertexMedian(),
             _ => throw new ArgumentOutOfRangeException(nameof(splitPointStrategy))
         };
 
-        return await Split(sourcePath, destPath, divisions, zSplit, textureStrategy, splitPointStrategy, getSplitPoint, textureDownscale, maxTextureSize, textureQuality, textureFormat);
+        return await Split(sourcePath, destPath, divisions, zSplit, textureStrategy, splitPointStrategy,
+            getSplitPoint, bounds, textureDownscale, maxTextureSize, textureQuality, textureFormat,
+            singleMaterialPerPart);
     }
 
     private static async Task<Dictionary<string, Box3>> Split(string sourcePath, string destPath, int divisions,
@@ -112,8 +131,10 @@ public static partial class StagesFacade
         TexturesStrategy textureStrategy,
         SplitPointStrategy splitPointStrategy,
         Func<IMesh, Vertex3> getSplitPoint,
+        Box3? bounds = null,
         float textureDownscale = 1.0f,
-        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg)
+        int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg,
+        bool singleMaterialPerPart = false)
     {
         var sw = new Stopwatch();
         var tilesBounds = new Dictionary<string, Box3>();
@@ -139,6 +160,7 @@ public static partial class StagesFacade
                 t.MaxTextureSize = maxTextureSize;
                 t.TextureQuality = textureQuality;
                 t.TextureFormat = textureFormat;
+                t.SingleMaterialPerPart = singleMaterialPerPart;
             }
 
             mesh.WriteObj(Path.Combine(destPath, $"{mesh.Name}.obj"));
@@ -156,7 +178,14 @@ public static partial class StagesFacade
 
         int count;
 
-        if (splitPointStrategy == SplitPointStrategy.VertexMedian)
+        if (splitPointStrategy == SplitPointStrategy.GlobalBounding)
+        {
+            var globalBounds = CreateGlobalSquareBounds(bounds ?? mesh.Bounds);
+            count = zSplit
+                ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, globalBounds, meshes)
+                : await MeshUtils.RecurseSplitXY(mesh, divisions, globalBounds, meshes);
+        }
+        else if (splitPointStrategy == SplitPointStrategy.VertexMedian)
         {
             count = zSplit
                 ? await MeshUtils.RecurseSplitXYZBalanced(mesh, divisions, getSplitPoint, meshes)
@@ -197,6 +226,7 @@ public static partial class StagesFacade
                 t.MaxTextureSize = maxTextureSize;
                 t.TextureQuality = textureQuality;
                 t.TextureFormat = textureFormat;
+                t.SingleMaterialPerPart = singleMaterialPerPart;
             }
 
             var tilePath = Path.Combine(destPath, $"{m.Name}.obj");
@@ -214,6 +244,27 @@ public static partial class StagesFacade
         Console.WriteLine($" ?> {meshes.Count} tiles written in {sw.ElapsedMilliseconds}ms");
 
         return tilesBounds;
+    }
+
+    private static Box3 CreateGlobalSquareBounds(Box3 sourceBounds)
+    {
+        // If we would adhere to a regular 3-axis AABB, where all sides are the same length, 
+        // z-splitting would be meaningless in almost every case, as it would performn no cuts on the z-axis.
+        // In order to provide a use case for z-splitting, the box does not behave like a cube, once z-splitting is enabled.
+        // Instead. When z-splitting is enabled, we simply clamp to sourceBounds.z, so that the mesh does get segmented across the entire height.
+        
+        var side = Math.Max(sourceBounds.Width, sourceBounds.Height);
+
+        var center = sourceBounds.Center;
+        var halfSide = side / 2;
+
+        return new Box3(
+            center.X - halfSide,
+            center.Y - halfSide,
+            sourceBounds.Min.Z,
+            center.X + halfSide,
+            center.Y + halfSide,
+            sourceBounds.Max.Z);
     }
 
     #region Split Plan Pre-computation (vertex-only, no mesh splitting)
@@ -438,6 +489,7 @@ public static partial class StagesFacade
 public enum SplitPointStrategy
 {
     AbsoluteCenter,
+    GlobalBounding,
     VertexBaricenter,
     VertexMedian
 }
