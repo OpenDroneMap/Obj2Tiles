@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -95,6 +96,38 @@ public class Mesh3Tests
     }
 
     [Test]
+    public void WriteObj_Cube_SingleMaterialPerPart_ProducesReloadableSingleMaterialAtlas()
+    {
+        var testPath = GetTestOutputPath(nameof(WriteObj_Cube_SingleMaterialPerPart_ProducesReloadableSingleMaterialAtlas));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube", "cube.obj"));
+        mesh.TexturesStrategy = TexturesStrategy.Repack;
+        mesh.SingleMaterialPerPart = true;
+
+        var outputPath = Path.Combine(testPath, "mesh.obj");
+        mesh.WriteObj(outputPath);
+
+        var output = (MeshT)MeshUtils.LoadMesh(outputPath);
+        output.Materials.Count.ShouldBe(1);
+        output.Faces.All(face => face.MaterialIndex == 0).ShouldBeTrue();
+        File.Exists(Path.Combine(testPath, output.Materials[0].Texture!)).ShouldBeTrue();
+    }
+
+    [Test]
+    public void WriteObj_Cube_SingleMaterialPerPart_TooSmallAtlasExplainsHowToFixIt()
+    {
+        var testPath = GetTestOutputPath(nameof(WriteObj_Cube_SingleMaterialPerPart_TooSmallAtlasExplainsHowToFixIt));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube", "cube.obj"));
+        mesh.SingleMaterialPerPart = true;
+        mesh.MaxTextureSize = 4;
+
+        var error = Should.Throw<InvalidOperationException>(() =>
+            mesh.WriteObj(Path.Combine(testPath, "mesh.obj")));
+
+        error.Message.ShouldContain("Cannot fit");
+        error.Message.ShouldContain("Increase --max-texture-size or set it to 0.");
+    }
+
+    [Test]
     public void WriteObj_Brighton_Repacking()
     {
         using var fs = new TestFS(BrightonTexturingTestUrl, nameof(Mesh3Tests));
@@ -106,6 +139,23 @@ public class Mesh3Tests
         Directory.CreateDirectory(outputPath);
 
         mesh.WriteObj(Path.Combine(outputPath, "mesh.obj"));
+    }
+
+    [Test]
+    public void WriteObj_Brighton_SingleMaterialPerPart_ProducesReloadableSingleMaterialAtlas()
+    {
+        using var fs = new TestFS(BrightonTexturingTestUrl, nameof(WriteObj_Brighton_SingleMaterialPerPart_ProducesReloadableSingleMaterialAtlas));
+        var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(fs.TestFolder, "odm_textured_model_geo.obj"));
+        mesh.TexturesStrategy = TexturesStrategy.Repack;
+        mesh.SingleMaterialPerPart = true;
+
+        var outputPath = Path.Combine(fs.TestFolder, "single-material.obj");
+        mesh.WriteObj(outputPath);
+
+        var output = (MeshT)MeshUtils.LoadMesh(outputPath);
+        output.Materials.Count.ShouldBe(1);
+        output.Faces.All(face => face.MaterialIndex == 0).ShouldBeTrue();
+        File.Exists(Path.Combine(fs.TestFolder, output.Materials[0].Texture!)).ShouldBeTrue();
     }
 
 

@@ -148,6 +148,26 @@ public class StagesTests
 
     }
 
+    [TestCase(false, "Mesh-XL-YL")]
+    [TestCase(true, "Mesh-XL-YL-ZR")]
+    public async Task SplitStage_GlobalBounding_UsesTheSuppliedGridInsteadOfLocalMeshBounds(bool zSplit,
+        string expectedTileName)
+    {
+        var testPath = GetTestOutputPath(nameof(SplitStage_GlobalBounding_UsesTheSuppliedGridInsteadOfLocalMeshBounds));
+        var sourcePath = Path.Combine(testPath, "mesh.obj");
+        File.WriteAllText(sourcePath, "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n");
+
+        var result = await StagesFacade.Split(
+            sourcePath,
+            Path.Combine(testPath, "output"),
+            divisions: 1,
+            zSplit: zSplit,
+            bounds: new Box3(0, 0, 0, 4, 4, 0),
+            splitPointStrategy: SplitPointStrategy.GlobalBounding);
+
+        result.Keys.ShouldBe([expectedTileName]);
+    }
+
     #region GpsCoords / ECEF Tests
 
     [Test]
