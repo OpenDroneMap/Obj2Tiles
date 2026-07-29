@@ -641,36 +641,60 @@ public class MeshT : IMesh
             packingScale = Math.Clamp(packingScale, double.Epsilon, 1.0);
         }
 
-        // Actual Packing
+        // Pack charts using a simple shelf algorithm
         var packed = false;
+        var shelfScale = packingScale;
         for (var attempt = 0; attempt < 64 && !packed; attempt++)
         {
-            var binPack = new MaxRectanglesBinPack(atlasEdge, atlasEdge, false);
-            packed = true;
-
-            foreach (var chart in charts)
+            // Compute padded chart sizes at current scale.
+            var paddedW = new int[charts.Count];
+            var paddedH = new int[charts.Count];
+            for (var i = 0; i < charts.Count; i++)
             {
-                var width = Math.Max(1, (int)Math.Round(chart.NaturalWidth * packingScale));
-                var height = Math.Max(1, (int)Math.Round(chart.NaturalHeight * packingScale));
-                var rectangle = binPack.Insert(width + 2 * padding, height + 2 * padding,
-                    FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
+                paddedW[i] = Math.Max(1, (int)Math.Round(charts[i].NaturalWidth * shelfScale)) + 2 * padding;
+                paddedH[i] = Math.Max(1, (int)Math.Round(charts[i].NaturalHeight * shelfScale)) + 2 * padding;
+            }
 
-                if (rectangle.Width == 0)
+            // Sort by descending by height 
+            var order = Enumerable.Range(0, charts.Count).ToArray();
+            Array.Sort(order, (a, b) => paddedH[b].CompareTo(paddedH[a]));
+
+            // Shelf pack.
+            packed = true;
+            var curX = 0;
+            var curY = 0;
+            var rowHeight = 0;
+            for (var si = 0; si < order.Length; si++)
+            {
+                var i = order[si];
+                var w = paddedW[i];
+                var h = paddedH[i];
+
+                if (curX + w > atlasEdge)
+                {
+                    // Start new row.
+                    curX = 0;
+                    curY += rowHeight;
+                    rowHeight = 0;
+                }
+
+                if (curY + h > atlasEdge)
                 {
                     packed = false;
                     break;
                 }
 
-                chart.PackedRectangle = rectangle;
+                charts[i].PackedRectangle = new PackingRectangle { X = curX, Y = curY, Width = w, Height = h };
+                curX += w;
+                rowHeight = Math.Max(rowHeight, h);
             }
 
-            if (packed)
-                break;
+            if (packed) break;
 
             if (MaxTextureSize == 0)
                 atlasEdge *= 2;
             else
-                packingScale *= 0.85;
+                shelfScale *= 0.85;
         }
 
         if (!packed)
