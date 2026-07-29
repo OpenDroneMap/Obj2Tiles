@@ -171,9 +171,25 @@ namespace Obj2Tiles
                         // smaller user cap when one is set). 256px keeps the root - the first tile the
                         // viewer downloads - small (a few MB) without any visible loss at overview zoom.
                         const int rootTextureSizeCap = 256;
-                        var rootMaxTextureSize = opts.MaxTextureSize > 0
-                            ? Math.Min(opts.MaxTextureSize, rootTextureSizeCap)
-                            : rootTextureSizeCap;
+
+                        // When SingleMaterialPerPart is used, we do however know that there can only be
+                        // a single texture for the root tiles. In this case we don't need to enforce a
+                        // per-texture cap, but rather a max-size for the one texture we have.
+                        const int singleMaterialTextureSizeCap = 4096;
+
+                        int rootMaxTextureSize;
+
+                        if (opts.SingleMaterialPerPart)
+                        {
+                            rootMaxTextureSize = Math.Min(opts.MaxTextureSize, singleMaterialTextureSizeCap);
+                        }
+                        else
+                        {
+                            rootMaxTextureSize = opts.MaxTextureSize > 0
+                                ? Math.Min(opts.MaxTextureSize, rootTextureSizeCap)
+                                : rootTextureSizeCap;
+                        }
+
                         await StagesFacade.Split(rootSourceObj, rootTempDir, 0,
                             textureDownscale: rootDownscale, maxTextureSize: rootMaxTextureSize, textureQuality: opts.TextureQuality,
                             textureFormat: opts.TextureFormat, singleMaterialPerPart: opts.SingleMaterialPerPart);
