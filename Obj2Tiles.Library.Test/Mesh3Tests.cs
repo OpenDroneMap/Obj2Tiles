@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -113,18 +114,55 @@ public class Mesh3Tests
     }
 
     [Test]
-    public void WriteObj_Cube_SingleMaterialPerPart_TooSmallAtlasExplainsHowToFixIt()
+    public void WriteObj_Cube_SingleMaterialPerPart_SubPixelChartsFitWithoutPadding()
     {
-        var testPath = GetTestOutputPath(nameof(WriteObj_Cube_SingleMaterialPerPart_TooSmallAtlasExplainsHowToFixIt));
+        var testPath = GetTestOutputPath(nameof(WriteObj_Cube_SingleMaterialPerPart_SubPixelChartsFitWithoutPadding));
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(TestDataPath, "cube", "cube.obj"));
         mesh.SingleMaterialPerPart = true;
         mesh.MaxTextureSize = 4;
 
-        var error = Should.Throw<InvalidOperationException>(() =>
-            mesh.WriteObj(Path.Combine(testPath, "mesh.obj")));
+        var outputPath = Path.Combine(testPath, "mesh.obj");
+        mesh.WriteObj(outputPath);
 
-        error.Message.ShouldContain("Cannot fit");
-        error.Message.ShouldContain("Increase --max-texture-size or set it to 0.");
+        var output = (MeshT)MeshUtils.LoadMesh(outputPath);
+        output.Materials.Count.ShouldBe(1);
+        output.Faces.All(face => face.MaterialIndex == 0).ShouldBeTrue();
+    }
+
+    [Test]
+    public void WriteObj_SingleMaterialPerPart_SubPixelChartsDoNotReservePadding()
+    {
+        var testPath = GetTestOutputPath(nameof(WriteObj_SingleMaterialPerPart_SubPixelChartsDoNotReservePadding));
+        var texturePath = Path.Combine(testPath, "source.png");
+        using (var texture = new Image<Rgba32>(256, 256, new Rgba32(255, 0, 0, 255)))
+            texture.SaveAsPng(texturePath);
+
+        const int chartCount = 64;
+        var vertices = new[] { new Vertex3(0, 0, 0), new Vertex3(1, 0, 0), new Vertex3(0, 1, 0) };
+        var textureVertices = new List<Vertex2>(chartCount * 3);
+        var faces = new List<FaceT>(chartCount);
+        for (var i = 0; i < chartCount; i++)
+        {
+            var textureIndex = textureVertices.Count;
+            var u = i * 0.015;
+            textureVertices.Add(new Vertex2(u, 0));
+            textureVertices.Add(new Vertex2(u + 0.01, 0));
+            textureVertices.Add(new Vertex2(u, 0.01));
+            faces.Add(new FaceT(0, 1, 2, textureIndex, textureIndex + 1, textureIndex + 2, 0));
+        }
+
+        var mesh = new MeshT(vertices, textureVertices, faces, [new Materials.Material("tiny", texturePath)])
+        {
+            TexturesStrategy = TexturesStrategy.Repack,
+            SingleMaterialPerPart = true,
+            MaxTextureSize = 32
+        };
+
+        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
+
+        using var atlas = Image.Load(Path.Combine(testPath, mesh.Materials[0].Texture!));
+        atlas.Width.ShouldBe(32);
+        atlas.Height.ShouldBe(32);
     }
 
     [Test]

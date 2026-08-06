@@ -141,7 +141,13 @@ When source meshes come with UDIM meshes that are scattered all over the place, 
 
 When enabling this, each sliced mesh combines all of its used materials into one material, texture inputs are packed into one single atlas. In most scenarios, this may reduce overall resolution, can however be counteracted by using a higher `--max-texture-size`.
 
-The option works with every split strategy, LOD mode, texture format, and `--keeptextures` (where lossless PNG atlases are used because combining sources requires repacking).
+When using this with  `--max-texture-size 0`. The repacking maintains the original Texel Density 1:1, resulting in lossless texture transfer. The resulting textures, while automatically choose an adequate resolution, that fits all charts at the original texel density, while optimizing for space. This can result in textures with vastly varying resoltions. Optimization can be done be either reducing the resolution of the input textures, or by increasing `--divisions`.
+
+The option works with every split strategy, LOD mode, texture format.
+
+`--keeptextures` is ignored when this is specified.
+
+Note: When there are to many charts to fit into an atlas of the specified size, instead of failing we chooses the smallest possible texture size, which can fit all charts.
 
 **Octree mode** (`--octree`):
 
@@ -334,10 +340,10 @@ Obj2Tiles --split-strategy VertexMedian --lods 4 --divisions 2 --local model.obj
 
 ### Stable global square grid with one material per tile
 
-Split all LODs against one source-derived square grid and combine every tile's material maps:
+Split all LODs against one source-derived square grid and combine every tile's material maps, resulting in a runtime-performance optimized 3D Tileset:
 
 ```bash
-Obj2Tiles --split-strategy GlobalBounding --single-material-per-part --divisions 3 --local model.obj ./output
+Obj2Tiles --split-strategy GlobalBounding --divisions 1 --octree --single-material-per-part --max-texture-size 2048   model.obj ./output
 ```
 
 ### Survey feet to meters
