@@ -1,9 +1,9 @@
 
 # Obj2Tiles - Converts OBJ file to 3D Tiles format
 
-![license](https://img.shields.io/github/license/HeDo88TH/Obj2Tiles)
-![commits](https://img.shields.io/github/commit-activity/m/HeDo88TH/Obj2Tiles)
-![languages](https://img.shields.io/github/languages/top/HeDo88TH/Obj2Tiles)
+![license](https://img.shields.io/github/license/OpenDroneMap/Obj2Tiles)
+![commits](https://img.shields.io/github/commit-activity/m/OpenDroneMap/Obj2Tiles)
+![languages](https://img.shields.io/github/languages/top/OpenDroneMap/Obj2Tiles)
 [![Build & Test](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml)
 [![Publish](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml)
 ![Discord](https://img.shields.io/discord/1491016144310767670?label=Discord&logo=discord&color=5865F2)
@@ -52,7 +52,7 @@ Obj2Tiles [options] <input.obj> <output>
 | `-g, --split-strategy` | `VertexBaricenter` | How the split point is computed: `AbsoluteCenter` (bounding box center), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy VertexMedian` |
 | `-k, --keeptextures` | `false` | Keep original textures instead of repacking them (not recommended) | `--keeptextures` |
 | `--octree` | `false` | Use octree spatial subdivision: each LOD gets one additional division level, producing a proper parent-child tile hierarchy instead of per-tile LOD chains. Combine with `--zsplit` for a true 8-way octree | `--octree --zsplit` |
-| `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses bicubic resampling | `--lod-texture-scale 0.5` |
+| `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses ImageSharp's default resampler | `--lod-texture-scale 0.5` |
 
 ### Textures
 
@@ -115,7 +115,7 @@ By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `r
 
 ### 1. Decimation
 
-The source OBJ is decimated using the **Fast Quadric Mesh Simplification** algorithm by [Mattias Edlund](https://github.com/Whinarn) (ported from .NET Framework 3.5 to .NET Core; original repo [here](https://github.com/Whinarn/MeshDecimator)).
+The source OBJ is decimated using the **Fast Quadric Mesh Simplification** algorithm (originally by Sven Forstmann, [sp4cerat/Fast-Quadric-Mesh-Simplification](https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification)). The C# implementation is vendored in `MeshDecimatorCore/`, ported from [Whinarn/MeshDecimator](https://github.com/Whinarn/MeshDecimator) and modernized for current .NET.
 
 The number of LODs is controlled by `--lods`. Decimation quality levels follow this formula:
 
@@ -158,7 +158,7 @@ Each tile's texture atlas is repacked from the portion of the source texture wit
 | 1 | 0.5 | 512×512 JPEG |
 | 2 | 0.25 | 256×256 JPEG |
 
-Downscaling uses ImageSharp's default resampler. LOD-0 preserves the original texture format; coarser LODs are JPEG at quality 75.
+Downscaling uses `Resize` with ImageSharp's default resampler. LOD-0 preserves the original texture format; coarser LODs are re-encoded JPEG at `--texture-quality` (default 75).
 
 ### 3. Tiling
 
