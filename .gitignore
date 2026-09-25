@@ -8,3 +8,4 @@ test_output/
 test-output/
 test-output2/
 publish/
+*.DotSettings.user

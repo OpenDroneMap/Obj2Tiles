@@ -16,7 +16,9 @@ namespace MeshDecimatorCore
             PreserveUVFoldoverEdges = false,
             PreserveSurfaceCurvature = false,
             EnableSmartLink = true,
-            VertexLinkDistance = double.Epsilon,
+            // double.Epsilon is the smallest representable positive double (~4.9e-324), not a usable
+            // welding tolerance - this is the double-precision machine epsilon (C/C++ DBL_EPSILON).
+            VertexLinkDistance = 2.2204460492503131E-16,
             MaxIterationCount = 100,
             Aggressiveness = 7.0
         };
@@ -28,14 +30,22 @@ namespace MeshDecimatorCore
         public bool PreserveBorderEdges;
 
         /// <summary>
-        /// If enabled, UV seam edges will not be collapsed,
-        /// preventing texture discontinuity artifacts.
+        /// If enabled, UV seam edges will not be collapsed, preventing texture
+        /// discontinuity artifacts.
+        /// A UV seam edge is a border edge that is duplicated in two distinct
+        /// triangles with different UV coordinates (cut for texturing purposes).
+        /// This is relevant only if EnableSmartLink is set to true.
+        /// If EnableSmartLink is set to false the UV seam edges are always treated as borders.
         /// Default value: false
         /// </summary>
         public bool PreserveUVSeamEdges;
 
         /// <summary>
         /// If enabled, UV foldover edges will not be collapsed.
+        /// A UV foldover edge is a border edge that is duplicated in two distinct
+        /// triangles with same UV coordinates (likely normal-related vertex duplication).
+        /// This is relevant only if EnableSmartLink is set to true.
+        /// If EnableSmartLink is set to false the UV foldover edges are always treated as borders.
         /// Default value: false
         /// </summary>
         public bool PreserveUVFoldoverEdges;
@@ -58,7 +68,7 @@ namespace MeshDecimatorCore
         /// <summary>
         /// The maximum distance between two vertices to be linked together
         /// when smart linking is enabled.
-        /// Default value: double.Epsilon
+        /// Default value: double-precision machine epsilon (2.2204460492503131E-16)
         /// </summary>
         public double VertexLinkDistance;
 

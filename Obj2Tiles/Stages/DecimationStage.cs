@@ -9,7 +9,8 @@ namespace Obj2Tiles.Stages;
 
 public static partial class StagesFacade
 {
-    public static async Task<DecimateResult> Decimate(string sourcePath, string destPath, int lods)
+    public static async Task<DecimateResult> Decimate(string sourcePath, string destPath, int lods,
+        DecimationMode mode = DecimationMode.Standard, bool ignoreNormalMaps = false)
     {
 
         var qualities = Enumerable.Range(0, lods - 1).Select(i => 1.0f - ((i + 1) / (float)lods)).ToArray();
@@ -36,7 +37,7 @@ public static partial class StagesFacade
 
             Console.WriteLine(" -> Decimating mesh {0} with quality {1:0.00}", fileName, quality);
 
-            tasks.Add(Task.Run(() => InternalDecimate(sourceObjMesh, destFile, quality)));
+            tasks.Add(Task.Run(() => InternalDecimate(sourceObjMesh, destFile, quality, mode)));
 
             destFiles.Add(destFile);
         }
@@ -45,7 +46,7 @@ public static partial class StagesFacade
         Console.WriteLine(" ?> Decimation done");
 
         Console.WriteLine(" -> Copying obj dependencies");
-        Utils.CopyObjDependencies(sourcePath, destPath);
+        Utils.CopyObjDependencies(sourcePath, destPath, ignoreNormalMaps);
         Console.WriteLine(" ?> Dependencies copied");
 
         return new DecimateResult { DestFiles = destFiles.ToArray(), Bounds = bounds };
@@ -53,7 +54,7 @@ public static partial class StagesFacade
     }
 
 
-    private static void InternalDecimate(ObjMesh sourceObjMesh, string destPath, float quality)
+    private static void InternalDecimate(ObjMesh sourceObjMesh, string destPath, float quality, DecimationMode mode)
     {
         quality = MathHelper.Clamp01(quality);
         var sourceVertices = sourceObjMesh.Vertices;
@@ -61,6 +62,7 @@ public static partial class StagesFacade
         var sourceTexCoords2D = sourceObjMesh.TexCoords2D;
         var sourceTexCoords3D = sourceObjMesh.TexCoords3D;
         var sourceSubMeshIndices = sourceObjMesh.SubMeshIndices;
+        var hasTextures = sourceTexCoords2D != null || sourceTexCoords3D != null;
 
         var sourceMesh = new Mesh(sourceVertices!, sourceSubMeshIndices!)
         {
@@ -87,18 +89,66 @@ public static partial class StagesFacade
         stopwatch.Reset();
         stopwatch.Start();
 
+        bool enableSmartLink;
+        bool preserveUVSeamEdges;
+        bool preserveUVFoldoverEdges;
+        bool preserveBorderEdges;
+        double aggressiveness;
+        int maxIterations;
+
+        switch (mode)
+        {
+            case DecimationMode.Aggressive:
+                enableSmartLink = true;
+                preserveUVSeamEdges = false;
+                preserveUVFoldoverEdges = false;
+                preserveBorderEdges = quality > 0.2f;
+                aggressiveness = 7.0;
+                maxIterations = 100;
+                break;
+            case DecimationMode.Quality:
+                // Note: this is substantially equivalent to
+                // enableSmartLink = true, preserveUVSeamEdges = true, preserveUVFoldoverEdges = true
+                // ... but faster.
+                enableSmartLink = false;
+                preserveUVSeamEdges = false;
+                preserveUVFoldoverEdges = false;
+                preserveBorderEdges = true;
+                // Less aggressive, more steps - slower but possibly slightly better
+                aggressiveness = 5.0;
+                maxIterations = 300;
+                break;
+            case DecimationMode.Standard:
+            default:
+                enableSmartLink = true;
+                // With textures we should almost always preserve UV-seams and UV-foldovers
+                // as not doing so will generate visible distortion.
+                // Without textures the distortion effect is only related to normals
+                // and is usually milder, so we can tolerate it when quality is low.
+                preserveUVSeamEdges = hasTextures || quality > 0.5f;
+                preserveUVFoldoverEdges = hasTextures || quality > 0.5f;
+                preserveBorderEdges = quality > 0.2f;
+                aggressiveness = 7.0;
+                maxIterations = 100;
+                break;
+        }
+
         var algorithm = new FastQuadricMeshSimplification
         {
             Verbose = true,
             Options = new SimplificationOptions
             {
-                EnableSmartLink = true,
-                PreserveUVSeamEdges = false,
-                PreserveBorderEdges = quality > 0.2f,
+                EnableSmartLink = enableSmartLink,
+                PreserveUVSeamEdges = preserveUVSeamEdges,
+                PreserveBorderEdges = preserveBorderEdges,
+                PreserveUVFoldoverEdges = preserveUVFoldoverEdges,
                 PreserveSurfaceCurvature = true,
-                Aggressiveness = 7.0,
-                MaxIterationCount = 100,
-                VertexLinkDistance = double.Epsilon
+                Aggressiveness = aggressiveness,
+                MaxIterationCount = maxIterations,
+                // double.Epsilon is the smallest representable positive double (~4.9e-324), not a
+                // usable welding tolerance - this is the double-precision machine epsilon (C/C++
+                // DBL_EPSILON), matching SimplificationOptions.Default.
+                VertexLinkDistance = 2.2204460492503131E-16
             }
         };
 
@@ -144,4 +194,32 @@ public static partial class StagesFacade
             destVertices.Length, outputTriangleCount, reduction, timeTaken);
     }
 
+}
+
+/// <summary>
+/// Controls how aggressively the decimation stage simplifies geometry around UV seams.
+/// </summary>
+public enum DecimationMode
+{
+    /// <summary>
+    /// Maximizes triangle reduction: UV seams and foldover edges are allowed to collapse
+    /// like any other edge. Can produce texture-mapping artifacts on models with UV seams.
+    /// </summary>
+    Aggressive,
+
+    /// <summary>
+    /// Preserves UV seam and foldover edges (avoiding texture-mapping artifacts) when the
+    /// mesh has textures, or when the quality target is above 0.5 even without textures;
+    /// otherwise behaves like <see cref="Aggressive"/>.
+    /// </summary>
+    Standard,
+
+    /// <summary>
+    /// Disables smart-link vertex welding entirely: every UV seam is treated as a plain
+    /// mesh border rather than being welded and classified as a seam/foldover edge (same
+    /// <see cref="MeshDecimatorCore.SimplificationOptions.PreserveBorderEdges"/> rule as
+    /// the other modes then applies to it). Safest for texture fidelity, at the cost of
+    /// less aggressive decimation around seams.
+    /// </summary>
+    Quality
 }

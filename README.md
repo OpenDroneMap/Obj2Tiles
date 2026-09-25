@@ -42,17 +42,22 @@ Obj2Tiles [options] <input.obj> <output>
 |-----------|---------|-------------|---------|
 | `-s, --stage` | `Tiling` | Stage to stop at: `Decimation`, `Splitting`, or `Tiling` | `--stage Splitting` |
 | `-l, --lods` | `3` | Number of levels of detail to generate | `--lods 5` |
+| `-p, --preset` | `None` | Bundle of option defaults. `Legacy` = `--no-zsplit --no-octree --lod-texture-scale 1.0`. `Standard` = `--octree --local --zsplit --lod-texture-scale 0.5 --decimation-mode Quality --glb --texture-quality 80 --fine-texture-quality 90 --max-texture-size 8192`. Options given explicitly always win over the preset; with `Standard`, passing `--lat`/`--lon` keeps the tileset georeferenced instead of forcing `--local` | `--preset standard` |
+| `-m, --decimation-mode` | `Standard` | `Aggressive` (maximum reduction, UV seams may collapse), `Standard` (preserves UV seams/foldovers on textured meshes), or `Quality` (treats seams as borders: best texture fidelity, slower, less reduction) | `--decimation-mode Quality` |
 
 ### Splitting
 
 | Parameter | Default | Description | Example |
 |-----------|---------|-------------|---------|
-| `-d, --divisions` | `2` | Recursion depth for binary splitting along each axis. Each level doubles the grid, producing `(2^divisions)^2` tiles along XY (or `(2^divisions)^3` with `--zsplit`). For example, `--divisions 2` gives a 4x4 grid (16 tiles) and `--divisions 3` gives 8x8 (64 tiles) | `--divisions 3` |
+| `-d, --divisions` | `2` | Recursion depth for binary splitting along each axis - in `--octree` mode, the depth of the coarsest LOD specifically. See [Tile count](#tile-count) for how this determines the number of tiles | `--divisions 3` |
 | `-z, --zsplit` | `false` | Also split along the Z-axis (not just X and Y) | `--zsplit` |
+| `--no-zsplit` | `false` | Disable Z-axis splitting, overriding `--zsplit` (useful with `--preset`) | `--no-zsplit` |
 | `-g, --split-strategy` | `VertexBaricenter` | How the split grid is computed: `AbsoluteCenter` (local bounding-box center), `GlobalBounding` (one global square grid from the source AABB), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy GlobalBounding` |
 | `-k, --keeptextures` | `false` | Keep original textures instead of repacking them (not recommended) | `--keeptextures` |
 | `--single-material-per-part` | `false` | Force every sliced part to emit one material and at most one atlas per supported map (base color and normal). This necessarily repacks textures, including when used with `--keeptextures` | `--single-material-per-part` |
 | `--octree` | `false` | Use octree spatial subdivision: each LOD gets one additional division level, producing a proper parent-child tile hierarchy instead of per-tile LOD chains. Combine with `--zsplit` for a true 8-way octree | `--octree --zsplit` |
+| `--no-octree` | `false` | Disable octree subdivision, overriding `--octree` (useful with `--preset`) | `--no-octree` |
+| `--overlap` | `0` | Overlap distance between adjacent tiles, in mesh units. When > 0 each tile extends past the split plane by this amount, hiding sub-pixel seams at the cost of duplicated geometry. Each tile is also nudged by a deterministic per-axis offset of at most 1e-4 of its bounding-box diagonal (and never more than 20% of the overlap) to avoid z-fighting in the duplicated band. Works with every `--split-strategy` | `--overlap 0.001` |
 | `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses ImageSharp's default resampler | `--lod-texture-scale 0.5` |
 
 ### Textures
@@ -63,12 +68,16 @@ Controls how repacked texture atlases are encoded.
 |-----------|---------|-------------|---------|
 | `--texture-format` | `Jpeg` | Output format for repacked textures: `Jpeg` (default), `Webp` (25-35% smaller, emits `EXT_texture_webp`), or `Ktx2` (GPU-compressed Basis Universal, emits `KHR_texture_basisu`, cuts VRAM 4-8x - see [KTX2 GPU Texture Compression](#ktx2-gpu-texture-compression)) | `--texture-format Ktx2` |
 | `--texture-quality` | `75` | JPEG/WebP quality (1-100). Higher is better quality but larger files. Only for `Jpeg` and `Webp` formats | `--texture-quality 90` |
+| `--fine-texture-quality` | `0` | JPEG/WebP quality (1-100) for LOD-0 (the finest LOD) only. `0` (default) falls back to `--texture-quality` for LOD-0 too | `--fine-texture-quality 95` |
 | `--max-texture-size` | `4096` | Maximum texture atlas resolution per side (pixels). Source textures larger than this are downscaled. `0` disables the cap | `--max-texture-size 2048` |
 | `--ktx2-quality` | `128` | KTX2 ETC1S/BasisLZ quality (1-255; higher = better quality, larger files). Reinterpreted as UASTC quality (0-4) when `--ktx2-uastc` is set. Only used with `--texture-format Ktx2` | `--ktx2-quality 200` |
 | `--ktx2-uastc` | `false` | Use UASTC instead of ETC1S/BasisLZ for KTX2 textures. UASTC transcodes to BC7/ASTC for near-lossless quality at ~3x the size of ETC1S. Only used with `--texture-format Ktx2` | `--ktx2-uastc` |
 | `--ktx2-threads` | `0` | Number of libktx encoder threads per texture. `0` preserves the current default of one encoder thread per texture; positive values require `--texture-format Ktx2` | `--ktx2-threads 4` |
 | `--ktx2-zstd-level` | `0` | Zstandard supercompression level for UASTC KTX2 textures (`1`-`22`; `0` disables). Requires `--texture-format Ktx2` and `--ktx2-uastc`; levels above `20` use substantially more memory | `--ktx2-zstd-level 18` |
 | `--ktx-path` |  | Path to the libktx native library or its directory. When omitted, resolved from `OBJ2TILES_KTX`, then the executable directory (where the bundled lib lives), then system `PATH`. Only used with `--texture-format Ktx2` | `--ktx-path /usr/lib/libktx.so` |
+| `--ignore-normal-maps` | `false` | Drop normal maps entirely: they are neither copied nor referenced by the output materials | `--ignore-normal-maps` |
+
+Normal maps are read from the MTL `norm`, `bump` and `map_Bump` keywords and are always written losslessly as PNG, regardless of `--texture-format` and texture strategy, because lossy compression corrupts the encoded directions.
 
 ### Geo-referencing
 
@@ -90,6 +99,9 @@ By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `r
 | `--3tz` | `false` | Produce a single `.3tz` archive instead of a folder tree (implied by a `.3tz` output path). When set without a `.3tz` extension, the archive is written to `<output>.3tz` | `--3tz` |
 | `--3tz-compression` | `6` | DEFLATE level for `.3tz` content, `0`-`9` (gzip-style), see table below. The index is always stored uncompressed | `--3tz-compression 9` |
 | `--no-root-content` | `false` | Omit `root.b3dm` and emit a legal contentless tileset root. Useful when only separately audited child tiles should be published, but requires a renderer that descends into children of contentless roots | `--no-root-content` |
+| `--glb` | `false` | Write plain glTF binary (`.glb`) tile content instead of `.b3dm`, with `asset.version` `1.1` (3D Tiles 1.1). Make sure your renderer supports 3D Tiles 1.1 | `--glb` |
+| `--b3dm` | `false` | Force legacy `.b3dm` content, overriding `--glb` (useful with `--preset standard`) | `--b3dm` |
+| `--unlit` | `false` | Mark every material with `KHR_materials_unlit`, so viewers show the baked texture colors without PBR lighting (typical for photogrammetry) | `--unlit` |
 
 **Compression levels (`--3tz-compression`):**
 
@@ -106,7 +118,9 @@ By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `r
 
 | Parameter | Default | Description | Example |
 |-----------|---------|-------------|---------|
-| `-e, --error` | `0` (auto) | Base geometric error for the root tile in `tileset.json`. When `0` (default) it is derived automatically from the model's bounding box diagonal | `--error 500` |
+| `-e, --error` | auto | Base geometric error value for the root tile in `tileset.json`. If omitted or `0`, it's auto-computed from the coarsest LOD via `--error-estimation-mode`/`--error-factor` | `--error 500` |
+| `--error-estimation-mode` | `AverageEdgeLength` | How geometric error is estimated: `BoundingBoxDiagonal`, `AverageEdgeLength`, `MaximumEdgeLength` compute each tile's error from that tile's own geometry (bounding-box diagonal, or average/maximum triangle edge length, times `--error-factor`). Below 4 faces, `AverageEdgeLength`/`MaximumEdgeLength` fall back to `bounding-box diagonal * 0.1` since an edge-length estimate isn't meaningful. The `Toplevel*` variants instead compute one value at the root from the coarsest LOD using the same metric, then halve it once per LOD subdivision. In every mode a tile's error is capped at its parent's | `--error-estimation-mode MaximumEdgeLength` |
+| `--error-factor` | `0.1` (`*BoundingBoxDiagonal`) / `1.0` (`*AverageEdgeLength`, `*MaximumEdgeLength`) | Multiplier applied to the metric selected by `--error-estimation-mode` | `--error-factor 0.3` |
 | `--use-system-temp` | `false` | Use the system temp folder for intermediate files instead of the output folder | `--use-system-temp` |
 | `--keep-intermediate` | `false` | Keep intermediate files (decimated OBJs, split tiles) for debugging | `--keep-intermediate` |
 | `--help` |  | Display help screen | `--help` |
@@ -154,15 +168,35 @@ Note: When there are too many charts (or too much texture detail) to fit into an
 
 **Octree mode** (`--octree`):
 
-By default, every LOD produces the same number of tiles arranged as per-tile chains in `tileset.json`. With `--octree`, each LOD receives one additional division level compared to the next coarser LOD. The per-LOD split depth formula is `lodDivisions = divisions + lods - index - 1` (fine LODs get deeper splits). The grid at depth D is $(2^D)^2$ tiles:
+By default, every LOD produces the same number of tiles arranged as per-tile chains in `tileset.json`. With `--octree`, each LOD receives one additional division level compared to the next coarser LOD, and coarser tiles become spatial parents of finer ones - a proper tree hierarchy instead of flat chains. Combine `--octree` with `--zsplit` for a true 8-way octree.
 
-| LOD | LOD depth (`--divisions 2`, 3 LODs) | Grid | Tiles (XY) |
-|-----|-------------------------------------|------|------------|
-| 0 (finest) | 2+3-0-1 = 4 | 16x16 | 256 |
-| 1 | 2+3-1-1 = 3 | 8x8 | 64 |
-| 2 (coarsest) | 2+3-2-1 = 2 | 4x4 | 16 |
+#### Tile count
 
-Coarser tiles become spatial parents of finer ones in `tileset.json`, producing a proper tree hierarchy. Combine `--octree` with `--zsplit` for a true 8-way octree.
+Every split level bisects the mesh along X and Y (and Z with `--zsplit`), so each level multiplies the tile count by a fixed **branching factor** `b`:
+
+- `b = 4` normally (a level splits into 4 quadrants: X × Y)
+- `b = 8` with `--zsplit` (a level splits into 8 octants: X × Y × Z)
+
+**Without `--octree`:** every LOD is split to the same depth, `--divisions`. Tiles per LOD = `b^divisions`.
+
+**With `--octree`:** `--divisions` sets the depth of the *coarsest* LOD, not the finest - each LOD one step finer adds one more level. For a run with `lods` LODs (indexed `0` = finest .. `lods-1` = coarsest):
+
+```
+depth(LOD i) = divisions + (lods - 1 - i)
+tiles(LOD i) = b ^ depth(LOD i)
+```
+
+So the coarsest LOD (`i = lods-1`) sits at exactly `divisions` levels, and the finest LOD sits `lods-1` levels deeper. Example with `--divisions 2 --lods 3`:
+
+| LOD | depth (no `--zsplit`, b=4) | tiles | depth (`--zsplit`, b=8) | tiles |
+|-----|------|-------|------|-------|
+| 0 (finest) | 2+3-0-1 = 4 | 4⁴ = 256 | 4 | 8⁴ = 4096 |
+| 1 | 2+3-1-1 = 3 | 4³ = 64 | 3 | 8³ = 512 |
+| 2 (coarsest) | 2+3-2-1 = 2 | 4² = 16 | 2 | 8² = 64 |
+
+A common surprise: with the default `--divisions 2`, the coarsest LOD already sits two levels deep (16 or 64 tiles), not one (4 or 8). To make the coarsest LOD a single first-level split, use `--divisions 1`.
+
+These formulas are upper bounds - branches with no geometry are pruned, so sparse or unevenly-distributed models produce fewer tiles in practice.
 
 **Texture downscaling** (`--lod-texture-scale`):
 

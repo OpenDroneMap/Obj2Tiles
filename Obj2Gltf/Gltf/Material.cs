@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -66,6 +67,12 @@ namespace SilentWave.Obj2Gltf.Gltf
         /// </summary>
         [JsonProperty("normalTexture")]
         public TextureReferenceInfo normalTexture { get; set; }
+
+        /// <summary>
+        /// glTF extensions attached to this material (e.g. KHR_materials_unlit), keyed by extension name.
+        /// </summary>
+        [JsonProperty("extensions", NullValueHandling = NullValueHandling.Ignore)]
+        public Dictionary<string, object> Extensions { get; set; }
 
         public override string ToString()
             => $"AM:{AlphaMode} DS:{(DoubleSided ? 1 : 0)} MRB:[{PbrMetallicRoughness.BaseColorFactor[0]}, {PbrMetallicRoughness.BaseColorFactor[1]}, {PbrMetallicRoughness.BaseColorFactor[2]}, {PbrMetallicRoughness.BaseColorFactor[3]}] E:[{EmissiveFactor[0]}, {EmissiveFactor[1]}, {EmissiveFactor[2]}] M:{PbrMetallicRoughness.MetallicFactor} R:{PbrMetallicRoughness.RoughnessFactor} T:{PbrMetallicRoughness.BaseColorTexture?.Index.ToString() ?? "<null>"} {Name}";

@@ -389,6 +389,35 @@ public class Mesh3Tests
     }
 
     [Test]
+    public void WriteObj_SingleMaterialPerPart_JpegDiffuse_NormalMapStaysLosslessPng()
+    {
+        var testPath = GetTestOutputPath(nameof(WriteObj_SingleMaterialPerPart_JpegDiffuse_NormalMapStaysLosslessPng));
+        var diffusePath = Path.Combine(testPath, "diffuse.jpg");
+        var normalPath = Path.Combine(testPath, "normal.png");
+        using (var diffuse = new Image<Rgba32>(16, 16, new Rgba32(200, 100, 50, 255)))
+            diffuse.SaveAsJpeg(diffusePath);
+        using (var normal = new Image<Rgba32>(16, 16, new Rgba32(128, 128, 255, 255)))
+            normal.SaveAsPng(normalPath);
+
+        var mesh = new MeshT(
+            [new Vertex3(0, 0, 0), new Vertex3(1, 0, 0), new Vertex3(0, 1, 0)],
+            [new Vertex2(0, 0), new Vertex2(1, 0), new Vertex2(0, 1)],
+            [new FaceT(0, 1, 2, 0, 1, 2, 0)],
+            [new Materials.Material("mat", diffusePath, normalPath)])
+        {
+            TexturesStrategy = TexturesStrategy.RepackCompressed,
+            SingleMaterialPerPart = true
+        };
+
+        mesh.WriteObj(Path.Combine(testPath, "mesh.obj"));
+
+        Path.GetExtension(mesh.Materials[0].Texture!).ShouldBe(".jpg");
+        mesh.Materials[0].NormalMap.ShouldNotBeNull();
+        Path.GetExtension(mesh.Materials[0].NormalMap!).ShouldBe(".png");
+        File.Exists(Path.Combine(testPath, mesh.Materials[0].NormalMap!)).ShouldBeTrue();
+    }
+
+    [Test]
     public void WriteObj_Brighton_Repacking()
     {
         using var fs = new TestFS(BrightonTexturingTestUrl, nameof(Mesh3Tests));

@@ -27,6 +27,12 @@ public class MeshT : IMesh
     public IReadOnlyList<Material> Materials => _materials;
     public IReadOnlyList<RGB>? VertexColors => _vertexColors;
 
+    public void Translate(Vertex3 offset)
+    {
+        for (var i = 0; i < _vertices.Count; i++)
+            _vertices[i] = _vertices[i] + offset;
+    }
+
     public const string DefaultName = "Mesh";
     private const int Padding = 2;     // Bleed ring (pixels) added around atlas charts to hide bilinear sampling at UV seams.
 
@@ -500,6 +506,8 @@ public class MeshT : IMesh
 
         var newTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
 
+        var canonicalIndex = GetCanonicalPositionIndices();
+
         for (var m = 0; m < facesByMaterial.Count; m++)
         {
             var material = _materials[m];
@@ -508,7 +516,7 @@ public class MeshT : IMesh
             if (facesIndexes.Count == 0)
                 continue;
 
-            var edgesMapper = GetEdgesMapper(facesIndexes);
+            var edgesMapper = GetEdgesMapper(facesIndexes, canonicalIndex);
             var facesMapper = GetFacesMapper(edgesMapper);
             var clusters = GetFacesClusters(facesIndexes, facesMapper);
 
@@ -531,6 +539,31 @@ public class MeshT : IMesh
                 nextSaveProgressMs += 5000;
             }
         }
+    }
+
+    // Exporters (Blender in particular) commonly emit a separate position vertex per
+    // unique (position, normal, uv) corner, so the SAME 3D point can appear under many
+    // different vertex indices. Canonicalizing by value once - now that Vertex3.Equals
+    // is correct - means the position-edge adjacency check in GetEdgesMapper recognizes
+    // two triangles as sharing an edge whenever they're at the same actual location,
+    // regardless of which duplicate index each one happens to reference. Without this,
+    // position-edge matching on raw indices sees almost no adjacency at all on meshes
+    // like this, shattering every UV island into near-single-triangle fragments.
+    internal int[] GetCanonicalPositionIndices()
+    {
+        var canonicalPosition = new Dictionary<Vertex3, int>(_vertices.Count);
+        var canonicalIndex = new int[_vertices.Count];
+        for (var i = 0; i < _vertices.Count; i++)
+        {
+            if (!canonicalPosition.TryGetValue(_vertices[i], out var canonical))
+            {
+                canonical = i;
+                canonicalPosition[_vertices[i]] = canonical;
+            }
+            canonicalIndex[i] = canonical;
+        }
+
+        return canonicalIndex;
     }
 
     private sealed class SingleAtlasChart
@@ -600,6 +633,7 @@ public class MeshT : IMesh
         var chartData = new List<(Material Material, List<int> FaceIndexes, RectangleF UvBounds,
             Image<Rgba32>? Diffuse, Image<Rgba32>? Normal, double DensityU, double DensityV)>();
         var maxSourceDensity = 0.0;
+        var canonicalIndex = GetCanonicalPositionIndices();
 
         for (var materialIndex = 0; materialIndex < facesByMaterial.Count; materialIndex++)
         {
@@ -614,7 +648,7 @@ public class MeshT : IMesh
             var normal = material.NormalMap != null ? TexturesCache.GetTexture(material.NormalMap) : null;
             hasNormalMap |= normal != null;
 
-            var edgesMapper = GetEdgesMapper(faceIndexes);
+            var edgesMapper = GetEdgesMapper(faceIndexes, canonicalIndex);
             var facesMapper = GetFacesMapper(edgesMapper);
             var clusters = GetFacesClusters(faceIndexes, facesMapper);
 
@@ -997,8 +1031,8 @@ public class MeshT : IMesh
         string? normalFileName = null;
         if (normalAtlas != null)
         {
-            normalFileName = $"{Name}-texture-normal{extension}";
-            SaveSingleAtlas(normalAtlas, Path.Combine(targetFolder, normalFileName));
+            normalFileName = $"{Name}-texture-normal.png";
+            normalAtlas.SaveAsPng(Path.Combine(targetFolder, normalFileName));
         }
 
         var representative = usedMaterials[0];
@@ -1134,21 +1168,31 @@ public class MeshT : IMesh
 
     private JpegEncoder CreateEncoder() => new JpegEncoder { Quality = Math.Clamp(TextureQuality, 1, 100) };
 
+    private static readonly string[] JpegExtensions = { ".jpg", ".jpeg" };
+
     /// <summary>
-    /// Output file extension for a repacked atlas, honoring the selected texture format.
+    /// Output file extension for a repacked atlas, honoring the selected texture format. Normal maps
+    /// are always PNG regardless of format/strategy - see <see cref="SaveAtlas"/>.
     /// </summary>
-    private string AtlasExtension(string sourcePath)
-        => TextureFormat == TextureFormat.Webp ? ".webp"
+    private string AtlasExtension(string sourcePath, bool isNormalMap)
+        => isNormalMap ? ".png"
+           : TextureFormat == TextureFormat.Webp ? ".webp"
            : (TexturesStrategy == TexturesStrategy.Repack ? Path.GetExtension(sourcePath) : ".jpg");
 
     /// <summary>
     /// Saves a repacked atlas with the encoder matching the current strategy and format.
-    /// WebP is always encoded lossy at TextureQuality; for the classic formats Repack is lossless
-    /// (original format) and RepackCompressed is lossy JPEG.
+    /// WebP is always encoded lossy at TextureQuality; for the classic formats RepackCompressed is
+    /// always lossy JPEG at TextureQuality, and Repack re-encodes at TextureQuality only when the
+    /// output stays JPEG (matching the source), otherwise it's a lossless save in the original
+    /// format. Normal maps are always saved losslessly (PNG), ignoring TextureFormat/TexturesStrategy:
+    /// JPEG/WebP lossy compression corrupts the directional data encoded in the RGB channels,
+    /// producing visible lighting artifacts even though the diffuse texture tolerates it fine.
     /// </summary>
-    private void SaveAtlas(Image image, string path)
+    private void SaveAtlas(Image image, string path, bool isNormalMap)
     {
-        if (TextureFormat == TextureFormat.Webp)
+        if (isNormalMap)
+            image.SaveAsPng(path);
+        else if (TextureFormat == TextureFormat.Webp)
         {
             // Always lossy: lossless WebP of an already-lossy source (e.g. a JPEG source atlas) can be
             // larger than the source and defeat the purpose. Lossy WebP at TextureQuality is smaller
@@ -1156,7 +1200,15 @@ public class MeshT : IMesh
             image.SaveAsWebp(path, new WebpEncoder { FileFormat = WebpFileFormatType.Lossy, Quality = Math.Clamp(TextureQuality, 1, 100) });
         }
         else if (TexturesStrategy == TexturesStrategy.Repack)
-            image.Save(path);
+        {
+            // Repack keeps the source format (see AtlasExtension); when that format is JPEG, re-encode
+            // at TextureQuality (e.g. --fine-texture-quality for LOD-0) instead of ImageSharp's default
+            // quality so the setting actually controls Repack-strategy atlases, not just RepackCompressed.
+            if (JpegExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+                image.SaveAsJpeg(path, CreateEncoder());
+            else
+                image.Save(path);
+        }
         else
             image.SaveAsJpeg(path, CreateEncoder());
     }
@@ -1289,18 +1341,18 @@ public class MeshT : IMesh
             if (packRect.Width == 0)
             {
                 textureFileName = material.Texture != null
-                    ? $"{Name}-texture-diffuse-{materialIndex}-{material.Name}{AtlasExtension(material.Texture)}" : null;
+                    ? $"{Name}-texture-diffuse-{materialIndex}-{material.Name}{AtlasExtension(material.Texture, false)}" : null;
                 normalMapFileName = material.NormalMap != null
-                    ? $"{Name}-texture-normal-{materialIndex}-{material.Name}{AtlasExtension(material.NormalMap)}" : null;
+                    ? $"{Name}-texture-normal-{materialIndex}-{material.Name}{AtlasExtension(material.NormalMap, true)}" : null;
 
                 if (material.Texture != null) {
                     newPathTexture = Path.Combine(targetFolder, textureFileName!);
-                    SaveAtlas(newTexture!, newPathTexture); newTexture!.Dispose();
+                    SaveAtlas(newTexture!, newPathTexture, false); newTexture!.Dispose();
                 }
 
                 if (material.NormalMap != null) {
                     newPathNormalMap = Path.Combine(targetFolder, normalMapFileName!);
-                    SaveAtlas(newNormalMap!, newPathNormalMap);
+                    SaveAtlas(newNormalMap!, newPathNormalMap, true);
                     newNormalMap!.Dispose();
                 }
 
@@ -1393,27 +1445,27 @@ public class MeshT : IMesh
         // ---------- saving ----------
         if (material.Texture != null)
         {
-            textureFileName = $"{Name}-texture-diffuse-{materialIndex}-{material.Name}{AtlasExtension(material.Texture)}";
+            textureFileName = $"{Name}-texture-diffuse-{materialIndex}-{material.Name}{AtlasExtension(material.Texture, false)}";
             newPathTexture = Path.Combine(targetFolder, textureFileName);
         }
 
         if (material.NormalMap != null)
         {
-            normalMapFileName = $"{Name}-texture-normal-{materialIndex}-{material.Name}{AtlasExtension(material.NormalMap)}";
+            normalMapFileName = $"{Name}-texture-normal-{materialIndex}-{material.Name}{AtlasExtension(material.NormalMap, true)}";
             newPathNormalMap = Path.Combine(targetFolder, normalMapFileName);
         }
 
         var saveTaskTexture = new Task(t =>
         {
             var tx = (Image<Rgba32>)t!;
-            SaveAtlas(tx, newPathTexture!);
+            SaveAtlas(tx, newPathTexture!, false);
             tx.Dispose();
         }, newTexture, TaskCreationOptions.LongRunning);
 
         var saveTaskNormalMap = new Task(t =>
         {
             var tx = (Image<Rgba32>)t!;
-            SaveAtlas(tx, newPathNormalMap!);
+            SaveAtlas(tx, newPathNormalMap!, true);
             tx.Dispose();
         }, newNormalMap, TaskCreationOptions.LongRunning);
 
@@ -1514,7 +1566,7 @@ public class MeshT : IMesh
         return area;
     }
 
-    private static List<List<int>> GetFacesClusters(IEnumerable<int> facesIndexes,
+    internal static List<List<int>> GetFacesClusters(IEnumerable<int> facesIndexes,
         IReadOnlyDictionary<int, List<int>> facesMapper)
     {
 
@@ -1580,22 +1632,31 @@ public class MeshT : IMesh
         return clusters;
     }
 
-    private static Dictionary<int, List<int>> GetFacesMapper(Dictionary<Edge, List<int>> edgesMapper)
+    // Two faces are only in the same UV island if they share a real 3D edge (position-index
+    // match - true mesh adjacency) AND the UV mapping is continuous across it (matching
+    // texture-index edge - no seam). Position edges are the map key; each occurrence also
+    // carries its paired texture edge so GetFacesMapper can check that second condition.
+    // Requiring only the texture edge (as this used to) lets two faces that merely reuse the
+    // same UV coordinates - e.g. two unrelated rooms whose floors intentionally share one
+    // tileable UV layout, deduplicated by the exporter into the same vt indices - be wrongly
+    // treated as one contiguous island, even though they don't share a single 3D vertex.
+    internal static Dictionary<int, List<int>> GetFacesMapper(Dictionary<Edge, List<(int FaceIndex, Edge TextureEdge)>> edgesMapper)
     {
         var facesMapper = new Dictionary<int, List<int>>();
 
         foreach (var edge in edgesMapper)
         {
-            for (var i = 0; i < edge.Value.Count; i++)
+            var entries = edge.Value;
+            for (var i = 0; i < entries.Count; i++)
             {
-                var faceIndex = edge.Value[i];
+                var (faceIndex, textureEdge) = entries[i];
                 if (!facesMapper.ContainsKey(faceIndex))
                     facesMapper.Add(faceIndex, []);
 
-                for (var index = 0; index < edge.Value.Count; index++)
+                for (var index = 0; index < entries.Count; index++)
                 {
-                    var f = edge.Value[index];
-                    if (f != faceIndex)
+                    var (f, otherTextureEdge) = entries[index];
+                    if (f != faceIndex && textureEdge.Equals(otherTextureEdge))
                         facesMapper[faceIndex].Add(f);
                 }
             }
@@ -1604,32 +1665,33 @@ public class MeshT : IMesh
         return facesMapper;
     }
 
-    private Dictionary<Edge, List<int>> GetEdgesMapper(IReadOnlyList<int> facesIndexes)
+    internal Dictionary<Edge, List<(int FaceIndex, Edge TextureEdge)>> GetEdgesMapper(IReadOnlyList<int> facesIndexes,
+        int[] canonicalIndex)
     {
-        var edgesMapper = new Dictionary<Edge, List<int>>();
+        var edgesMapper = new Dictionary<Edge, List<(int, Edge)>>();
         edgesMapper.EnsureCapacity(facesIndexes.Count * 3);
+
+        void AddEdge(int posA, int posB, int texA, int texB, int faceIndex)
+        {
+            var posEdge = new Edge(canonicalIndex[posA], canonicalIndex[posB]);
+
+            if (!edgesMapper.TryGetValue(posEdge, out var list))
+            {
+                list = [];
+                edgesMapper.Add(posEdge, list);
+            }
+
+            list.Add((faceIndex, new Edge(texA, texB)));
+        }
 
         for (var idx = 0; idx < facesIndexes.Count; idx++)
         {
             var faceIndex = facesIndexes[idx];
             var f = _faces[faceIndex];
 
-            var e1 = new Edge(f.TextureIndexA, f.TextureIndexB);
-            var e2 = new Edge(f.TextureIndexB, f.TextureIndexC);
-            var e3 = new Edge(f.TextureIndexA, f.TextureIndexC);
-
-            if (!edgesMapper.ContainsKey(e1))
-                edgesMapper.Add(e1, []);
-
-            if (!edgesMapper.ContainsKey(e2))
-                edgesMapper.Add(e2, []);
-
-            if (!edgesMapper.ContainsKey(e3))
-                edgesMapper.Add(e3, []);
-
-            edgesMapper[e1].Add(faceIndex);
-            edgesMapper[e2].Add(faceIndex);
-            edgesMapper[e3].Add(faceIndex);
+            AddEdge(f.IndexA, f.IndexB, f.TextureIndexA, f.TextureIndexB, faceIndex);
+            AddEdge(f.IndexB, f.IndexC, f.TextureIndexB, f.TextureIndexC, faceIndex);
+            AddEdge(f.IndexA, f.IndexC, f.TextureIndexA, f.TextureIndexC, faceIndex);
         }
 
         return edgesMapper;
@@ -1676,6 +1738,56 @@ public class MeshT : IMesh
             }
 
             return new Box3(minX, minY, minZ, maxX, maxY, maxZ);
+        }
+    }
+
+    public double AverageEdgeLength
+    {
+        get
+        {
+            if (_faces.Count == 0) return 0;
+
+            var total = 0.0;
+
+            for (var index = 0; index < _faces.Count; index++)
+            {
+                var f = _faces[index];
+                var a = _vertices[f.IndexA];
+                var b = _vertices[f.IndexB];
+                var c = _vertices[f.IndexC];
+
+                total += a.Distance(b) + b.Distance(c) + c.Distance(a);
+            }
+
+            return total / (_faces.Count * 3);
+        }
+    }
+
+    public double MaximumEdgeLength
+    {
+        get
+        {
+            if (_faces.Count == 0) return 0;
+
+            var max = 0.0;
+
+            for (var index = 0; index < _faces.Count; index++)
+            {
+                var f = _faces[index];
+                var a = _vertices[f.IndexA];
+                var b = _vertices[f.IndexB];
+                var c = _vertices[f.IndexC];
+
+                var ab = a.Distance(b);
+                var bc = b.Distance(c);
+                var ca = c.Distance(a);
+
+                if (ab > max) max = ab;
+                if (bc > max) max = bc;
+                if (ca > max) max = ca;
+            }
+
+            return max;
         }
     }
 
@@ -2061,6 +2173,56 @@ public class MeshT : IMesh
                                 }
 
                                 material.Texture = textureFileName;
+                                break;
+                            }
+                    }
+                }
+
+                if (material.NormalMap != null)
+                {
+                    switch (TexturesStrategy)
+                    {
+                        case TexturesStrategy.KeepOriginal:
+                            {
+                                var folder = Path.GetDirectoryName(path);
+
+                                var normalMapFileName =
+                                    $"{Path.GetFileNameWithoutExtension(path)}-normalmap-{index}{Path.GetExtension(material.NormalMap)}";
+
+                                var newNormalMapPath =
+                                    folder != null ? Path.Combine(folder, normalMapFileName) : normalMapFileName;
+
+                                if (!File.Exists(newNormalMapPath))
+                                    File.Copy(material.NormalMap, newNormalMapPath, true);
+
+                                material.NormalMap = normalMapFileName;
+                                break;
+                            }
+                        case TexturesStrategy.Compress:
+                            {
+                                // Normal maps stay lossless (PNG) even under the "compress" strategy:
+                                // JPEG chroma subsampling corrupts the directional data encoded in
+                                // the RGB channels, producing visible lighting artifacts.
+                                var folder = Path.GetDirectoryName(path);
+
+                                var normalMapFileName =
+                                    $"{Path.GetFileNameWithoutExtension(path)}-normalmap-{index}.png";
+
+                                var newNormalMapPath =
+                                    folder != null ? Path.Combine(folder, normalMapFileName) : normalMapFileName;
+
+                                if (File.Exists(newNormalMapPath))
+                                    File.Delete(newNormalMapPath);
+
+                                Console.WriteLine($" -> Copying normal map '{material.NormalMap}'");
+
+                                using (var image = Image.Load(material.NormalMap))
+                                {
+                                    ApplyTextureSizeLimit(image);
+                                    image.SaveAsPng(newNormalMapPath);
+                                }
+
+                                material.NormalMap = normalMapFileName;
                                 break;
                             }
                     }

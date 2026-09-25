@@ -289,7 +289,7 @@ public class ThreeTzArchiveTests
                 Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
                     new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
                 Name = Path.GetFileNameWithoutExtension(file)
-            }).ToDictionary(item => item.Name, item => item.Bounds);
+            }).ToDictionary(item => item.Name, item => new TileBounds(item.Bounds, item.Bounds.Diagonal(), item.Bounds.Diagonal(), 100));
 
         StagesFacade.Tile("TestData/Tile1", tilesetDir, 1, 100, [boundsMapper]);
 

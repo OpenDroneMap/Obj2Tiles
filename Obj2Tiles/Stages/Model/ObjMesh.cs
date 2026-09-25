@@ -695,7 +695,37 @@ namespace Obj2Tiles.Stages.Model
                 throw new InvalidOperationException(
                     "The number of sub-mesh material names does not match the count of sub-mesh index arrays.");
 
-            // TODO: Optimize the output by sharing vertices, normals, etc
+            bool hasColors = (vertexColors != null && vertexColors.Length == vertices.Length);
+            bool hasNormals = (normals != null);
+            bool hasTexCoords = (texCoords2D != null || texCoords3D != null);
+
+            // This class stores one "vertex" per unique (position, uv, normal) combination, so any
+            // position touched by more than one distinct UV (every UV seam) or normal (every hard
+            // edge) is repeated verbatim across several vertex entries. Deduplicate positions
+            // (together with vertex colors, since they're written on the same "v" line), normals
+            // and texture coordinates independently - the way OBJ's separate v/vt/vn lists are
+            // meant to be used - and remap each face corner to reference each list on its own.
+            var posIndexMap = BuildPositionIndexMap(vertices, hasColors ? vertexColors : null,
+                out var dedupedVertices, out var dedupedColors);
+
+            Vector3[]? dedupedNormals = null;
+            int[]? normalIndexMap = null;
+            if (hasNormals)
+            {
+                normalIndexMap = BuildIndexMap(normals!, out dedupedNormals);
+            }
+
+            Vector2[]? dedupedTexCoords2D = null;
+            Vector3[]? dedupedTexCoords3D = null;
+            int[]? texIndexMap = null;
+            if (texCoords2D != null)
+            {
+                texIndexMap = BuildIndexMap(texCoords2D, out dedupedTexCoords2D);
+            }
+            else if (texCoords3D != null)
+            {
+                texIndexMap = BuildIndexMap(texCoords3D, out dedupedTexCoords3D);
+            }
 
             using (StreamWriter writer = File.CreateText(path))
             {
@@ -711,14 +741,72 @@ namespace Obj2Tiles.Stages.Model
                     writer.WriteLine();
                 }
 
-                WriteVertices(writer, vertices!, vertexColors);
-                WriteNormals(writer, normals);
-                WriteTextureCoords(writer, texCoords2D, texCoords3D);
+                WriteVertices(writer, dedupedVertices, dedupedColors);
+                WriteNormals(writer, dedupedNormals);
+                WriteTextureCoords(writer, dedupedTexCoords2D, dedupedTexCoords3D);
 
-                bool hasTexCoords = (texCoords2D != null || texCoords3D != null);
-                bool hasNormals = (normals != null);
-                WriteSubMeshes(writer, subMeshIndices!, subMeshMaterials, hasTexCoords, hasNormals);
+                WriteSubMeshes(writer, subMeshIndices!, subMeshMaterials, posIndexMap, texIndexMap, normalIndexMap,
+                    hasTexCoords, hasNormals);
             }
+        }
+
+        /// <summary>
+        /// Deduplicates a per-vertex attribute array (normals or texture coordinates), returning
+        /// the deduplicated values and a map from each original index to its index in that array.
+        /// </summary>
+        private static int[] BuildIndexMap<T>(T[] values, out T[] deduped) where T : IEquatable<T>
+        {
+            var map = new Dictionary<T, int>(values.Length);
+            var dedupedList = new List<T>(values.Length);
+            var indexMap = new int[values.Length];
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                var value = values[i];
+                if (!map.TryGetValue(value, out var index))
+                {
+                    index = dedupedList.Count;
+                    dedupedList.Add(value);
+                    map[value] = index;
+                }
+
+                indexMap[i] = index;
+            }
+
+            deduped = dedupedList.ToArray();
+            return indexMap;
+        }
+
+        /// <summary>
+        /// Deduplicates positions together with their vertex color, if any, since both are
+        /// written on the same "v" line and so must be considered together: two vertices at the
+        /// same position but with different colors cannot share a single "v" line.
+        /// </summary>
+        private static int[] BuildPositionIndexMap(Vector3d[] positions, Vector4[]? colors,
+            out Vector3d[] dedupedPositions, out Vector4[]? dedupedColors)
+        {
+            var map = new Dictionary<(Vector3d, Vector4), int>(positions.Length);
+            var dedupedPositionList = new List<Vector3d>(positions.Length);
+            var dedupedColorList = colors != null ? new List<Vector4>(positions.Length) : null;
+            var indexMap = new int[positions.Length];
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                var key = (positions[i], colors != null ? colors[i] : default);
+                if (!map.TryGetValue(key, out var index))
+                {
+                    index = dedupedPositionList.Count;
+                    dedupedPositionList.Add(positions[i]);
+                    dedupedColorList?.Add(colors![i]);
+                    map[key] = index;
+                }
+
+                indexMap[i] = index;
+            }
+
+            dedupedPositions = dedupedPositionList.ToArray();
+            dedupedColors = dedupedColorList?.ToArray();
+            return indexMap;
         }
 
         #endregion
@@ -807,7 +895,7 @@ namespace Obj2Tiles.Stages.Model
         }
 
         private static void WriteSubMeshes(TextWriter writer, int[][] subMeshIndices, string[]? subMeshMaterials,
-            bool hasTexCoords, bool hasNormals)
+            int[] posIndexMap, int[]? texIndexMap, int[]? normalIndexMap, bool hasTexCoords, bool hasNormals)
         {
             for (int subMeshIndex = 0; subMeshIndex < subMeshIndices.Length; subMeshIndex++)
             {
@@ -823,81 +911,47 @@ namespace Obj2Tiles.Stages.Model
                     writer.WriteLine(materialName);
                 }
 
-                WriteFaces(writer, indices, hasTexCoords, hasNormals);
+                WriteFaces(writer, indices, posIndexMap, texIndexMap, normalIndexMap, hasTexCoords, hasNormals);
             }
         }
 
-        private static void WriteFaces(TextWriter writer, int[] indices, bool hasTexCoords, bool hasNormals)
+        private static void WriteFaces(TextWriter writer, int[] indices, int[] posIndexMap, int[]? texIndexMap,
+            int[]? normalIndexMap, bool hasTexCoords, bool hasNormals)
         {
             for (int i = 0; i < indices.Length; i += 3)
             {
-                int v0 = indices[i] + 1;
-                int v1 = indices[i + 1] + 1;
-                int v2 = indices[i + 2] + 1;
-
                 writer.Write("f ");
-
-                if (hasTexCoords && hasNormals)
-                {
-                    writer.Write(v0);
-                    writer.Write('/');
-                    writer.Write(v0);
-                    writer.Write('/');
-                    writer.Write(v0);
-                    writer.Write(' ');
-                    writer.Write(v1);
-                    writer.Write('/');
-                    writer.Write(v1);
-                    writer.Write('/');
-                    writer.Write(v1);
-                    writer.Write(' ');
-                    writer.Write(v2);
-                    writer.Write('/');
-                    writer.Write(v2);
-                    writer.Write('/');
-                    writer.Write(v2);
-                }
-                else if (hasTexCoords)
-                {
-                    writer.Write(v0);
-                    writer.Write('/');
-                    writer.Write(v0);
-                    writer.Write(' ');
-                    writer.Write(v1);
-                    writer.Write('/');
-                    writer.Write(v1);
-                    writer.Write(' ');
-                    writer.Write(v2);
-                    writer.Write('/');
-                    writer.Write(v2);
-                }
-                else if (hasNormals)
-                {
-                    writer.Write(v0);
-                    writer.Write('/');
-                    writer.Write('/');
-                    writer.Write(v0);
-                    writer.Write(' ');
-                    writer.Write(v1);
-                    writer.Write('/');
-                    writer.Write('/');
-                    writer.Write(v1);
-                    writer.Write(' ');
-                    writer.Write(v2);
-                    writer.Write('/');
-                    writer.Write('/');
-                    writer.Write(v2);
-                }
-                else
-                {
-                    writer.Write(v0);
-                    writer.Write(' ');
-                    writer.Write(v1);
-                    writer.Write(' ');
-                    writer.Write(v2);
-                }
-
+                WriteFaceCorner(writer, indices[i], posIndexMap, texIndexMap, normalIndexMap, hasTexCoords, hasNormals);
+                writer.Write(' ');
+                WriteFaceCorner(writer, indices[i + 1], posIndexMap, texIndexMap, normalIndexMap, hasTexCoords, hasNormals);
+                writer.Write(' ');
+                WriteFaceCorner(writer, indices[i + 2], posIndexMap, texIndexMap, normalIndexMap, hasTexCoords, hasNormals);
                 writer.WriteLine();
+            }
+        }
+
+        private static void WriteFaceCorner(TextWriter writer, int originalIndex, int[] posIndexMap,
+            int[]? texIndexMap, int[]? normalIndexMap, bool hasTexCoords, bool hasNormals)
+        {
+            writer.Write(posIndexMap[originalIndex] + 1);
+
+            if (hasTexCoords && hasNormals)
+            {
+                writer.Write('/');
+                writer.Write(texIndexMap![originalIndex] + 1);
+                writer.Write('/');
+                writer.Write(normalIndexMap![originalIndex] + 1);
+            }
+            else if (hasTexCoords)
+            {
+                writer.Write('/');
+                writer.Write(texIndexMap![originalIndex] + 1);
+            }
+            else if (hasNormals)
+            {
+                writer.Write('/');
+                writer.Write('/');
+                writer.Write(normalIndexMap![originalIndex] + 1);
             }
         }
 

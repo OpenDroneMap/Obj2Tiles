@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using CommandLine;
 using CommandLine.Text;
@@ -26,11 +27,57 @@ namespace Obj2Tiles
                 with.HelpWriter = Console.Error;
             });
 
-            var oResult = await parser.ParseArguments<Options>(args).WithParsedAsync(Run);
+            var oResult = await parser.ParseArguments<Options>(args).WithParsedAsync(opts =>
+            {
+                ApplyPreset(opts, args);
+                return Run(opts);
+            });
 
             if (oResult.Tag == ParserResultType.NotParsed)
             {
                 Console.WriteLine("Usage: obj2tiles [options]");
+            }
+        }
+
+        internal static void ApplyPreset(Options opts, string[] args)
+        {
+            if (opts.Preset == Preset.None) return;
+
+            bool WasSpecified(params string[] flags) =>
+                args.Any(a => flags.Contains(a) || Array.Exists(flags, f => a.StartsWith(f + "=")));
+
+            switch (opts.Preset)
+            {
+                case Preset.Legacy:
+                    if (!WasSpecified("-z", "--zsplit", "--no-zsplit"))
+                        opts.NoZSplit = true;
+                    if (!WasSpecified("--octree", "--no-octree"))
+                        opts.NoOctree = true;
+                    if (!WasSpecified("--lod-texture-scale"))
+                        opts.LodTextureScale = 1.0;
+                    break;
+
+                case Preset.Standard:
+                    if (!WasSpecified("-z", "--zsplit"))
+                        opts.ZSplit = true;
+                    if (!WasSpecified("--octree"))
+                        opts.Octree = true;
+                    // Explicit coordinates mean the caller wants a georeferenced tileset, which --local would discard.
+                    if (!WasSpecified("--local", "--lat", "--lon"))
+                        opts.LocalMode = true;
+                    if (!WasSpecified("--lod-texture-scale"))
+                        opts.LodTextureScale = 0.5;
+                    if (!WasSpecified("-m", "--decimation-mode"))
+                        opts.DecimationMode = DecimationMode.Quality;
+                    if (!WasSpecified("--glb"))
+                        opts.UseGlb = true;
+                    if (!WasSpecified("--texture-quality"))
+                        opts.TextureQuality = 80;
+                    if (!WasSpecified("--fine-texture-quality"))
+                        opts.FineTextureQuality = 90;
+                    if (!WasSpecified("--max-texture-size"))
+                        opts.MaxTextureSize = 8192;
+                    break;
             }
         }
 
@@ -103,7 +150,8 @@ namespace Obj2Tiles
                 Console.WriteLine($" => Decimation stage with {opts.LODs} LODs");
                 sw.Start();
 
-                var decimateRes = await StagesFacade.Decimate(opts.Input, destFolderDecimation, opts.LODs);
+                var decimateRes = await StagesFacade.Decimate(opts.Input, destFolderDecimation, opts.LODs, opts.DecimationMode,
+                    opts.IgnoreNormalMaps);
 
                 Console.WriteLine(" ?> Decimation stage done in {0}", sw.Elapsed);
 
@@ -112,7 +160,7 @@ namespace Obj2Tiles
 
                 Console.WriteLine();
                 Console.WriteLine(
-                    $" => Splitting stage with {opts.Divisions} divisions {(opts.ZSplit ? "and Z-split" : "")}");
+                    $" => Splitting stage with {opts.Divisions} divisions {(opts.EffectiveZSplit ? "and Z-split" : "")}");
 
                 destFolderSplit = opts.StopAt == Stage.Splitting
                     ? opts.Output
@@ -122,8 +170,9 @@ namespace Obj2Tiles
                     $" ?> Keep original textures: {opts.KeepOriginalTextures}, Single material per part: {opts.SingleMaterialPerPart}, Split strategy: {opts.SplitPointStrategy}");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
-                    opts.ZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.Octree, (float)opts.LodTextureScale,
-                    opts.MaxTextureSize, opts.TextureQuality, opts.TextureFormat, opts.SingleMaterialPerPart);
+                    opts.EffectiveZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.EffectiveOctree, (float)opts.LodTextureScale,
+                    opts.Overlap, opts.IgnoreNormalMaps, opts.MaxTextureSize, opts.TextureQuality, opts.TextureFormat, opts.FineTextureQuality,
+                    opts.SingleMaterialPerPart);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 
@@ -138,13 +187,10 @@ namespace Obj2Tiles
                 Console.WriteLine($" => Tiling stage {(gpsCoords != null ? $"with GPS coords {gpsCoords}" : "")}");
 
                 // Geometric error must be expressed in the model's own coordinate units because it
-                // drives the screen-space-error refinement of every 3D Tiles renderer. A fixed value
-                // is meaningless for models that are not that size, so when the caller does not force
-                // one (--error 0, the default) derive it from the model's bounding box diagonal.
-                var b = decimateRes.Bounds;
-                var modelDiagonal = Math.Sqrt(b.Width * b.Width + b.Height * b.Height + b.Depth * b.Depth);
-                var baseError = opts.BaseError > 0 ? opts.BaseError : modelDiagonal;
-                if (!(baseError > 0) || double.IsInfinity(baseError)) baseError = 1.0;
+                // drives the screen-space-error refinement of every 3D Tiles renderer. When the caller
+                // does not force one (--error omitted), it is derived automatically inside the Tiling
+                // stage from the coarsest LOD using --error-estimation-mode/--error-factor.
+                var baseError = opts.BaseError;
 
                 // Coarsest decimated whole-model mesh, used to give the tileset root renderable content
                 // (an empty root tile leaves the model invisible in renderers that do not descend into
@@ -195,7 +241,8 @@ namespace Obj2Tiles
 
                         await StagesFacade.Split(rootSourceObj, rootTempDir, 0,
                             textureDownscale: rootDownscale, maxTextureSize: rootMaxTextureSize, textureQuality: opts.TextureQuality,
-                            textureFormat: opts.TextureFormat, singleMaterialPerPart: opts.SingleMaterialPerPart);
+                            textureFormat: opts.TextureFormat, ignoreNormalMaps: opts.IgnoreNormalMaps,
+                            singleMaterialPerPart: opts.SingleMaterialPerPart);
                         var compressedRoot = Directory.GetFiles(rootTempDir, "*.obj").FirstOrDefault();
                         if (compressedRoot != null)
                             rootSourceObj = compressedRoot;
@@ -207,31 +254,32 @@ namespace Obj2Tiles
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($" => Tiling stage with baseError {baseError:0.000}");
+                Console.WriteLine(baseError.HasValue
+                    ? $" => Tiling stage with baseError {baseError}"
+                    : $" => Tiling stage with auto-computed baseError ({opts.ErrorEstimationMode})");
 
                 sw.Restart();
 
                 if (opts.LocalMode && (opts.Latitude != null || opts.Longitude != null))
                     Console.WriteLine(" !> Warning: --local overrides --lat/--lon. ECEF transform will not be applied.");
 
-                // Build glTF conversion options. KTX2 (Basis Universal) textures cut GPU/VRAM usage
-                // several-fold versus decoded JPEG/WebP, which is the dominant cost for texture-heavy
-                // tilesets; they are produced here in-process via the bundled libktx native library (P/Invoke).
-                GltfConverterOptions? gltfOptions = null;
+                // Build glTF conversion options. Unlit marks materials with KHR_materials_unlit. KTX2
+                // (Basis Universal) textures cut GPU/VRAM usage several-fold versus decoded JPEG/WebP,
+                // which is the dominant cost for texture-heavy tilesets; they are produced here
+                // in-process via the bundled libktx native library (P/Invoke).
+                var gltfOptions = new GltfConverterOptions { UnlitMaterials = opts.Unlit };
                 if (opts.TextureFormat == TextureFormat.Ktx2)
                 {
-                    gltfOptions = new GltfConverterOptions
-                    {
-                        EncodeKtx2 = true,
-                        Ktx2Uastc = opts.Ktx2Uastc,
-                        Ktx2QualityLevel = opts.Ktx2Quality,
-                        Ktx2Threads = opts.Ktx2Threads,
-                        Ktx2ZstdLevel = opts.Ktx2ZstdLevel,
-                        KtxToolPath = opts.KtxPath
-                    };
+                    gltfOptions.EncodeKtx2 = true;
+                    gltfOptions.Ktx2Uastc = opts.Ktx2Uastc;
+                    gltfOptions.Ktx2QualityLevel = opts.Ktx2Quality;
+                    gltfOptions.Ktx2Threads = opts.Ktx2Threads;
+                    gltfOptions.Ktx2ZstdLevel = opts.Ktx2ZstdLevel;
+                    gltfOptions.KtxToolPath = opts.KtxPath;
                 }
 
-                StagesFacade.Tile(destFolderSplit, tilesetOutput, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.Octree, rootSourceObj, gltfOptions);
+                StagesFacade.Tile(destFolderSplit, tilesetOutput, opts.LODs, baseError, boundsMapper, gpsCoords, opts.LocalMode, opts.EffectiveOctree,
+                    opts.ErrorEstimationMode, opts.ErrorFactor, opts.EffectiveUseGlb, opts.LodTextureScale, rootSourceObj, gltfOptions);
 
                 Console.WriteLine(" ?> Tiling stage done in {0}", sw.Elapsed);
 
@@ -289,7 +337,7 @@ namespace Obj2Tiles
             }
         }
 
-        private static bool CheckOptions(Options opts)
+        internal static bool CheckOptions(Options opts)
         {
 
             if (string.IsNullOrWhiteSpace(opts.Input))
@@ -347,9 +395,42 @@ namespace Obj2Tiles
                 return false;
             }
 
+            if (opts.FineTextureQuality is < 0 or > 100)
+            {
+                Console.WriteLine(" !> --fine-texture-quality must be between 0 and 100 (0 falls back to --texture-quality)");
+                return false;
+            }
+
             if (opts.LodTextureScale is <= 0 or > 1)
             {
                 Console.WriteLine(" !> --lod-texture-scale must be in the (0, 1] range");
+                return false;
+            }
+
+            if (opts.BaseError is { } baseError)
+            {
+                if (baseError == 0)
+                {
+                    // Older releases documented --error 0 as "derive automatically"; keep that meaning.
+                    Console.WriteLine(" ?> --error 0 means auto: the geometric error will be estimated from the mesh");
+                    opts.BaseError = null;
+                }
+                else if (!(baseError > 0) || !double.IsFinite(baseError))
+                {
+                    Console.WriteLine(" !> --error must be a positive finite number (or 0 / omitted for auto)");
+                    return false;
+                }
+            }
+
+            if (opts.ErrorFactor is { } errorFactor && (!(errorFactor > 0) || !double.IsFinite(errorFactor)))
+            {
+                Console.WriteLine(" !> --error-factor must be a positive finite number");
+                return false;
+            }
+
+            if (!(opts.Overlap >= 0) || !double.IsFinite(opts.Overlap))
+            {
+                Console.WriteLine(" !> --overlap must be a non-negative finite number");
                 return false;
             }
 

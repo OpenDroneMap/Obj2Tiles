@@ -7,7 +7,37 @@ namespace Obj2Tiles.Library;
 
 public static class Common
 {
-    public static readonly double Epsilon = double.Epsilon * 10;
+    private static readonly string[] TextureSubfolderNames = { "texture", "textures", "tex" };
+
+    // Looks for a conventionally-named texture subfolder directly under parentFolder
+    // (case-insensitively, since assets are often authored on case-insensitive filesystems).
+    public static string? FindTextureSubfolder(string parentFolder)
+    {
+        foreach (var name in TextureSubfolderNames)
+        {
+            var candidate = Path.Combine(parentFolder, name);
+            if (Directory.Exists(candidate)) return candidate;
+        }
+
+        if (!Directory.Exists(parentFolder)) return null;
+
+        foreach (var dir in Directory.EnumerateDirectories(parentFolder))
+        {
+            var dirName = Path.GetFileName(dir);
+            foreach (var name in TextureSubfolderNames)
+            {
+                if (string.Equals(dirName, name, StringComparison.OrdinalIgnoreCase))
+                    return dir;
+            }
+        }
+
+        return null;
+    }
+
+    // C#'s double.Epsilon is the smallest representable positive double (~4.9e-324), not a usable
+    // comparison tolerance. This is the double-precision machine epsilon (C/C++ DBL_EPSILON,
+    // std::numeric_limits<double>::epsilon(), 2^-52) that "epsilon" comparisons actually need.
+    public static readonly double Epsilon = 2.2204460492503131E-16;
     
     public static void CopyImage(Image<Rgba32> sourceImage, Image<Rgba32> dest, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int destX, int destY)
     {

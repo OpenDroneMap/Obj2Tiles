@@ -20,6 +20,8 @@ namespace SilentWave.Obj2Gltf.WaveFront
         private const string map_kaPrefix = "map_Ka";
         private const string map_KdPrefix = "map_Kd";
         private const string normPrefix = "norm";
+        private const string bumpPrefix = "bump";
+        private const string map_BumpPrefix = "map_Bump";
 
         private static Reflectivity GetReflectivity(string val)
         {
@@ -199,6 +201,22 @@ namespace SilentWave.Obj2Gltf.WaveFront
                     else if (line.StartsWith(normPrefix))
                     {
                         var mn = line.Substring(normPrefix.Length).Trim();
+                        if (File.Exists(Path.Combine(searchPath, mn)))
+                        {
+                            currentMaterial.NormalTextureFile = mn;
+                        }
+                    }
+                    else if (line.StartsWith(map_BumpPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var mn = line.Substring(map_BumpPrefix.Length).Trim();
+                        if (File.Exists(Path.Combine(searchPath, mn)))
+                        {
+                            currentMaterial.NormalTextureFile = mn;
+                        }
+                    }
+                    else if (line.StartsWith(bumpPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var mn = line.Substring(bumpPrefix.Length).Trim();
                         if (File.Exists(Path.Combine(searchPath, mn)))
                         {
                             currentMaterial.NormalTextureFile = mn;

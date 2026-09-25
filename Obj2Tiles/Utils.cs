@@ -15,6 +15,11 @@ public static class Utils
         "norm", "bump", "disp", "decal"
     };
 
+    // Subset of MtlMapKeywords that Material.ReadMtl treats as the normal/bump map, kept in sync
+    // with the "norm"/"bump"/"map_Bump" cases there. Matching is OrdinalIgnoreCase (see
+    // GetMtlTextureDependencies), so this also covers "map_bump".
+    private static readonly string[] NormalMapKeywords = { "map_Bump", "norm", "bump" };
+
     private static readonly Dictionary<string, int> MtlOptionValueCounts =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -85,13 +90,35 @@ public static class Utils
         candidate = Path.GetFullPath(path);
         if (File.Exists(candidate)) return candidate;
 
+        // Last resort: some asset sets keep textures in a conventionally-named
+        // subfolder ("texture"/"textures"/"tex") next to the MTL or OBJ, while
+        // the MTL itself references the file with no such prefix (or a different one).
+        var baseFolders = string.Equals(mtlFolder, objFolder, StringComparison.OrdinalIgnoreCase)
+            ? new[] { mtlFolder }
+            : new[] { mtlFolder, objFolder };
+
+        foreach (var baseFolder in baseFolders)
+        {
+            var subFolder = Library.Common.FindTextureSubfolder(baseFolder);
+            if (subFolder == null) continue;
+
+            candidate = Path.GetFullPath(Path.Combine(subFolder, path));
+            if (File.Exists(candidate)) return candidate;
+
+            if (fileName.Length < path.Length)
+            {
+                candidate = Path.GetFullPath(Path.Combine(subFolder, fileName));
+                if (File.Exists(candidate)) return candidate;
+            }
+        }
+
         return null;
     }
 
     // Returns (normalizedRelPath, resolvedAbsPath) pairs for every texture
     // referenced by an MTL file. Uses the full resolution algorithm.
     private static IEnumerable<(string relPath, string resolvedPath)> GetMtlTextureDependencies(
-        string mtlPath, string objFolder)
+        string mtlPath, string objFolder, bool ignoreNormalMaps = false)
     {
         if (!File.Exists(mtlPath)) yield break;
 
@@ -104,6 +131,7 @@ public static class Utils
 
             foreach (var keyword in MtlMapKeywords)
             {
+                if (ignoreNormalMaps && NormalMapKeywords.Contains(keyword, StringComparer.OrdinalIgnoreCase)) continue;
                 if (!trimmedLine.StartsWith(keyword, StringComparison.OrdinalIgnoreCase)) continue;
                 // Reject prefix matches like "map_Kd2" for "map_Kd"
                 if (trimmedLine.Length > keyword.Length &&
@@ -174,7 +202,7 @@ public static class Utils
         };
     }
 
-    public static void CopyObjDependencies(string input, string output)
+    public static void CopyObjDependencies(string input, string output, bool ignoreNormalMaps = false)
     {
         var objFolder = Path.GetDirectoryName(Path.GetFullPath(input)) ?? string.Empty;
         var outputFull = Path.GetFullPath(output).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -205,7 +233,7 @@ public static class Utils
                 Console.WriteLine($" -> Copied {mtlRelPath}");
             }
 
-            foreach (var (relPath, absPath) in GetMtlTextureDependencies(mtlSrcPath, objFolder))
+            foreach (var (relPath, absPath) in GetMtlTextureDependencies(mtlSrcPath, objFolder, ignoreNormalMaps))
             {
                 var texDestPath = Path.Combine(output, relPath);
                 if (!IsWithinOutput(outputFull, texDestPath))
@@ -234,6 +262,21 @@ public static class Utils
 
     public static void ConvertB3dm(string objPath, string destPath, GltfConverterOptions? gltfOptions = null)
     {
+        var glbBytes = ConvertToGlbBytes(objPath, gltfOptions);
+        var b3dm = new B3dm(glbBytes);
+
+        File.WriteAllBytes(destPath, b3dm.ToBytes());
+    }
+
+    public static void ConvertGlb(string objPath, string destPath, GltfConverterOptions? gltfOptions = null)
+    {
+        var glbBytes = ConvertToGlbBytes(objPath, gltfOptions);
+
+        File.WriteAllBytes(destPath, glbBytes);
+    }
+
+    private static byte[] ConvertToGlbBytes(string objPath, GltfConverterOptions? gltfOptions = null)
+    {
         var dir = Path.GetDirectoryName(objPath);
         var name = Path.GetFileNameWithoutExtension(objPath);
 
@@ -247,8 +290,6 @@ public static class Utils
 
         var glbFile = Path.ChangeExtension(outputFile, ".glb");
 
-        var b3dm = new B3dm(File.ReadAllBytes(glbFile));
-
-        File.WriteAllBytes(destPath, b3dm.ToBytes());
+        return File.ReadAllBytes(glbFile);
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using SilentWave.Obj2Gltf.WaveFront;
 using Shouldly;
+using Newtonsoft.Json.Linq;
 
 namespace Obj2Tiles.Test;
 
@@ -240,5 +241,66 @@ public class ObjParserGltfTests
         {
             Directory.Delete(tempDir, true);
         }
+    }
+
+    // --- Normal maps ---
+
+    [TestCase("bump")]
+    [TestCase("map_Bump")]
+    [TestCase("norm")]
+    public void MtlParser_NormalMapKeywords_SetsNormalTextureFile(string keyword)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "obj2tiles_test_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "n.png"), "x");
+            var mtlPath = Path.Combine(dir, "m.mtl");
+            File.WriteAllText(mtlPath, $"newmtl X\n{keyword} n.png\n");
+
+            var mtlParser = new MtlParser();
+            var mats = mtlParser.Parse(mtlPath);
+
+            mats[0].NormalTextureFile.ShouldBe("n.png");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Test]
+    public void Convert_NormalMapOnlyMaterial_ProducesValidGltfWithTexCoords()
+    {
+        // A material with only a normal map (no map_Kd) must still get TEXCOORD_0
+        // emitted on the primitive, otherwise the glTF declares a normalTexture
+        // reference with no corresponding texture coordinates (spec-invalid).
+        var dir = Path.Combine(Path.GetTempPath(), "obj2tiles_test_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "normalmap.png"), "x");
+            var mtlPath = Path.Combine(dir, "normalonly.mtl");
+            var objPath = Path.Combine(dir, "normalonly.obj");
+            var gltfPath = Path.Combine(dir, "normalonly.gltf");
+
+            File.WriteAllText(mtlPath, "newmtl NormalOnly\nbump normalmap.png\n");
+            File.WriteAllText(objPath,
+                "mtllib normalonly.mtl\n" +
+                "v 0 0 0\nv 1 0 0\nv 0.5 1 0\n" +
+                "vt 0 0\nvt 1 0\nvt 0.5 1\n" +
+                "usemtl NormalOnly\n" +
+                "f 1/1 2/2 3/3\n");
+
+            var converter = SilentWave.Obj2Gltf.Converter.MakeDefault();
+            converter.Convert(objPath, gltfPath);
+
+            var gltf = JObject.Parse(File.ReadAllText(gltfPath));
+
+            var material = gltf["materials"]!.First(m => (string?)m["name"] == "NormalOnly");
+            material["normalTexture"].ShouldNotBeNull();
+            material["pbrMetallicRoughness"]?["baseColorTexture"].ShouldBeNull();
+
+            var primitive = gltf["meshes"]![0]!["primitives"]![0]!;
+            primitive["attributes"]!["TEXCOORD_0"].ShouldNotBeNull();
+        }
+        finally { Directory.Delete(dir, true); }
     }
 }

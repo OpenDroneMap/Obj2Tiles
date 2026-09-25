@@ -46,7 +46,7 @@ public class StagesTests
                 Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
                     new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
                 Name = Path.GetFileNameWithoutExtension(file)
-            }).ToDictionary(item => item.Name, item => item.Bounds);
+            }).ToDictionary(item => item.Name, item => new TileBounds(item.Bounds, 0, 0, 0));
 
         StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, [boundsMapper]);
 
@@ -64,7 +64,7 @@ public class StagesTests
                 Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
                     new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
                 Name = Path.GetFileNameWithoutExtension(file)
-            }).ToDictionary(item => item.Name, item => item.Bounds);
+            }).ToDictionary(item => item.Name, item => new TileBounds(item.Bounds, item.Bounds.Diagonal(), item.Bounds.Diagonal(), 100));
 
         StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, [boundsMapper], rootSourceObj: null);
 
@@ -90,7 +90,7 @@ public class StagesTests
                 Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
                     new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
                 Name = Path.GetFileNameWithoutExtension(file)
-            }).ToDictionary(item => item.Name, item => item.Bounds);
+            }).ToDictionary(item => item.Name, item => new TileBounds(item.Bounds, item.Bounds.Diagonal(), item.Bounds.Diagonal(), 100));
 
         var rootSourceObj = Path.GetFullPath("TestData/Tile2/Mesh-XL-YR-XR-YL.obj");
         StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, [boundsMapper], rootSourceObj: rootSourceObj);
@@ -416,7 +416,7 @@ public class StagesTests
                 Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
                     new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
                 Name = Path.GetFileNameWithoutExtension(file)
-            }).ToDictionary(item => item.Name, item => item.Bounds);
+            }).ToDictionary(item => item.Name, item => new TileBounds(item.Bounds, 0, 0, 0));
 
         StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, [boundsMapper], localMode: true);
 
@@ -442,7 +442,7 @@ public class StagesTests
                 Bounds = new Box3(new Vertex3(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
                     new Vertex3(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)),
                 Name = Path.GetFileNameWithoutExtension(file)
-            }).ToDictionary(item => item.Name, item => item.Bounds);
+            }).ToDictionary(item => item.Name, item => new TileBounds(item.Bounds, 0, 0, 0));
 
         // Without localMode and without coords → default Milan coordinates → NOT identity
         StagesFacade.Tile("TestData/Tile1", testPath, 1, 100, [boundsMapper]);
@@ -478,8 +478,8 @@ public class StagesTests
         Tri("LOD-0", "Mesh-XL-XR");
         Tri("LOD-1", "Mesh-XL");
 
-        var lod0 = new Dictionary<string, Box3> { ["Mesh-XL-XR"] = new Box3(0, 0, 0, 1, 1, 1) };
-        var lod1 = new Dictionary<string, Box3> { ["Mesh-XL"] = new Box3(0, 0, 0, 2, 2, 2) };
+        var lod0 = new Dictionary<string, TileBounds> { ["Mesh-XL-XR"] = new TileBounds(new Box3(0, 0, 0, 1, 1, 1), 0, 0, 0) };
+        var lod1 = new Dictionary<string, TileBounds> { ["Mesh-XL"] = new TileBounds(new Box3(0, 0, 0, 2, 2, 2), 0, 0, 0) };
 
         StagesFacade.Tile(src, testPath, 2, 100, [lod0, lod1], localMode: true, isOctree: true);
 
@@ -507,6 +507,28 @@ public class StagesTests
         Obj2Tiles.Utils.CopyObjDependencies(Path.Combine(inDir, "model.obj"), outDir);
 
         File.Exists(Path.Combine(testPath, "evil.mtl")).ShouldBeFalse("traversal must not write outside output");
+    }
+
+    [Test]
+    public void CopyObjDependencies_TextureInSubfolder_CopiesViaFallback()
+    {
+        var testPath = GetTestOutputPath(nameof(CopyObjDependencies_TextureInSubfolder_CopiesViaFallback));
+        var inDir = Path.Combine(testPath, "in");
+        var outDir = Path.Combine(testPath, "out");
+        var texDir = Path.Combine(inDir, "textures");
+        Directory.CreateDirectory(texDir);
+        Directory.CreateDirectory(outDir);
+
+        File.WriteAllText(Path.Combine(texDir, "diffuse.png"), "x");
+        File.WriteAllText(Path.Combine(inDir, "model.mtl"), "newmtl X\nmap_Kd diffuse.png\n");
+        File.WriteAllText(Path.Combine(inDir, "model.obj"), "mtllib model.mtl\n");
+
+        Obj2Tiles.Utils.CopyObjDependencies(Path.Combine(inDir, "model.obj"), outDir);
+
+        // The MTL references "diffuse.png" with no subfolder prefix, so the dependency
+        // is copied under that same relative name even though it was resolved from
+        // the "textures" subfolder fallback.
+        File.Exists(Path.Combine(outDir, "diffuse.png")).ShouldBeTrue();
     }
 
     #endregion

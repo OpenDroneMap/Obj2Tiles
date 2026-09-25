@@ -36,12 +36,12 @@ public class Vertex2
 
     public static bool operator ==(Vertex2 a, Vertex2 b)
     {
-        return Math.Abs(a.X - b.X) < double.Epsilon && Math.Abs(a.Y - b.Y) < double.Epsilon;
+        return Math.Abs(a.X - b.X) < Common.Epsilon && Math.Abs(a.Y - b.Y) < Common.Epsilon;
     }
 
     public static bool operator !=(Vertex2 a, Vertex2 b)
     {
-        return Math.Abs(a.X - b.X) > double.Epsilon || Math.Abs(a.Y - b.Y) > double.Epsilon;
+        return Math.Abs(a.X - b.X) > Common.Epsilon || Math.Abs(a.Y - b.Y) > Common.Epsilon;
     }
 
     public double Distance(Vertex2 other)

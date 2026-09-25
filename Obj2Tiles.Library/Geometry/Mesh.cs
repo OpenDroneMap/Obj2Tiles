@@ -16,6 +16,12 @@ public class Mesh : IMesh
     public IReadOnlyList<Face> Faces => _faces;
     public IReadOnlyList<RGB>? VertexColors => _vertexColors;
 
+    public void Translate(Vertex3 offset)
+    {
+        for (var i = 0; i < _vertices.Count; i++)
+            _vertices[i] = _vertices[i] + offset;
+    }
+
     public const string DefaultName = "Mesh";
 
     public string Name { get; set; } = DefaultName;
@@ -356,6 +362,56 @@ public class Mesh : IMesh
             }
 
             return new Box3(minX, minY, minZ, maxX, maxY, maxZ);
+        }
+    }
+
+    public double AverageEdgeLength
+    {
+        get
+        {
+            if (_faces.Count == 0) return 0;
+
+            var total = 0.0;
+
+            for (var index = 0; index < _faces.Count; index++)
+            {
+                var f = _faces[index];
+                var a = _vertices[f.IndexA];
+                var b = _vertices[f.IndexB];
+                var c = _vertices[f.IndexC];
+
+                total += a.Distance(b) + b.Distance(c) + c.Distance(a);
+            }
+
+            return total / (_faces.Count * 3);
+        }
+    }
+
+    public double MaximumEdgeLength
+    {
+        get
+        {
+            if (_faces.Count == 0) return 0;
+
+            var max = 0.0;
+
+            for (var index = 0; index < _faces.Count; index++)
+            {
+                var f = _faces[index];
+                var a = _vertices[f.IndexA];
+                var b = _vertices[f.IndexB];
+                var c = _vertices[f.IndexC];
+
+                var ab = a.Distance(b);
+                var bc = b.Distance(c);
+                var ca = c.Distance(a);
+
+                if (ab > max) max = ab;
+                if (bc > max) max = bc;
+                if (ca > max) max = ca;
+            }
+
+            return max;
         }
     }
 

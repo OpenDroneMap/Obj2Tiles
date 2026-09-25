@@ -44,7 +44,9 @@ namespace MeshDecimatorCore.Math
         /// <summary>
         /// The vector epsilon.
         /// </summary>
-        public const double Epsilon = double.Epsilon;
+        // double.Epsilon is the smallest representable positive double (~4.9e-324), not a usable
+        // comparison tolerance - this is the double-precision machine epsilon (C/C++ DBL_EPSILON).
+        public const double Epsilon = 2.2204460492503131E-16;
         #endregion
 
         #region Fields

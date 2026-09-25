@@ -22,6 +22,10 @@
       <PackageReference Include="CommandLineParser" Version="2.9.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <InternalsVisibleTo Include="Obj2Tiles.Test" />
+    </ItemGroup>
+
     <!--
       Bundle the native KTX-Software library (libktx) that matches the target runtime, next to the
       published executable, so KTX2 (KHR_texture_basisu) encoding works out of the box on every

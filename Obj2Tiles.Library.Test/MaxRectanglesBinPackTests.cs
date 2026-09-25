@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Obj2Tiles.Library.Algos;
@@ -125,5 +126,53 @@ public class MaxRectanglesBinPackTests
         // The batch packer must never achieve lower occupancy than the sequential one.
         batchOcc.ShouldBeGreaterThanOrEqualTo(seqOcc);
         PlacedCount(batchPlacements).ShouldBeGreaterThan(0);
+    }
+
+    private static bool Intersects(Rectangle a, Rectangle b) =>
+        a.X < b.Right && b.X < a.Right && a.Y < b.Bottom && b.Y < a.Bottom;
+
+    // What a full (non-incremental) PruneFreeList guarantees after every placement.
+    private static void AssertFreeListInvariant(MaxRectanglesBinPack bin)
+    {
+        var free = bin.freeRectangles;
+        for (var i = 0; i < free.Count; i++)
+        {
+            for (var j = 0; j < free.Count; j++)
+                if (i != j)
+                    free[j].Contains(free[i]).ShouldBeFalse($"free rect {free[i]} is contained in {free[j]}");
+
+            foreach (var used in bin.usedRectangles)
+                Intersects(free[i], used).ShouldBeFalse($"free rect {free[i]} overlaps used rect {used}");
+        }
+    }
+
+    [TestCase(FreeRectangleChoiceHeuristic.RectangleBestAreaFit, 1)]
+    [TestCase(FreeRectangleChoiceHeuristic.RectangleBestShortSideFit, 2)]
+    [TestCase(FreeRectangleChoiceHeuristic.RectangleBottomLeftRule, 3)]
+    [TestCase(FreeRectangleChoiceHeuristic.RectangleContactPointRule, 4)]
+    public void SingleInsert_KeepsFreeListPairwiseNonContaining(FreeRectangleChoiceHeuristic heuristic, int seed)
+    {
+        var rng = new Random(seed);
+        var bin = new MaxRectanglesBinPack(512, 512, true);
+
+        for (var i = 0; i < 150; i++)
+        {
+            bin.Insert(rng.Next(4, 80), rng.Next(4, 80), heuristic);
+            AssertFreeListInvariant(bin);
+        }
+    }
+
+    [Test]
+    public void BatchInsert_KeepsFreeListPairwiseNonContaining()
+    {
+        var rng = new Random(42);
+        var rects = new (int Width, int Height)[120];
+        for (var i = 0; i < rects.Length; i++)
+            rects[i] = (rng.Next(4, 70), rng.Next(4, 70));
+
+        var bin = new MaxRectanglesBinPack(512, 512, true);
+        bin.Insert(rects, Heuristic);
+
+        AssertFreeListInvariant(bin);
     }
 }

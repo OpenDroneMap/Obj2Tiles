@@ -89,7 +89,11 @@ namespace Obj2Tiles.Library.Algos
                 }
             }
 
-            PruneFreeList();
+            // At this point freeRectangles is [surviving old free rects] followed by
+            // [newly split pieces appended by SplitFreeNode], in that order (removals
+            // above only ever shift elements left, they never reorder or interleave).
+            // numRectangleanglesToProcess is exactly the count of the surviving-old prefix.
+            PruneFreeList(numRectangleanglesToProcess);
 
             usedRectangles.Add(newNode);
             return newNode;
@@ -161,7 +165,7 @@ namespace Obj2Tiles.Library.Algos
                 }
             }
 
-            PruneFreeList();
+            PruneFreeList(numRectangleanglesToProcess);
 
             usedRectangles.Add(node);
         }
@@ -529,15 +533,40 @@ namespace Obj2Tiles.Library.Algos
             return true;
         }
 
-        private void PruneFreeList()
+        private bool[] pruneFreeListToRemove = new bool[10];
+        
+        /// Removes free rectangles that are fully contained within another free rectangle.
+        ///
+        /// This is a real bottleneck, so it's optimised a little.
+        /// 
+        /// Rectangles at index &lt; startNewIndex already went through this pass in a
+        /// previous call and are known to be pairwise non-containing (that invariant is
+        /// preserved by every call, inductively), so we only need to check pairs that
+        /// involve at least one of the newly added rectangles at index >= startNewIndex.
+        /// This yields exactly the same surviving set as checking every pair from
+        /// scratch, just without redoing work on pairs that can't have changed.
+        private void PruneFreeList(int startNewIndex)
         {
-            var toRemove = new bool[freeRectangles.Count];
+            int total = freeRectangles.Count;
+            
+            //var toRemove = new bool[total];
+            if(this.pruneFreeListToRemove.Length < total)
+                this.pruneFreeListToRemove = new bool[(total * 2) + 10];
+            else
+                Array.Clear(this.pruneFreeListToRemove, 0, total);
 
-            for (var i = 0; i < freeRectangles.Count; i++)
+            bool[] toRemove = this.pruneFreeListToRemove;
+            
+            int minRemoved = total;
+
+            for (var i = 0; i < total; i++)
             {
-                if (toRemove[i]) continue;
+                if (toRemove[i])
+                    continue;
 
-                for (var j = i + 1; j < freeRectangles.Count; ++j)
+                var jStart = i >= startNewIndex ? i + 1 : Math.Max(i + 1, startNewIndex);
+
+                for (var j = jStart; j < total; ++j)
                 {
                     if (toRemove[j])
                         continue;
@@ -545,19 +574,36 @@ namespace Obj2Tiles.Library.Algos
                     if (freeRectangles[j].Contains(freeRectangles[i]))
                     {
                         toRemove[i] = true;
+                        if(i < minRemoved)
+                            minRemoved = i;
                         break;
                     }
 
-                    if (freeRectangles[i].Contains(freeRectangles[j]))
+                    if(freeRectangles[i].Contains(freeRectangles[j]))
+                    {
                         toRemove[j] = true;
+                        if(j < minRemoved)
+                            minRemoved = j;
+                    }
                 }
             }
-
-            for (var i = toRemove.Length - 1; i >= 0; i--)
+            
+            if(minRemoved >= total)
+                return; // nothing removed
+            
+            // indices up to, and excluding minRemoved are kept
+            int freeSlot = minRemoved;
+            for(var i = minRemoved + 1; i < total; i++)
             {
-                if (toRemove[i])
-                    freeRectangles.RemoveAt(i);
+                if(!toRemove[i])
+                {
+                    // move to free slot
+                    freeRectangles[freeSlot] = freeRectangles[i];
+                    freeSlot++;
+                }
             }
+            
+            freeRectangles.RemoveRange(freeSlot, total - freeSlot);
         }
     }
 }

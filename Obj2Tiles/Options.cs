@@ -16,17 +16,29 @@ public sealed class Options
     [Option('s', "stage", Required = false, HelpText = "Stage to stop at (Decimation, Splitting, Tiling)", Default = Stage.Tiling)]
     public Stage StopAt { get; set; }
 
-    [Option('d', "divisions", Required = false, HelpText = "How many tiles divisions", Default = 2)]
+    [Option('p', "preset", Required = false, HelpText = "Applies a bundle of option defaults. 'legacy' sets --no-zsplit --no-octree --lod-texture-scale 1.0. 'standard' sets --octree --local --zsplit --lod-texture-scale 0.5 --decimation-mode Quality --glb --texture-quality 80 --fine-texture-quality 90 --max-texture-size 8192. Any of these options given explicitly on the command line take precedence over the preset; with 'standard', passing --lat/--lon keeps the tileset georeferenced instead of forcing --local.", Default = Preset.None)]
+    public Preset Preset { get; set; }
+
+    [Option('d', "divisions", Required = false, HelpText = "How many levels of spatial splitting the coarsest LOD sits at (with --octree, each finer LOD gets one extra level; without it, every LOD uses this same depth). See README.md for how this determines the number of tiles.", Default = 2)]
     public int Divisions { get; set; }
 
     [Option('z', "zsplit", Required = false, HelpText = "Splits along z-axis too", Default = false)]
     public bool ZSplit { get; set; }
 
+    [Option("no-zsplit", Required = false, HelpText = "Disables z-axis splitting, overriding --zsplit.", Default = false)]
+    public bool NoZSplit { get; set; }
+
     [Option('l', "lods", Required = false, HelpText = "How many levels of details", Default = 3)]
     public int LODs { get; set; }
 
+    [Option('m', "decimation-mode", Required = false, HelpText = "Decimation mode: Aggressive (max reduction, may distort UV seams), Standard (usually good results, may have distortions in certain cases), or Quality (best results but slower and less vertex reduction)", Default = DecimationMode.Standard)]
+    public DecimationMode DecimationMode { get; set; } = DecimationMode.Standard;
+
     [Option('k', "keeptextures", Required = false, HelpText = "Keeps original textures", Default = false)]
     public bool KeepOriginalTextures { get; set; }
+
+    [Option("ignore-normal-maps", Required = false, HelpText = "Excludes normal maps entirely: not copied as a dependency and not referenced in the output materials/textures.", Default = false)]
+    public bool IgnoreNormalMaps { get; set; }
 
     [Option("single-material-per-part", Required = false, HelpText = "Forces every sliced part to use one material with at most one texture per supported map.", Default = false)]
     public bool SingleMaterialPerPart { get; set; }
@@ -46,8 +58,14 @@ public sealed class Options
     [Option("scale", Required = false, HelpText = "Scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)", Default = 1.0)]
     public double Scale { get; set; }
 
-    [Option('e',"error", Required = false, HelpText = "Base geometric error for the root node, in the model's coordinate units. When 0 (default) it is derived automatically from the model's bounding box diagonal.", Default = 0.0)]
-    public double BaseError { get; set; }
+    [Option('e',"error", Required = false, HelpText = "Base error for root node. If omitted (or 0), it's auto-computed from the coarsest LOD using --error-estimation-mode/--error-factor.", Default = null)]
+    public double? BaseError { get; set; }
+
+    [Option("error-estimation-mode", Required = false, HelpText = "How to estimate geometric error: BoundingBoxDiagonal/AverageEdgeLength/MaximumEdgeLength derive each tile's error from that tile's own geometry (bounding-box diagonal, or average/maximum triangle edge length, times --error-factor). The Toplevel* variants instead derive a single value at the root from the coarsest LOD using the same metric, then halve it once per LOD subdivision. A tile's error never exceeds its parent's.", Default = ErrorEstimationMode.AverageEdgeLength)]
+    public ErrorEstimationMode ErrorEstimationMode { get; set; } = ErrorEstimationMode.AverageEdgeLength;
+
+    [Option("error-factor", Required = false, HelpText = "Multiplier applied to the metric selected by --error-estimation-mode. If omitted, defaults to 0.1 for *BoundingBoxDiagonal modes, 1.0 for *AverageEdgeLength/*MaximumEdgeLength modes.", Default = null)]
+    public double? ErrorFactor { get; set; }
 
     [Option("use-system-temp", Required = false, HelpText = "Uses the system temp folder", Default = false)]
     public bool UseSystemTempFolder { get; set; }
@@ -64,6 +82,9 @@ public sealed class Options
     [Option("octree", Required = false, HelpText = "Use octree spatial subdivision: each LOD gets one additional division level relative to the next coarser LOD, producing a proper tile hierarchy instead of same-count tiles per LOD.", Default = false)]
     public bool Octree { get; set; }
 
+    [Option("no-octree", Required = false, HelpText = "Disables octree spatial subdivision, overriding --octree.", Default = false)]
+    public bool NoOctree { get; set; }
+
     [Option("no-root-content", Required = false, HelpText = "Omit root.b3dm and emit a content-less tileset root. Requires a renderer that descends into children of content-less roots.", Default = false)]
     public bool NoRootContent { get; set; }
 
@@ -73,8 +94,11 @@ public sealed class Options
     [Option("max-texture-size", Required = false, HelpText = "Maximum texture resolution (per side, in pixels) used when repacking/compressing atlases. Larger source textures are downscaled to fit, which bounds the dominant LOD-0 texture cost. 0 disables the cap.", Default = 4096)]
     public int MaxTextureSize { get; set; }
 
-    [Option("texture-quality", Required = false, HelpText = "JPEG quality (1-100) for compressed textures (RepackCompressed and the tileset root). Higher is better quality but larger.", Default = 75)]
+    [Option("texture-quality", Required = false, HelpText = "JPEG/WebP quality (1-100) for compressed textures (RepackCompressed, the tileset root, and any Repack-strategy atlas that stays JPEG or WebP). Higher is better quality but larger. Also the fallback for --fine-texture-quality.", Default = 75)]
     public int TextureQuality { get; set; }
+
+    [Option("fine-texture-quality", Required = false, HelpText = "JPEG/WebP quality (1-100) for LOD-0 (the finest LOD) textures only. Default 0 falls back to --texture-quality for LOD-0 too.", Default = 0)]
+    public int FineTextureQuality { get; set; }
 
     [Option("texture-format", Required = false, HelpText = "Output image format for repacked/compressed textures: Jpeg (default), Webp or Ktx2. Webp emits the EXT_texture_webp glTF extension (25-35% smaller than JPEG). Ktx2 encodes GPU-compressed Basis Universal textures (KHR_texture_basisu), cutting GPU/VRAM usage ~4-8x, using the bundled libktx native library (no separate tool required); make sure your renderer supports the chosen format.", Default = TextureFormat.Jpeg)]
     public TextureFormat TextureFormat { get; set; }
@@ -99,6 +123,27 @@ public sealed class Options
 
     [Option("3tz-compression", Required = false, HelpText = "DEFLATE level for .3tz output, 0-9 (gzip-style): 0 = stored (no compression), 1-3 = fastest, 4-6 = balanced, 7-9 = smallest. The index is always stored. Zstandard support is planned.", Default = 6)]
     public int ThreeTzCompression { get; set; }
+
+    [Option("glb", Required = false, HelpText = "Uses plain glTF/GLB tile content instead of wrapping it in b3dm (3D Tiles 1.1 style).", Default = false)]
+    public bool UseGlb { get; set; }
+
+    [Option("b3dm", Required = false, HelpText = "Forces legacy b3dm tile content, overriding --glb.", Default = false)]
+    public bool ForceB3dm { get; set; }
+
+    [Option("unlit", Required = false, HelpText = "Marks every output material with the KHR_materials_unlit glTF extension, so viewers render the base color texture as-is without applying PBR lighting. Useful for photogrammetry content where lighting is already baked into the textures.", Default = false)]
+    public bool Unlit { get; set; }
+
+    [Option("overlap", Required = false, HelpText = "Overlap distance between adjacent split tiles, in mesh units. Default 0.0 disables overlap entirely (tiles share an exact boundary). When > 0, each tile is extended past the split plane by this amount, so adjacent tiles carry a redundant band of duplicated surface at the seam - this hides sub-pixel precision gaps at the cost of extra geometry. Each overlapping tile is also nudged by a small random per-axis offset (up to 1e-4 of the tile's bounding-box diagonal, and never more than 20% of the overlap) to avoid z-fighting between the coincident duplicated surfaces.", Default = 0.0)]
+    public double Overlap { get; set; }
+
+    [JsonIgnore]
+    public bool EffectiveZSplit => ZSplit && !NoZSplit;
+
+    [JsonIgnore]
+    public bool EffectiveOctree => Octree && !NoOctree;
+
+    [JsonIgnore]
+    public bool EffectiveUseGlb => UseGlb && !ForceB3dm;
 }
 
 public enum Stage
@@ -106,4 +151,11 @@ public enum Stage
     Decimation,
     Splitting,
     Tiling
+}
+
+public enum Preset
+{
+    None,
+    Legacy,
+    Standard
 }

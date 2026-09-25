@@ -28,6 +28,8 @@ namespace Obj2Tiles.Library.Geometry
 
         public Vertex3 Center => new((Min.X + Max.X) / 2, (Min.Y + Max.Y) / 2, (Min.Z + Max.Z) / 2);
 
+        public double Diagonal() => Math.Sqrt(Width * Width + Height * Height + Depth * Depth);
+
         public override string ToString()
         {
             return $"{Min:0.00} - {Max:0.00} ({Width:0.00}x{Height:0.00}x{Depth:0.00}) c: {Center:0.00}";

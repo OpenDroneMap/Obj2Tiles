@@ -909,6 +909,9 @@ namespace MeshDecimatorCore.Algorithms
                     UpdateReferences();
                 }
 
+                if (Verbose)
+                    LogDecimationStatistics(triangles, vertices, triangleCount);
+
                 // Init Quadrics by Plane & Edge Errors
                 //
                 // required at the beginning ( iteration == 0 )
@@ -960,6 +963,75 @@ namespace MeshDecimatorCore.Algorithms
                     triangles[i].err3 = MathHelper.Min(triangles[i].err0, triangles[i].err1, triangles[i].err2);
                 }
             }
+        }
+
+        /// <summary>
+        /// Logs how many of the mesh's edges and triangles are eligible for collapse/removal under
+        /// the current PreserveBorderEdges/PreserveUVSeamEdges/PreserveUVFoldoverEdges options,
+        /// mirroring the exact lock conditions applied per-edge in RemoveVertexPass. Counts half-edges
+        /// (one per triangle corner, matching how RemoveVertexPass itself walks edges) rather than
+        /// deduping into unique undirected edges, so interior edges count twice and border edges once
+        /// - this avoids a second full-mesh pass through a hash set, which is too costly on large
+        /// meshes. A triangle is "decimatable" if at least one of its 3 edges isn't locked (i.e. it
+        /// could disappear via some future collapse); "locked" means all 3 edges are locked, so the
+        /// triangle can never be removed as things stand.
+        /// </summary>
+        private void LogDecimationStatistics(Triangle[] triangles, Vertex[] vertices, int triangleCount)
+        {
+            bool preserveBorderEdges = Options.PreserveBorderEdges;
+            bool preserveUVSeamEdges = Options.PreserveUVSeamEdges;
+            bool preserveUVFoldoverEdges = Options.PreserveUVFoldoverEdges;
+
+            int totalEdges = 0, borderEdges = 0, seamEdges = 0, foldoverEdges = 0, decimatableEdges = 0;
+            int totalTriangles = 0, decimatableTriangles = 0;
+
+            for (int tid = 0; tid < triangleCount; tid++)
+            {
+                if (triangles[tid].deleted)
+                    continue;
+
+                ++totalTriangles;
+                bool triangleDecimatable = false;
+
+                for (int edgeIndex = 0; edgeIndex < 3; edgeIndex++)
+                {
+                    int i0 = triangles[tid][edgeIndex];
+                    int i1 = triangles[tid][(edgeIndex + 1) % 3];
+
+                    bool bothBorder = vertices[i0].border && vertices[i1].border;
+                    bool bothSeam = vertices[i0].seam && vertices[i1].seam;
+                    bool bothFoldover = vertices[i0].foldover && vertices[i1].foldover;
+                    bool mismatched = vertices[i0].border != vertices[i1].border ||
+                                       vertices[i0].seam != vertices[i1].seam ||
+                                       vertices[i0].foldover != vertices[i1].foldover;
+
+                    ++totalEdges;
+                    if (bothBorder) ++borderEdges;
+                    if (bothSeam) ++seamEdges;
+                    if (bothFoldover) ++foldoverEdges;
+
+                    bool locked = mismatched ||
+                                   (preserveBorderEdges && bothBorder) ||
+                                   (preserveUVSeamEdges && bothSeam) ||
+                                   (preserveUVFoldoverEdges && bothFoldover);
+
+                    if (!locked)
+                    {
+                        ++decimatableEdges;
+                        triangleDecimatable = true;
+                    }
+                }
+
+                if (triangleDecimatable) ++decimatableTriangles;
+            }
+
+            Logging.LogVerbose(
+                " ?> Edges (half-edges): {0} total, {1} border, {2} uv-seam, {3} uv-foldover, {4} decimatable, {5} locked",
+                totalEdges, borderEdges, seamEdges, foldoverEdges, decimatableEdges, totalEdges - decimatableEdges);
+
+            Logging.LogVerbose(
+                " ?> Triangles: {0} total, {1} decimatable, {2} locked",
+                totalTriangles, decimatableTriangles, totalTriangles - decimatableTriangles);
         }
         #endregion
 

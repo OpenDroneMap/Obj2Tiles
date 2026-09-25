@@ -80,6 +80,28 @@ public class Material : ICloneable
         candidate = Path.GetFullPath(path);
         if (File.Exists(candidate)) return candidate;
 
+        // Last resort: some asset sets keep textures in a conventionally-named
+        // subfolder ("texture"/"textures"/"tex") next to the MTL or OBJ, while
+        // the MTL itself references the file with no such prefix (or a different one).
+        var baseFolders = string.Equals(mtlFolder, objFolder, StringComparison.OrdinalIgnoreCase)
+            ? new[] { mtlFolder }
+            : new[] { mtlFolder, objFolder };
+
+        foreach (var baseFolder in baseFolders)
+        {
+            var subFolder = Common.FindTextureSubfolder(baseFolder);
+            if (subFolder == null) continue;
+
+            candidate = Path.GetFullPath(Path.Combine(subFolder, path));
+            if (File.Exists(candidate)) return candidate;
+
+            if (fileName.Length < path.Length)
+            {
+                candidate = Path.GetFullPath(Path.Combine(subFolder, fileName));
+                if (File.Exists(candidate)) return candidate;
+            }
+        }
+
         return null;
     }
 
@@ -125,7 +147,8 @@ public class Material : ICloneable
         IlluminationModel = illuminationModel;
     }
 
-    public static Material[] ReadMtl(string path, out string[] dependencies, string? objFilePath = null)
+    public static Material[] ReadMtl(string path, out string[] dependencies, string? objFilePath = null,
+        bool ignoreNormalMaps = false)
     {
         var lines = File.ReadAllLines(path);
         var materials = new List<Material>();
@@ -183,7 +206,12 @@ public class Material : ICloneable
                     break;
                 }
                 case "norm":
+                case "bump":
+                case "map_Bump":
+                case "map_bump":
                 {
+                    if (ignoreNormalMaps) break;
+
                     var texPath = ExtractTexturePath(remainder);
                     if (!string.IsNullOrEmpty(texPath))
                     {
