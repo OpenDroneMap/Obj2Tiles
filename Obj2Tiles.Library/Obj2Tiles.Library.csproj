@@ -10,4 +10,8 @@
       <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     </ItemGroup>
 
+    <ItemGroup>
+      <InternalsVisibleTo Include="Obj2Tiles.Library.Test" />
+    </ItemGroup>
+
 </Project>

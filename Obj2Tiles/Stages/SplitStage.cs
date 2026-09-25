@@ -192,8 +192,8 @@ public static partial class StagesFacade
         {
             var globalBounds = CreateGlobalSquareBounds(bounds ?? mesh.Bounds);
             count = zSplit
-                ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, globalBounds, meshes)
-                : await MeshUtils.RecurseSplitXY(mesh, divisions, globalBounds, meshes);
+                ? await MeshUtils.RecurseSplitXYZ(mesh, divisions, globalBounds, meshes, overlap)
+                : await MeshUtils.RecurseSplitXY(mesh, divisions, globalBounds, meshes, overlap);
         }
         else if (splitPointStrategy == SplitPointStrategy.VertexMedian)
         {

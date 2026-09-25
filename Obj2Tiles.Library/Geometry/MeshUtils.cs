@@ -269,17 +269,20 @@ public class MeshUtils
         }
     }
 
+    // Fraction of the tile's bounding-box diagonal used as the nudge magnitude. Tiles are viewed from a
+    // distance proportional to their size, so the depth-buffer resolution the nudge must beat scales with it too.
+    internal const double OverlapNudgeTileFraction = 1e-4;
+
     // Nudges a leaf tile by a small random per-axis offset, seeded deterministically from its own
     // name. Only relevant when overlap > 0: the overlap band's two copies of a boundary surface are
     // otherwise perfectly coincident geometry, which z-fights unpredictably in the viewer. A tiny
     // offset breaks the tie. Magnitude is capped well below the overlap width so it can't reopen the
-    // gap the overlap exists to close, and separately capped at an absolute maximum so it stays
-    // geometrically negligible even when --overlap itself is large.
-    private static void ApplyOverlapNudge(IMesh mesh, double overlap)
+    // gap the overlap exists to close.
+    internal static void ApplyOverlapNudge(IMesh mesh, double overlap)
     {
         if (overlap <= 0) return;
 
-        var magnitude = Math.Min(0.2 * overlap, 0.0001);
+        var magnitude = Math.Min(0.2 * overlap, OverlapNudgeTileFraction * mesh.Bounds.Diagonal());
         var rng = new Random(StableHash(mesh.Name));
 
         double NextOffset() => (rng.NextDouble() * 2 - 1) * magnitude;
@@ -287,22 +290,26 @@ public class MeshUtils
         mesh.Translate(new Vertex3(NextOffset(), NextOffset(), NextOffset()));
     }
 
-    public static async Task<int> RecurseSplitXY(IMesh mesh, int depth, Box3 bounds, ConcurrentBag<IMesh> meshes)
+    public static async Task<int> RecurseSplitXY(IMesh mesh, int depth, Box3 bounds, ConcurrentBag<IMesh> meshes,
+        double overlap = 0.0)
     {
         Debug.WriteLine($"RecurseSplitXY('{mesh.Name}' {mesh.VertexCount}, {depth}, {bounds})");
 
         if (depth == 0)
         {
             if (mesh.FacesCount > 0)
+            {
+                ApplyOverlapNudge(mesh, overlap);
                 meshes.Add(mesh);
+            }
             return 0;
         }
 
         var center = bounds.Center;
 
-        var count = mesh.Split(xutils3, center.X, out var left, out var right);
-        count += left.Split(yutils3, center.Y, out var topleft, out var topright);
-        count += right.Split(yutils3, center.Y, out var bottomleft, out var bottomright);
+        var count = SplitWithOverlap(mesh, xutils3, center.X, overlap, out var left, out var right);
+        count += SplitWithOverlap(left, yutils3, center.Y, overlap, out var topleft, out var topright);
+        count += SplitWithOverlap(right, yutils3, center.Y, overlap, out var bottomleft, out var bottomright);
 
         var xbounds = bounds.Split(Axis.X);
         var ybounds1 = xbounds[0].Split(Axis.Y);
@@ -312,10 +319,10 @@ public class MeshUtils
 
         var tasks = new List<Task<int>>();
 
-        if (topleft.FacesCount > 0) tasks.Add(RecurseSplitXY(topleft, nextDepth, ybounds1[0], meshes));
-        if (bottomleft.FacesCount > 0) tasks.Add(RecurseSplitXY(bottomleft, nextDepth, ybounds2[0], meshes));
-        if (topright.FacesCount > 0) tasks.Add(RecurseSplitXY(topright, nextDepth, ybounds1[1], meshes));
-        if (bottomright.FacesCount > 0) tasks.Add(RecurseSplitXY(bottomright, nextDepth, ybounds2[1], meshes));
+        if (topleft.FacesCount > 0) tasks.Add(RecurseSplitXY(topleft, nextDepth, ybounds1[0], meshes, overlap));
+        if (bottomleft.FacesCount > 0) tasks.Add(RecurseSplitXY(bottomleft, nextDepth, ybounds2[0], meshes, overlap));
+        if (topright.FacesCount > 0) tasks.Add(RecurseSplitXY(topright, nextDepth, ybounds1[1], meshes, overlap));
+        if (bottomright.FacesCount > 0) tasks.Add(RecurseSplitXY(bottomright, nextDepth, ybounds2[1], meshes, overlap));
 
         await Task.WhenAll(tasks);
 
@@ -405,28 +412,32 @@ public class MeshUtils
         return count + tasks.Sum(t => t.Result);
     }
 
-    public static async Task<int> RecurseSplitXYZ(IMesh mesh, int depth, Box3 bounds, ConcurrentBag<IMesh> meshes)
+    public static async Task<int> RecurseSplitXYZ(IMesh mesh, int depth, Box3 bounds, ConcurrentBag<IMesh> meshes,
+        double overlap = 0.0)
     {
         Debug.WriteLine($"RecurseSplitXYZ('{mesh.Name}' {mesh.VertexCount}, {depth}, {bounds})");
 
         if (depth == 0)
         {
             if (mesh.FacesCount > 0)
+            {
+                ApplyOverlapNudge(mesh, overlap);
                 meshes.Add(mesh);
+            }
             return 0;
         }
 
         var center = bounds.Center;
 
-        var count = mesh.Split(xutils3, center.X, out var left, out var right);
-        count += left.Split(yutils3, center.Y, out var topleft, out var bottomleft);
-        count += right.Split(yutils3, center.Y, out var topright, out var bottomright);
+        var count = SplitWithOverlap(mesh, xutils3, center.X, overlap, out var left, out var right);
+        count += SplitWithOverlap(left, yutils3, center.Y, overlap, out var topleft, out var bottomleft);
+        count += SplitWithOverlap(right, yutils3, center.Y, overlap, out var topright, out var bottomright);
 
-        count += topleft.Split(zutils3, center.Z, out var topleftnear, out var topleftfar);
-        count += bottomleft.Split(zutils3, center.Z, out var bottomleftnear, out var bottomleftfar);
+        count += SplitWithOverlap(topleft, zutils3, center.Z, overlap, out var topleftnear, out var topleftfar);
+        count += SplitWithOverlap(bottomleft, zutils3, center.Z, overlap, out var bottomleftnear, out var bottomleftfar);
 
-        count += topright.Split(zutils3, center.Z, out var toprightnear, out var toprightfar);
-        count += bottomright.Split(zutils3, center.Z, out var bottomrightnear, out var bottomrightfar);
+        count += SplitWithOverlap(topright, zutils3, center.Z, overlap, out var toprightnear, out var toprightfar);
+        count += SplitWithOverlap(bottomright, zutils3, center.Z, overlap, out var bottomrightnear, out var bottomrightfar);
 
         var xbounds = bounds.Split(Axis.X);
         var ybounds1 = xbounds[0].Split(Axis.Y);
@@ -442,14 +453,14 @@ public class MeshUtils
 
         var tasks = new List<Task<int>>();
 
-        if (topleftnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(topleftnear, nextDepth, zbounds1[0], meshes));
-        if (topleftfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(topleftfar, nextDepth, zbounds1[1], meshes));
-        if (bottomleftnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomleftnear, nextDepth, zbounds2[0], meshes));
-        if (bottomleftfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomleftfar, nextDepth, zbounds2[1], meshes));
-        if (toprightnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(toprightnear, nextDepth, zbounds3[0], meshes));
-        if (toprightfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(toprightfar, nextDepth, zbounds3[1], meshes));
-        if (bottomrightnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomrightnear, nextDepth, zbounds4[0], meshes));
-        if (bottomrightfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomrightfar, nextDepth, zbounds4[1], meshes));
+        if (topleftnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(topleftnear, nextDepth, zbounds1[0], meshes, overlap));
+        if (topleftfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(topleftfar, nextDepth, zbounds1[1], meshes, overlap));
+        if (bottomleftnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomleftnear, nextDepth, zbounds2[0], meshes, overlap));
+        if (bottomleftfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomleftfar, nextDepth, zbounds2[1], meshes, overlap));
+        if (toprightnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(toprightnear, nextDepth, zbounds3[0], meshes, overlap));
+        if (toprightfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(toprightfar, nextDepth, zbounds3[1], meshes, overlap));
+        if (bottomrightnear.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomrightnear, nextDepth, zbounds4[0], meshes, overlap));
+        if (bottomrightfar.FacesCount > 0) tasks.Add(RecurseSplitXYZ(bottomrightfar, nextDepth, zbounds4[1], meshes, overlap));
 
         await Task.WhenAll(tasks);
 
