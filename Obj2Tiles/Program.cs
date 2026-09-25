@@ -39,7 +39,7 @@ namespace Obj2Tiles
             }
         }
 
-        private static void ApplyPreset(Options opts, string[] args)
+        internal static void ApplyPreset(Options opts, string[] args)
         {
             if (opts.Preset == Preset.None) return;
 
@@ -49,9 +49,9 @@ namespace Obj2Tiles
             switch (opts.Preset)
             {
                 case Preset.Legacy:
-                    if (!WasSpecified("--no-zsplit"))
+                    if (!WasSpecified("-z", "--zsplit", "--no-zsplit"))
                         opts.NoZSplit = true;
-                    if (!WasSpecified("--no-octree"))
+                    if (!WasSpecified("--octree", "--no-octree"))
                         opts.NoOctree = true;
                     if (!WasSpecified("--lod-texture-scale"))
                         opts.LodTextureScale = 1.0;
@@ -62,7 +62,8 @@ namespace Obj2Tiles
                         opts.ZSplit = true;
                     if (!WasSpecified("--octree"))
                         opts.Octree = true;
-                    if (!WasSpecified("--local"))
+                    // Explicit coordinates mean the caller wants a georeferenced tileset, which --local would discard.
+                    if (!WasSpecified("--local", "--lat", "--lon"))
                         opts.LocalMode = true;
                     if (!WasSpecified("--lod-texture-scale"))
                         opts.LodTextureScale = 0.5;
@@ -336,7 +337,7 @@ namespace Obj2Tiles
             }
         }
 
-        private static bool CheckOptions(Options opts)
+        internal static bool CheckOptions(Options opts)
         {
 
             if (string.IsNullOrWhiteSpace(opts.Input))
@@ -403,6 +404,33 @@ namespace Obj2Tiles
             if (opts.LodTextureScale is <= 0 or > 1)
             {
                 Console.WriteLine(" !> --lod-texture-scale must be in the (0, 1] range");
+                return false;
+            }
+
+            if (opts.BaseError is { } baseError)
+            {
+                if (baseError == 0)
+                {
+                    // Older releases documented --error 0 as "derive automatically"; keep that meaning.
+                    Console.WriteLine(" ?> --error 0 means auto: the geometric error will be estimated from the mesh");
+                    opts.BaseError = null;
+                }
+                else if (!(baseError > 0) || !double.IsFinite(baseError))
+                {
+                    Console.WriteLine(" !> --error must be a positive finite number (or 0 / omitted for auto)");
+                    return false;
+                }
+            }
+
+            if (opts.ErrorFactor is { } errorFactor && (!(errorFactor > 0) || !double.IsFinite(errorFactor)))
+            {
+                Console.WriteLine(" !> --error-factor must be a positive finite number");
+                return false;
+            }
+
+            if (!(opts.Overlap >= 0) || !double.IsFinite(opts.Overlap))
+            {
+                Console.WriteLine(" !> --overlap must be a non-negative finite number");
                 return false;
             }
 

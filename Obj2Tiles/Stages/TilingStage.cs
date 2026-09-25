@@ -86,6 +86,9 @@ public static partial class StagesFacade
         var errorFactorValue = ResolveErrorFactor(errorEstimationMode, errorFactor);
         var isToplevel = IsToplevelMode(errorEstimationMode);
 
+        if (baseError is { } requestedError && (!(requestedError > 0) || !double.IsFinite(requestedError)))
+            baseError = null;
+
         // If no --error was passed, derive the root's geometric error from the coarsest LOD using the
         // chosen mode's metric (bounding-box diagonal, or average/maximum triangle edge length), so it
         // scales with the actual mesh size and detail instead of relying on a fixed default like 100.
@@ -100,6 +103,21 @@ public static partial class StagesFacade
 
         if (baseError == null)
             Console.WriteLine($" ?> No --error provided, auto-computed root geometric error: {rootGeometricError:0.00} ({errorEstimationMode}, factor {errorFactorValue}, texture-quality multiplier {LodTextureQualityMultiplier(lods, lodTextureScale):0.00})");
+
+        // Toplevel* modes cascade from the root by pure halving (the root already carries the texture
+        // multiplier); per-tile modes scale their own estimate. Either way a tile never claims more error
+        // than its parent, otherwise renderers refine straight through it and that LOD is never shown.
+        double TileGeometricError(int lod, TileBounds tileBounds, double parentError)
+        {
+            if (lod == 0) return 0;
+
+            var error = isToplevel
+                ? rootGeometricError / Math.Pow(2, lods - lod)
+                : EstimateGeometricError(tileBounds, errorEstimationMode, errorFactorValue)
+                  * LodTextureQualityMultiplier(lod, lodTextureScale);
+
+            return Math.Min(error, parentError);
+        }
 
         // Generate tileset.json
         var tileset = new Tileset
@@ -162,13 +180,12 @@ public static partial class StagesFacade
                     if (box3.Min.Z < minZ) minZ = box3.Min.Z;
                     if (box3.Max.Z > maxZ) maxZ = box3.Max.Z;
 
+                    var hasParent = lodParentMap.TryGetValue(descriptor, out var parentKey);
+                    var parentTile = hasParent ? tileMap[parentKey!] : tileset.Root!;
+
                     var tile = new TileElement
                     {
-                        // Leaves (lod == 0) are the finest representation, so they carry no further error.
-                        GeometricError = lod == 0 ? 0 : (isToplevel
-                            ? rootGeometricError / Math.Pow(2, lods - lod)
-                            : EstimateGeometricError(tileBounds, errorEstimationMode, errorFactorValue))
-                            * LodTextureQualityMultiplier(lod, lodTextureScale),
+                        GeometricError = TileGeometricError(lod, tileBounds, parentTile.GeometricError),
                         Refine = "REPLACE",
                         Content = new Content
                         {
@@ -179,17 +196,9 @@ public static partial class StagesFacade
 
                     tileMap[descriptor] = tile;
 
-                    if (lodParentMap.TryGetValue(descriptor, out var parentKey))
-                    {
-                        tileMap[parentKey].Children ??= [];
-                        tileMap[parentKey].Children!.Add(tile);
-                    }
-                    else
-                    {
-                        // No parent in a coarser LOD — attach directly to the root
-                        tileset.Root!.Children ??= [];
-                        tileset.Root!.Children!.Add(tile);
-                    }
+                    // Tiles without a parent in a coarser LOD attach directly to the root
+                    parentTile.Children ??= [];
+                    parentTile.Children!.Add(tile);
                 }
             }
         }
@@ -218,10 +227,7 @@ public static partial class StagesFacade
 
                     var tile = new TileElement
                     {
-                        GeometricError = lod == 0 ? 0 : (isToplevel
-                            ? rootGeometricError / Math.Pow(2, lods - lod)
-                            : EstimateGeometricError(tileBounds, errorEstimationMode, errorFactorValue))
-                            * LodTextureQualityMultiplier(lod, lodTextureScale),
+                        GeometricError = TileGeometricError(lod, tileBounds, currentTileElement.GeometricError),
                         Refine = "REPLACE",
                         Content = new Content
                         {
