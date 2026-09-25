@@ -549,7 +549,7 @@ public class MeshT : IMesh
     // regardless of which duplicate index each one happens to reference. Without this,
     // position-edge matching on raw indices sees almost no adjacency at all on meshes
     // like this, shattering every UV island into near-single-triangle fragments.
-    private int[] GetCanonicalPositionIndices()
+    internal int[] GetCanonicalPositionIndices()
     {
         var canonicalPosition = new Dictionary<Vertex3, int>(_vertices.Count);
         var canonicalIndex = new int[_vertices.Count];
@@ -1566,7 +1566,7 @@ public class MeshT : IMesh
         return area;
     }
 
-    private static List<List<int>> GetFacesClusters(IEnumerable<int> facesIndexes,
+    internal static List<List<int>> GetFacesClusters(IEnumerable<int> facesIndexes,
         IReadOnlyDictionary<int, List<int>> facesMapper)
     {
 
@@ -1640,7 +1640,7 @@ public class MeshT : IMesh
     // same UV coordinates - e.g. two unrelated rooms whose floors intentionally share one
     // tileable UV layout, deduplicated by the exporter into the same vt indices - be wrongly
     // treated as one contiguous island, even though they don't share a single 3D vertex.
-    private static Dictionary<int, List<int>> GetFacesMapper(Dictionary<Edge, List<(int FaceIndex, Edge TextureEdge)>> edgesMapper)
+    internal static Dictionary<int, List<int>> GetFacesMapper(Dictionary<Edge, List<(int FaceIndex, Edge TextureEdge)>> edgesMapper)
     {
         var facesMapper = new Dictionary<int, List<int>>();
 
@@ -1665,7 +1665,7 @@ public class MeshT : IMesh
         return facesMapper;
     }
 
-    private Dictionary<Edge, List<(int FaceIndex, Edge TextureEdge)>> GetEdgesMapper(IReadOnlyList<int> facesIndexes,
+    internal Dictionary<Edge, List<(int FaceIndex, Edge TextureEdge)>> GetEdgesMapper(IReadOnlyList<int> facesIndexes,
         int[] canonicalIndex)
     {
         var edgesMapper = new Dictionary<Edge, List<(int, Edge)>>();
