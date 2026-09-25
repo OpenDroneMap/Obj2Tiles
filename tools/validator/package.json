@@ -1,0 +1,16 @@
+{
+  "name": "obj2tiles-quality-gate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Official CesiumGS 3D Tiles validation harness for Obj2Tiles output (quality gate).",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "3d-tiles-validator": "0.6.1",
+    "gltf-validator": "2.0.0-dev.3.10",
+    "ktx-parse": "0.7.1",
+    "node-stream-zip": "1.16.0"
+  }
+}

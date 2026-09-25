@@ -17,7 +17,7 @@ namespace Obj2Tiles
 {
     internal class Program
     {
-        private static async Task Main(string[] args)
+        private static async Task<int> Main(string[] args)
         {
             // Accept enum option values case-insensitively (e.g. --texture-format webp) for a
             // friendlier CLI; option names keep their default (case-insensitive) handling.
@@ -36,7 +36,12 @@ namespace Obj2Tiles
             if (oResult.Tag == ParserResultType.NotParsed)
             {
                 Console.WriteLine("Usage: obj2tiles [options]");
+                return 1;
             }
+
+            // Run() signals invalid options through Environment.ExitCode; surface it as the
+            // process exit code so batch/CI callers (and the quality gate) can trust it.
+            return Environment.ExitCode;
         }
 
         internal static void ApplyPreset(Options opts, string[] args)
@@ -91,6 +96,15 @@ namespace Obj2Tiles
             // mistake a rejected configuration for a successful conversion.
             if (!CheckOptions(opts))
             {
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            // --scale accepts decimals and fractions (see Options.TryParseScale); an invalid
+            // value must fail before any output is written.
+            if (!Options.TryParseScale(opts.Scale, out var scale, out var scaleError))
+            {
+                Console.WriteLine($" !> {scaleError}");
                 Environment.ExitCode = 1;
                 return;
             }
@@ -180,7 +194,7 @@ namespace Obj2Tiles
                     return;
 
                 var gpsCoords = opts.Latitude != null && opts.Longitude != null
-                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude, opts.Scale, opts.YUpToZUp)
+                    ? new GpsCoords(opts.Latitude.Value, opts.Longitude.Value, opts.Altitude, scale, opts.YUpToZUp)
                     : null;
 
                 Console.WriteLine();

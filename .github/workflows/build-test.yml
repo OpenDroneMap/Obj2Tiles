@@ -5,6 +5,9 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  schedule:
+    - cron: '17 3 * * *'   # nightly, off-peak UTC
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,3 +26,59 @@ jobs:
         dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
+
+    - name: Setup Node (validator harness)
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: tools/validator/package-lock.json
+    - name: Install validator harness deps
+      run: npm ci --prefix tools/validator
+    - name: Quality gate (PICT matrix + official 3D Tiles validator)
+      run: >
+        dotnet test Obj2Tiles.Test/Obj2Tiles.Test.csproj --no-build -c Release
+        --filter "TestCategory=QualityGate" --logger "console;verbosity=normal"
+    - name: Upload validator reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: validator-reports
+        path: Obj2Tiles.Test/bin/*/net*/TestOutput/**/validator-report.json
+        if-no-files-found: warning
+
+  quality-gate-large:
+    # Nightly: real photogrammetry datasets (large downloads) on top of the PR-level gate.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+    - name: Setup Node (validator harness)
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: tools/validator/package-lock.json
+    - name: Restore and Build
+      run: |
+        dotnet restore
+        dotnet build --no-restore -c Release
+    - name: Install validator harness deps
+      run: npm ci --prefix tools/validator
+    - name: Quality gate (large datasets enabled)
+      env:
+        OBJ2TILES_RUN_LARGE: "1"
+      run: >
+        dotnet test Obj2Tiles.Test/Obj2Tiles.Test.csproj --no-build -c Release
+        --filter "TestCategory=QualityGate" --logger "console;verbosity=normal"
+    - name: Upload validator reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: validator-reports-large
+        path: Obj2Tiles.Test/bin/*/net*/TestOutput/**/validator-report.json
+        if-no-files-found: warning

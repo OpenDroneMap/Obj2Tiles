@@ -1,0 +1,6 @@
+[
+  {
+    "type": "GLTF_GLB_EXTRA_DATA",
+    "reason": "Obj2Tiles pads the b3dm content area so the tile byteLength stays 8-byte aligned; the GLB itself is intact and Cesium plus the official tileset validator accept the padding."
+  }
+]

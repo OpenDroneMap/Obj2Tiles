@@ -1,0 +1,57 @@
+# ------------------------------------------------------------------------
+# Obj2Tiles CLI pairwise (t-way=2) model for the quality gate.
+#
+# Parameter names are logical (no CLI dashes); the mapping to real CLI
+# flags lives in generate.py. The committed generated suite is
+# Obj2Tiles.Test/TestData/quality/matrix.json - tests consume that file,
+# so PICT itself is only needed when the model changes.
+#
+# Regenerate (see tools/matrix/README.md):
+#   python3 tools/matrix/generate.py
+# ------------------------------------------------------------------------
+
+stage:          Decimation, Splitting, Tiling
+lods:           1, 3
+divisions:      1, 2
+zsplit:         true, false
+splitstrategy:  AbsoluteCenter, GlobalBounding, VertexBaricenter, VertexMedian
+octree:         true, false
+noroot:         true, false
+error:          0, 100
+texfmt:         Jpeg, Webp, Ktx2
+texqual:        60, 90
+maxtex:         0, 256
+lodscale:       0.5, 1
+keeptex:        true, false
+smp:            true, false
+uastc:          true, false
+kthreads:       0, 2
+zstd:           0, 3
+geo:            local, georef
+yuptozup:       true, false
+scale:          1, 0.3048
+outform:        dir, 3tz
+tzcomp:         0, 6
+temp:           true, false
+
+# ------------------------------------------------------------------------
+# Constraints mirroring Program.CheckOptions: invalid configurations are
+# rejected by the CLI itself and are exercised as negative (curated)
+# cases instead, so they must not appear in the positive matrix.
+# ------------------------------------------------------------------------
+
+# A .3tz archive forces the full Tiling stage (CheckOptions rejects 3tz with
+# --stage Decimation/Splitting).
+IF [outform] = "3tz" THEN [stage] = "Tiling";
+
+# The archive compression level is irrelevant for a loose folder tree - pin it
+# to the default so pairwise effort goes to real combinations.
+IF [outform] = "dir" THEN [tzcomp] = 6;
+
+# KTX2 sub-knobs are only accepted by the CLI when the texture format is Ktx2.
+IF [texfmt] <> "Ktx2" THEN [kthreads] = 0;
+IF [texfmt] <> "Ktx2" THEN [zstd] = 0;
+IF [texfmt] <> "Ktx2" THEN [uastc] = "false";
+
+# zstd supercompression requires UASTC on top of Ktx2.
+IF [zstd] <> 0 THEN [uastc] = "true";

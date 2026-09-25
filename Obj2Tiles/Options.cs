@@ -55,8 +55,64 @@ public sealed class Options
     [Option("alt", Required = false, HelpText = "Altitude of the mesh (meters)", Default = 0)]
     public double Altitude { get; set; }
 
-    [Option("scale", Required = false, HelpText = "Scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)", Default = 1.0)]
-    public double Scale { get; set; }
+    [Option("scale", Required = false, HelpText = "Scale for data if using units other than meters. Accepts a decimal (0.3048) or a fraction numerator/denominator evaluated in full precision (1200.0/3937.0 for survey ft).", Default = "1")]
+    public string Scale { get; set; } = "1";
+
+    /// <summary>
+    /// Parses a --scale value: a positive finite decimal ("0.3048") or a positive fraction
+    /// with non-zero denominator ("1200.0/3937.0"), in invariant culture. The fraction form
+    /// is evaluated as a single division so both operands keep full double precision.
+    /// </summary>
+    public static bool TryParseScale(string? raw, out double scale, out string? error)
+    {
+        const System.Globalization.NumberStyles style = System.Globalization.NumberStyles.Float;
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        scale = 1;
+        error = null;
+
+        var text = (raw ?? string.Empty).Trim();
+        if (text.Length == 0)
+        {
+            error = "--scale must be a positive number or a fraction like 1200.0/3937.0";
+            return false;
+        }
+
+        var parts = text.Split('/');
+        if (parts.Length == 1)
+        {
+            if (!double.TryParse(parts[0].Trim(), style, culture, out scale) ||
+                !double.IsFinite(scale) || scale <= 0)
+            {
+                error = $"--scale '{raw}' must be a positive finite number or a fraction like 1200.0/3937.0";
+                return false;
+            }
+
+            return true;
+        }
+
+        if (parts.Length != 2 ||
+            !double.TryParse(parts[0].Trim(), style, culture, out var numerator) ||
+            !double.TryParse(parts[1].Trim(), style, culture, out var denominator))
+        {
+            error = $"--scale '{raw}' is not a valid number or fraction (expected numerator/denominator)";
+            return false;
+        }
+
+        if (denominator == 0)
+        {
+            error = $"--scale '{raw}' has a zero denominator";
+            return false;
+        }
+
+        scale = numerator / denominator;
+        if (!double.IsFinite(scale) || scale <= 0)
+        {
+            error = "--scale must be greater than 0";
+            return false;
+        }
+
+        return true;
+    }
 
     [Option('e',"error", Required = false, HelpText = "Base error for root node. If omitted (or 0), it's auto-computed from the coarsest LOD using --error-estimation-mode/--error-factor.", Default = null)]
     public double? BaseError { get; set; }

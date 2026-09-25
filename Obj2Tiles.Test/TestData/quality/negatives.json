@@ -1,0 +1,239 @@
+[
+  {
+    "name": "lods-zero",
+    "args": [
+      "--lods",
+      "0",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "divisions-negative",
+    "args": [
+      "--divisions",
+      "-1",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "texture-quality-too-low",
+    "args": [
+      "--texture-quality",
+      "0",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "texture-quality-too-high",
+    "args": [
+      "--texture-quality",
+      "101",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "lod-texture-scale-zero",
+    "args": [
+      "--lod-texture-scale",
+      "0",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "lod-texture-scale-above-one",
+    "args": [
+      "--lod-texture-scale",
+      "1.1",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "max-texture-size-negative",
+    "args": [
+      "--max-texture-size",
+      "-1",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "ktx2-threads-without-ktx2",
+    "args": [
+      "--ktx2-threads",
+      "2",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "ktx2-threads-negative",
+    "args": [
+      "--texture-format",
+      "Ktx2",
+      "--ktx2-threads",
+      "-1",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "ktx2-zstd-without-ktx2",
+    "args": [
+      "--ktx2-zstd-level",
+      "5",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "ktx2-zstd-without-uastc",
+    "args": [
+      "--texture-format",
+      "Ktx2",
+      "--ktx2-zstd-level",
+      "3",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "ktx2-zstd-above-range",
+    "args": [
+      "--texture-format",
+      "Ktx2",
+      "--ktx2-uastc",
+      "--ktx2-zstd-level",
+      "23",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "3tz-with-decimation-stage",
+    "args": [
+      "--3tz",
+      "--stage",
+      "Decimation",
+      "{input}",
+      "{outdir}.3tz"
+    ]
+  },
+  {
+    "name": "3tz-with-splitting-stage",
+    "args": [
+      "--3tz",
+      "--stage",
+      "Splitting",
+      "{input}",
+      "{outdir}.3tz"
+    ]
+  },
+  {
+    "name": "3tz-ext-with-splitting-stage",
+    "args": [
+      "--stage",
+      "Splitting",
+      "{input}",
+      "{outdir}.3tz"
+    ]
+  },
+  {
+    "name": "3tz-compression-out-of-range",
+    "args": [
+      "--3tz-compression",
+      "10",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "input-does-not-exist",
+    "args": [
+      "{noinput}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "unknown-option",
+    "args": [
+      "--not-an-option",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "missing-output-positional",
+    "args": [
+      "{input}"
+    ]
+  },
+  {
+    "name": "scale-zero",
+    "args": [
+      "--scale",
+      "0",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "scale-negative",
+    "args": [
+      "--scale",
+      "-2",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "scale-text",
+    "args": [
+      "--scale",
+      "abc",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "scale-fraction-zero-denominator",
+    "args": [
+      "--scale",
+      "1200/0",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "scale-fraction-too-many-parts",
+    "args": [
+      "--scale",
+      "1/2/3",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "scale-fraction-empty-side",
+    "args": [
+      "--scale",
+      "1200/",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "scale-fraction-negative-result",
+    "args": [
+      "--scale",
+      "-1200/3937",
+      "{input}",
+      "{outdir}"
+    ]
+  }
+]

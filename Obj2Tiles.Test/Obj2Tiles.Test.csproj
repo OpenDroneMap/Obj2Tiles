@@ -218,4 +218,11 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <!-- Quality-gate fixtures: PICT matrix, negative cases and the textured cube dataset -->
+      <None Update="TestData\quality\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

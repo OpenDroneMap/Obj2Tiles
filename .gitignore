@@ -9,3 +9,4 @@ test-output/
 test-output2/
 publish/
 *.DotSettings.user
+node_modules/
