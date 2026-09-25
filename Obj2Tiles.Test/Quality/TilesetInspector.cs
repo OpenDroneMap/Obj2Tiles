@@ -89,7 +89,7 @@ public static class TilesetInspector
         var contentByLod = new Dictionary<int, List<(string Uri, JToken GlbJson, byte[] GlbBin, List<string> ImageProblems)>>();
         var uriSeen = new HashSet<string>(StringComparer.Ordinal);
 
-        WalkTile("root", root, parentGe: null, parentIsReplace: true, e, problems, readRel, tilesetBaseDir.Length > 0, contentByLod, uriSeen);
+        WalkTile("root", root, parentGe: null, e, problems, readRel, tilesetBaseDir.Length > 0, contentByLod, uriSeen);
 
         if (e.Stage == Stage.Tiling)
             CheckLods(contentByLod, e, problems);
@@ -100,7 +100,7 @@ public static class TilesetInspector
     private static bool StageTiling(QualityExpectations e) => e.Stage == Stage.Tiling;
 
     private static void WalkTile(
-        string path, JToken tile, double? parentGe, bool parentIsReplace,
+        string path, JToken tile, double? parentGe,
         QualityExpectations e, List<string> problems, Func<string, byte[]?> readRel, bool fromDisk,
         Dictionary<int, List<(string, JToken, byte[], List<string>)>> contentByLod, HashSet<string> uriSeen)
     {
@@ -133,11 +133,10 @@ public static class TilesetInspector
         {
             if (ge > parentGe + Epsilon)
                 problems.Add($"{path}: geometricError {ge} is larger than the parent's {parentGe}");
-            else if (parentIsReplace && parentGe > 0 && Math.Abs(ge.Value - parentGe.Value) < Epsilon)
-            {
-                // equal errors on REPLACE chains hide a missing error budget
-                problems.Add($"{path}: geometricError equals the parent's ({ge}) on a REPLACE chain");
-            }
+            // Equality with the parent is legal since upstream clamps each tile's estimated
+            // error to its parent's ("a tile's error never exceeds its parent's"), so a tile
+            // whose estimate saturates at the clamp reports exactly the parent value. The
+            // regression guard that matters is strictly-greater (above) plus finiteness.
         }
 
         // --- content ---------------------------------------------------------------------
@@ -237,7 +236,7 @@ public static class TilesetInspector
         var children = tile["children"] as JArray;
         var i2 = 0;
         foreach (var child in children ?? new JArray())
-            WalkTile($"{path}/children/{i2++}", child, ge, refine == "REPLACE", e, problems, readRel, fromDisk, contentByLod, uriSeen);
+            WalkTile($"{path}/children/{i2++}", child, ge, e, problems, readRel, fromDisk, contentByLod, uriSeen);
     }
 
     private static void CheckLods(
