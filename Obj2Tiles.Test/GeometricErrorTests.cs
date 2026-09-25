@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
@@ -69,7 +70,7 @@ public class GeometricErrorTests
         foreach (var mode in Enum.GetValues<ErrorEstimationMode>())
         foreach (var octree in new[] { true, false })
         foreach (var scale in new[] { 0.5, 1.0 })
-            yield return new TestCaseData(mode, octree, scale).SetName($"ChildErrorNeverExceedsParent({mode},octree={octree},scale={scale})");
+            yield return new TestCaseData(mode, octree, scale).SetName($"ChildErrorNeverExceedsParent({mode},octree={octree},scale={scale.ToString(CultureInfo.InvariantCulture)})");
     }
 
     [TestCaseSource(nameof(AllModes))]

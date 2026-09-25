@@ -42,6 +42,8 @@ Obj2Tiles [options] <input.obj> <output>
 |-----------|---------|-------------|---------|
 | `-s, --stage` | `Tiling` | Stage to stop at: `Decimation`, `Splitting`, or `Tiling` | `--stage Splitting` |
 | `-l, --lods` | `3` | Number of levels of detail to generate | `--lods 5` |
+| `-p, --preset` | `None` | Bundle of option defaults. `Legacy` = `--no-zsplit --no-octree --lod-texture-scale 1.0`. `Standard` = `--octree --local --zsplit --lod-texture-scale 0.5 --decimation-mode Quality --glb --texture-quality 80 --fine-texture-quality 90 --max-texture-size 8192`. Options given explicitly always win over the preset; with `Standard`, passing `--lat`/`--lon` keeps the tileset georeferenced instead of forcing `--local` | `--preset standard` |
+| `-m, --decimation-mode` | `Standard` | `Aggressive` (maximum reduction, UV seams may collapse), `Standard` (preserves UV seams/foldovers on textured meshes), or `Quality` (treats seams as borders: best texture fidelity, slower, less reduction) | `--decimation-mode Quality` |
 
 ### Splitting
 
@@ -49,10 +51,13 @@ Obj2Tiles [options] <input.obj> <output>
 |-----------|---------|-------------|---------|
 | `-d, --divisions` | `2` | Recursion depth for binary splitting along each axis - in `--octree` mode, the depth of the coarsest LOD specifically. See [Tile count](#tile-count) for how this determines the number of tiles | `--divisions 3` |
 | `-z, --zsplit` | `false` | Also split along the Z-axis (not just X and Y) | `--zsplit` |
+| `--no-zsplit` | `false` | Disable Z-axis splitting, overriding `--zsplit` (useful with `--preset`) | `--no-zsplit` |
 | `-g, --split-strategy` | `VertexBaricenter` | How the split grid is computed: `AbsoluteCenter` (local bounding-box center), `GlobalBounding` (one global square grid from the source AABB), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy GlobalBounding` |
 | `-k, --keeptextures` | `false` | Keep original textures instead of repacking them (not recommended) | `--keeptextures` |
 | `--single-material-per-part` | `false` | Force every sliced part to emit one material and at most one atlas per supported map (base color and normal). This necessarily repacks textures, including when used with `--keeptextures` | `--single-material-per-part` |
 | `--octree` | `false` | Use octree spatial subdivision: each LOD gets one additional division level, producing a proper parent-child tile hierarchy instead of per-tile LOD chains. Combine with `--zsplit` for a true 8-way octree | `--octree --zsplit` |
+| `--no-octree` | `false` | Disable octree subdivision, overriding `--octree` (useful with `--preset`) | `--no-octree` |
+| `--overlap` | `0` | Overlap distance between adjacent tiles, in mesh units. When > 0 each tile extends past the split plane by this amount, hiding sub-pixel seams at the cost of duplicated geometry. Each tile is also nudged by a deterministic per-axis offset of at most 1e-4 of its bounding-box diagonal (and never more than 20% of the overlap) to avoid z-fighting in the duplicated band. Works with every `--split-strategy` | `--overlap 0.001` |
 | `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses ImageSharp's default resampler | `--lod-texture-scale 0.5` |
 
 ### Textures
@@ -70,6 +75,9 @@ Controls how repacked texture atlases are encoded.
 | `--ktx2-threads` | `0` | Number of libktx encoder threads per texture. `0` preserves the current default of one encoder thread per texture; positive values require `--texture-format Ktx2` | `--ktx2-threads 4` |
 | `--ktx2-zstd-level` | `0` | Zstandard supercompression level for UASTC KTX2 textures (`1`-`22`; `0` disables). Requires `--texture-format Ktx2` and `--ktx2-uastc`; levels above `20` use substantially more memory | `--ktx2-zstd-level 18` |
 | `--ktx-path` |  | Path to the libktx native library or its directory. When omitted, resolved from `OBJ2TILES_KTX`, then the executable directory (where the bundled lib lives), then system `PATH`. Only used with `--texture-format Ktx2` | `--ktx-path /usr/lib/libktx.so` |
+| `--ignore-normal-maps` | `false` | Drop normal maps entirely: they are neither copied nor referenced by the output materials | `--ignore-normal-maps` |
+
+Normal maps are read from the MTL `norm`, `bump` and `map_Bump` keywords and are always written losslessly as PNG, regardless of `--texture-format` and texture strategy, because lossy compression corrupts the encoded directions.
 
 ### Geo-referencing
 
@@ -91,6 +99,9 @@ By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `r
 | `--3tz` | `false` | Produce a single `.3tz` archive instead of a folder tree (implied by a `.3tz` output path). When set without a `.3tz` extension, the archive is written to `<output>.3tz` | `--3tz` |
 | `--3tz-compression` | `6` | DEFLATE level for `.3tz` content, `0`-`9` (gzip-style), see table below. The index is always stored uncompressed | `--3tz-compression 9` |
 | `--no-root-content` | `false` | Omit `root.b3dm` and emit a legal contentless tileset root. Useful when only separately audited child tiles should be published, but requires a renderer that descends into children of contentless roots | `--no-root-content` |
+| `--glb` | `false` | Write plain glTF binary (`.glb`) tile content instead of `.b3dm`, with `asset.version` `1.1` (3D Tiles 1.1). Make sure your renderer supports 3D Tiles 1.1 | `--glb` |
+| `--b3dm` | `false` | Force legacy `.b3dm` content, overriding `--glb` (useful with `--preset standard`) | `--b3dm` |
+| `--unlit` | `false` | Mark every material with `KHR_materials_unlit`, so viewers show the baked texture colors without PBR lighting (typical for photogrammetry) | `--unlit` |
 
 **Compression levels (`--3tz-compression`):**
 
@@ -107,8 +118,8 @@ By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `r
 
 | Parameter | Default | Description | Example |
 |-----------|---------|-------------|---------|
-| `-e, --error` |  | Base geometric error value for the root tile in `tileset.json`. If omitted, it's auto-computed from the coarsest LOD via `--error-estimation-mode`/`--error-factor` | `--error 500` |
-| `--error-estimation-mode` | `AverageEdgeLength` | How geometric error is estimated: `BoundingBoxDiagonal`, `AverageEdgeLength`, `MaximumEdgeLength` compute each tile's error from that tile's own geometry (bounding-box diagonal, or average/maximum triangle edge length, times `--error-factor`). Below 4 faces, `AverageEdgeLength`/`MaximumEdgeLength` fall back to `bounding-box diagonal * 0.1` since an edge-length estimate isn't meaningful. The `Toplevel*` variants instead compute one value at the root from the coarsest LOD using the same metric, then halve it once per LOD subdivision | `--error-estimation-mode MaximumEdgeLength` |
+| `-e, --error` | auto | Base geometric error value for the root tile in `tileset.json`. If omitted or `0`, it's auto-computed from the coarsest LOD via `--error-estimation-mode`/`--error-factor` | `--error 500` |
+| `--error-estimation-mode` | `AverageEdgeLength` | How geometric error is estimated: `BoundingBoxDiagonal`, `AverageEdgeLength`, `MaximumEdgeLength` compute each tile's error from that tile's own geometry (bounding-box diagonal, or average/maximum triangle edge length, times `--error-factor`). Below 4 faces, `AverageEdgeLength`/`MaximumEdgeLength` fall back to `bounding-box diagonal * 0.1` since an edge-length estimate isn't meaningful. The `Toplevel*` variants instead compute one value at the root from the coarsest LOD using the same metric, then halve it once per LOD subdivision. In every mode a tile's error is capped at its parent's | `--error-estimation-mode MaximumEdgeLength` |
 | `--error-factor` | `0.1` (`*BoundingBoxDiagonal`) / `1.0` (`*AverageEdgeLength`, `*MaximumEdgeLength`) | Multiplier applied to the metric selected by `--error-estimation-mode` | `--error-factor 0.3` |
 | `--use-system-temp` | `false` | Use the system temp folder for intermediate files instead of the output folder | `--use-system-temp` |
 | `--keep-intermediate` | `false` | Keep intermediate files (decimated OBJs, split tiles) for debugging | `--keep-intermediate` |

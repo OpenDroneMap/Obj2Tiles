@@ -49,33 +49,6 @@ public class Material : ICloneable
         return raw.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
     }
 
-    private static readonly string[] TextureSubfolderNames = { "texture", "textures", "tex" };
-
-    // Looks for a conventionally-named texture subfolder directly under parentFolder
-    // (case-insensitively, since assets are often authored on case-insensitive filesystems).
-    private static string? FindTextureSubfolder(string parentFolder)
-    {
-        foreach (var name in TextureSubfolderNames)
-        {
-            var candidate = Path.Combine(parentFolder, name);
-            if (Directory.Exists(candidate)) return candidate;
-        }
-
-        if (!Directory.Exists(parentFolder)) return null;
-
-        foreach (var dir in Directory.EnumerateDirectories(parentFolder))
-        {
-            var dirName = Path.GetFileName(dir);
-            foreach (var name in TextureSubfolderNames)
-            {
-                if (string.Equals(dirName, name, StringComparison.OrdinalIgnoreCase))
-                    return dir;
-            }
-        }
-
-        return null;
-    }
-
     // Tries to locate a texture file by progressively relaxing the base directory.
     // Returns the full absolute path on success, null if the file cannot be found.
     private static string? ResolvePath(string path, string mtlFolder, string objFolder)
@@ -116,7 +89,7 @@ public class Material : ICloneable
 
         foreach (var baseFolder in baseFolders)
         {
-            var subFolder = FindTextureSubfolder(baseFolder);
+            var subFolder = Common.FindTextureSubfolder(baseFolder);
             if (subFolder == null) continue;
 
             candidate = Path.GetFullPath(Path.Combine(subFolder, path));

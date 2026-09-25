@@ -16,7 +16,7 @@ public sealed class Options
     [Option('s', "stage", Required = false, HelpText = "Stage to stop at (Decimation, Splitting, Tiling)", Default = Stage.Tiling)]
     public Stage StopAt { get; set; }
 
-    [Option('p', "preset", Required = false, HelpText = "Applies a bundle of option defaults. 'legacy' sets --no-zsplit --no-octree --lod-texture-scale 1.0. 'standard' sets --octree --local --zsplit --lod-texture-scale 0.5 --decimation-mode Quality --glb --texture-quality 80 --fine-texture-quality 90 --max-texture-size 8192. Any of these options given explicitly on the command line take precedence over the preset.", Default = Preset.None)]
+    [Option('p', "preset", Required = false, HelpText = "Applies a bundle of option defaults. 'legacy' sets --no-zsplit --no-octree --lod-texture-scale 1.0. 'standard' sets --octree --local --zsplit --lod-texture-scale 0.5 --decimation-mode Quality --glb --texture-quality 80 --fine-texture-quality 90 --max-texture-size 8192. Any of these options given explicitly on the command line take precedence over the preset; with 'standard', passing --lat/--lon keeps the tileset georeferenced instead of forcing --local.", Default = Preset.None)]
     public Preset Preset { get; set; }
 
     [Option('d', "divisions", Required = false, HelpText = "How many levels of spatial splitting the coarsest LOD sits at (with --octree, each finer LOD gets one extra level; without it, every LOD uses this same depth). See README.md for how this determines the number of tiles.", Default = 2)]
@@ -58,10 +58,10 @@ public sealed class Options
     [Option("scale", Required = false, HelpText = "Scale for data if using units other than meters ( 1200.0/3937.0 for survey ft)", Default = 1.0)]
     public double Scale { get; set; }
 
-    [Option('e',"error", Required = false, HelpText = "Base error for root node. If omitted, it's auto-computed from the coarsest LOD using --error-estimation-mode/--error-factor.", Default = null)]
+    [Option('e',"error", Required = false, HelpText = "Base error for root node. If omitted (or 0), it's auto-computed from the coarsest LOD using --error-estimation-mode/--error-factor.", Default = null)]
     public double? BaseError { get; set; }
 
-    [Option("error-estimation-mode", Required = false, HelpText = "How to estimate geometric error: BoundingBoxDiagonal/AverageEdgeLength/MaximumEdgeLength derive each tile's error from that tile's own geometry (bounding-box diagonal, or average/maximum triangle edge length, times --error-factor). The Toplevel* variants instead derive a single value at the root from the coarsest LOD using the same metric, then halve it once per LOD subdivision.", Default = ErrorEstimationMode.AverageEdgeLength)]
+    [Option("error-estimation-mode", Required = false, HelpText = "How to estimate geometric error: BoundingBoxDiagonal/AverageEdgeLength/MaximumEdgeLength derive each tile's error from that tile's own geometry (bounding-box diagonal, or average/maximum triangle edge length, times --error-factor). The Toplevel* variants instead derive a single value at the root from the coarsest LOD using the same metric, then halve it once per LOD subdivision. A tile's error never exceeds its parent's.", Default = ErrorEstimationMode.AverageEdgeLength)]
     public ErrorEstimationMode ErrorEstimationMode { get; set; } = ErrorEstimationMode.AverageEdgeLength;
 
     [Option("error-factor", Required = false, HelpText = "Multiplier applied to the metric selected by --error-estimation-mode. If omitted, defaults to 0.1 for *BoundingBoxDiagonal modes, 1.0 for *AverageEdgeLength/*MaximumEdgeLength modes.", Default = null)]
@@ -133,7 +133,7 @@ public sealed class Options
     [Option("unlit", Required = false, HelpText = "Marks every output material with the KHR_materials_unlit glTF extension, so viewers render the base color texture as-is without applying PBR lighting. Useful for photogrammetry content where lighting is already baked into the textures.", Default = false)]
     public bool Unlit { get; set; }
 
-    [Option("overlap", Required = false, HelpText = "Overlap distance between adjacent split tiles, in mesh units. Default 0.0 disables overlap entirely (tiles share an exact boundary). When > 0, each tile is extended past the split plane by this amount, so adjacent tiles carry a redundant band of duplicated surface at the seam - this hides sub-pixel precision gaps at the cost of extra geometry. Each overlapping tile is also nudged by a small random per-axis offset (up to 20% of the overlap, capped at 0.0001) to avoid z-fighting between the coincident duplicated surfaces.", Default = 0.0)]
+    [Option("overlap", Required = false, HelpText = "Overlap distance between adjacent split tiles, in mesh units. Default 0.0 disables overlap entirely (tiles share an exact boundary). When > 0, each tile is extended past the split plane by this amount, so adjacent tiles carry a redundant band of duplicated surface at the seam - this hides sub-pixel precision gaps at the cost of extra geometry. Each overlapping tile is also nudged by a small random per-axis offset (up to 1e-4 of the tile's bounding-box diagonal, and never more than 20% of the overlap) to avoid z-fighting between the coincident duplicated surfaces.", Default = 0.0)]
     public double Overlap { get; set; }
 
     [JsonIgnore]

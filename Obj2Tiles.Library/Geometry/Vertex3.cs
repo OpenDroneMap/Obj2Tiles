@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Text.Json.Serialization;
-using Obj2Tiles.Library;
 
 namespace Obj2Tiles.Library.Geometry;
 

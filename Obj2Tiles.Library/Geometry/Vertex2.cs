@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Obj2Tiles.Library;
 
 namespace Obj2Tiles.Library.Geometry;
 

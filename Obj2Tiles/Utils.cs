@@ -59,33 +59,6 @@ public static class Utils
         return raw.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
     }
 
-    private static readonly string[] TextureSubfolderNames = { "texture", "textures", "tex" };
-
-    // Looks for a conventionally-named texture subfolder directly under parentFolder
-    // (case-insensitively, since assets are often authored on case-insensitive filesystems).
-    private static string? FindTextureSubfolder(string parentFolder)
-    {
-        foreach (var name in TextureSubfolderNames)
-        {
-            var candidate = Path.Combine(parentFolder, name);
-            if (Directory.Exists(candidate)) return candidate;
-        }
-
-        if (!Directory.Exists(parentFolder)) return null;
-
-        foreach (var dir in Directory.EnumerateDirectories(parentFolder))
-        {
-            var dirName = Path.GetFileName(dir);
-            foreach (var name in TextureSubfolderNames)
-            {
-                if (string.Equals(dirName, name, StringComparison.OrdinalIgnoreCase))
-                    return dir;
-            }
-        }
-
-        return null;
-    }
-
     // Tries to locate a file by progressively relaxing the base directory.
     // Returns the resolved absolute path, or null if no candidate exists.
     private static string? ResolveTexturePath(string path, string mtlFolder, string objFolder)
@@ -126,7 +99,7 @@ public static class Utils
 
         foreach (var baseFolder in baseFolders)
         {
-            var subFolder = FindTextureSubfolder(baseFolder);
+            var subFolder = Library.Common.FindTextureSubfolder(baseFolder);
             if (subFolder == null) continue;
 
             candidate = Path.GetFullPath(Path.Combine(subFolder, path));
