@@ -1031,8 +1031,8 @@ public class MeshT : IMesh
         string? normalFileName = null;
         if (normalAtlas != null)
         {
-            normalFileName = $"{Name}-texture-normal{extension}";
-            SaveSingleAtlas(normalAtlas, Path.Combine(targetFolder, normalFileName));
+            normalFileName = $"{Name}-texture-normal.png";
+            normalAtlas.SaveAsPng(Path.Combine(targetFolder, normalFileName));
         }
 
         var representative = usedMaterials[0];
