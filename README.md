@@ -1,9 +1,9 @@
 
 # Obj2Tiles - Converts OBJ file to 3D Tiles format
 
-![license](https://img.shields.io/github/license/HeDo88TH/Obj2Tiles)
-![commits](https://img.shields.io/github/commit-activity/m/HeDo88TH/Obj2Tiles)
-![languages](https://img.shields.io/github/languages/top/HeDo88TH/Obj2Tiles)
+![license](https://img.shields.io/github/license/OpenDroneMap/Obj2Tiles)
+![commits](https://img.shields.io/github/commit-activity/m/OpenDroneMap/Obj2Tiles)
+![languages](https://img.shields.io/github/languages/top/OpenDroneMap/Obj2Tiles)
 [![Build & Test](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/build-test.yml)
 [![Publish](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml/badge.svg)](https://github.com/OpenDroneMap/Obj2Tiles/actions/workflows/publish.yml)
 ![Discord](https://img.shields.io/discord/1491016144310767670?label=Discord&logo=discord&color=5865F2)
@@ -49,10 +49,11 @@ Obj2Tiles [options] <input.obj> <output>
 |-----------|---------|-------------|---------|
 | `-d, --divisions` | `2` | Recursion depth for binary splitting along each axis - in `--octree` mode, the depth of the coarsest LOD specifically. See [Tile count](#tile-count) for how this determines the number of tiles | `--divisions 3` |
 | `-z, --zsplit` | `false` | Also split along the Z-axis (not just X and Y) | `--zsplit` |
-| `-g, --split-strategy` | `VertexBaricenter` | How the split point is computed: `AbsoluteCenter` (bounding box center), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy VertexMedian` |
+| `-g, --split-strategy` | `VertexBaricenter` | How the split grid is computed: `AbsoluteCenter` (local bounding-box center), `GlobalBounding` (one global square grid from the source AABB), `VertexBaricenter` (vertex average), or `VertexMedian` (vertex median, most balanced) | `--split-strategy GlobalBounding` |
 | `-k, --keeptextures` | `false` | Keep original textures instead of repacking them (not recommended) | `--keeptextures` |
+| `--single-material-per-part` | `false` | Force every sliced part to emit one material and at most one atlas per supported map (base color and normal). This necessarily repacks textures, including when used with `--keeptextures` | `--single-material-per-part` |
 | `--octree` | `false` | Use octree spatial subdivision: each LOD gets one additional division level, producing a proper parent-child tile hierarchy instead of per-tile LOD chains. Combine with `--zsplit` for a true 8-way octree | `--octree --zsplit` |
-| `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses bicubic resampling | `--lod-texture-scale 0.5` |
+| `--lod-texture-scale` | `0.5` | Per-LOD texture downscale factor. LOD-0 always keeps full resolution; each subsequent LOD multiplies the previous atlas resolution by this factor. E.g. `0.5` gives LOD-1 at half resolution, LOD-2 at quarter, etc. Uses ImageSharp's default resampler | `--lod-texture-scale 0.5` |
 
 ### Textures
 
@@ -118,7 +119,7 @@ By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `r
 
 ### 1. Decimation
 
-The source OBJ is decimated using the **Fast Quadric Mesh Simplification** algorithm by [Mattias Edlund](https://github.com/Whinarn) (ported from .NET Framework 3.5 to .NET Core; original repo [here](https://github.com/Whinarn/MeshDecimator)).
+The source OBJ is decimated using the **Fast Quadric Mesh Simplification** algorithm (originally by Sven Forstmann, [sp4cerat/Fast-Quadric-Mesh-Simplification](https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification)). The C# implementation is vendored in `MeshDecimatorCore/`, ported from [Whinarn/MeshDecimator](https://github.com/Whinarn/MeshDecimator) and modernized for current .NET.
 
 The number of LODs is controlled by `--lods`. Decimation quality levels follow this formula:
 
@@ -137,7 +138,22 @@ For every decimated mesh, the program splits it recursively along the X and Y ax
 
 - **`VertexBaricenter`** (default): split point is the barycenter of the sub-mesh vertices. Adapts to geometry concentration, producing balanced tiles.
 - **`AbsoluteCenter`**: split point is the bounding box center. Produces a spatially uniform grid but may yield uneven tiles for non-uniform geometry.
+- **`GlobalBounding`**: creates a square XY bounding box from the LOD-0 source AABB, centered on the source and sized to its longest XY side. Every recursion level subdivides those same global cells into smaller squares, so all LODs use one stable grid. With `--zsplit`, Z uses the source AABB depth.
 - **`VertexMedian`**: split point is the vertex median. Most balanced of all strategies - robust to outliers and skewed distributions. Uses a *pre-computed split plan* from LOD-0 vertices so all LODs share the same split points without redundant computation.
+
+**Single-material tiles** (`--single-material-per-part`):
+
+When source meshes come with UDIM tiles scattered all over the place, sliced meshes can receive a lot of materials (and thereby also textures) each.
+
+When enabling this, each sliced mesh combines all of its used materials into one material; texture inputs are packed into one single atlas. In most scenarios this may reduce overall resolution, which can be counteracted by using a higher `--max-texture-size`.
+
+When using this with `--max-texture-size 0`, the repacking preserves the original texel density of each chart, so texture detail is carried over as-is (subject to the per-LOD `--lod-texture-scale` downscaling and the built-in 16384px atlas limit). The atlas resolution is chosen automatically to fit all charts while optimizing for space, which can result in textures with vastly varying resolutions. To reduce resolutions, either reduce the resolution of the input textures, or increase `--divisions` so each part carries fewer charts.
+
+The option works with every split strategy, LOD mode and texture format.
+
+`--keeptextures` is ignored when this is specified: textures are always repacked into the atlas.
+
+Note: When there are too many charts (or too much texture detail) to fit into an atlas of the configured `--max-texture-size`, the converter fails with an error rather than silently dropping resolution. Increase `--max-texture-size` or `--divisions`.
 
 **Octree mode** (`--octree`):
 
@@ -181,7 +197,7 @@ Each tile's texture atlas is repacked from the portion of the source texture wit
 | 1 | 0.5 | 512×512 JPEG |
 | 2 | 0.25 | 256×256 JPEG |
 
-Downscaling uses ImageSharp's default resampler. LOD-0 preserves the original texture format; coarser LODs are JPEG at quality 75.
+Downscaling uses `Resize` with ImageSharp's default resampler. LOD-0 preserves the original texture format; coarser LODs are re-encoded JPEG at `--texture-quality` (default 75).
 
 ### 3. Tiling
 
@@ -356,6 +372,14 @@ Use the median-based split strategy for the most balanced tiles:
 
 ```bash
 Obj2Tiles --split-strategy VertexMedian --lods 4 --divisions 2 --local model.obj ./output
+```
+
+### Stable global square grid with one material per tile
+
+Split all LODs against one source-derived square grid and combine every tile's material maps, resulting in a runtime-performance optimized 3D Tileset:
+
+```bash
+Obj2Tiles --split-strategy GlobalBounding --divisions 1 --octree --single-material-per-part --max-texture-size 2048   model.obj ./output
 ```
 
 ### Survey feet to meters

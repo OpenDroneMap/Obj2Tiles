@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
-using System.Numerics;
 using Obj2Tiles.Library.Algos;
 using Obj2Tiles.Library.Materials;
 using SixLabors.ImageSharp;
@@ -8,6 +7,8 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+
+using PackingRectangle = Obj2Tiles.Library.Algos.Model.Rectangle;
 using Path = System.IO.Path;
 
 namespace Obj2Tiles.Library.Geometry;
@@ -33,6 +34,13 @@ public class MeshT : IMesh
     }
 
     public const string DefaultName = "Mesh";
+    private const int Padding = 2;     // Bleed ring (pixels) added around atlas charts to hide bilinear sampling at UV seams.
+
+    private const int MaximumAtlasTextureSize = 16384; // Maximum Size Single Material Texture can grow too.
+
+    // Binary-search tuning for the single-atlas chart scale search.
+    private const int ScaleSearchMaxIterations = 16; // Hard cap on binary-search probes.
+    private const double ScaleSearchTolerance = 0.0067d; // Stop when the scale window is below this.
 
     public string Name { get; set; } = DefaultName;
     public string DebugName { get; set; } = string.Empty;
@@ -62,6 +70,11 @@ public class MeshT : IMesh
     /// extension and is typically 25-35% smaller than JPEG at comparable quality.
     /// </summary>
     public TextureFormat TextureFormat { get; set; } = TextureFormat.Jpeg;
+
+    /// <summary>
+    /// Repackages all material maps used by this mesh into one atlas per map and emits one material.
+    /// </summary>
+    public bool SingleMaterialPerPart { get; set; }
 
     public MeshT(IEnumerable<Vertex3> vertices, IEnumerable<Vertex2> textureVertices,
         IEnumerable<FaceT> faces, IEnumerable<Material> materials, IEnumerable<RGB>? vertexColors = null)
@@ -493,25 +506,7 @@ public class MeshT : IMesh
 
         var newTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
 
-        // Exporters (Blender in particular) commonly emit a separate position vertex per
-        // unique (position, normal, uv) corner, so the SAME 3D point can appear under many
-        // different vertex indices. Canonicalizing by value once - now that Vertex3.Equals
-        // is correct - means the position-edge adjacency check in GetEdgesMapper recognizes
-        // two triangles as sharing an edge whenever they're at the same actual location,
-        // regardless of which duplicate index each one happens to reference. Without this,
-        // position-edge matching on raw indices sees almost no adjacency at all on meshes
-        // like this, shattering every UV island into near-single-triangle fragments.
-        var canonicalPosition = new Dictionary<Vertex3, int>(_vertices.Count);
-        var canonicalIndex = new int[_vertices.Count];
-        for (var i = 0; i < _vertices.Count; i++)
-        {
-            if (!canonicalPosition.TryGetValue(_vertices[i], out var canonical))
-            {
-                canonical = i;
-                canonicalPosition[_vertices[i]] = canonical;
-            }
-            canonicalIndex[i] = canonical;
-        }
+        var canonicalIndex = GetCanonicalPositionIndices();
 
         for (var m = 0; m < facesByMaterial.Count; m++)
         {
@@ -543,6 +538,620 @@ public class MeshT : IMesh
                 Console.WriteLine($" -> [{DebugName}] Saving texture atlases... ({saveSw.Elapsed.TotalSeconds:F0}s)");
                 nextSaveProgressMs += 5000;
             }
+        }
+    }
+
+    // Exporters (Blender in particular) commonly emit a separate position vertex per
+    // unique (position, normal, uv) corner, so the SAME 3D point can appear under many
+    // different vertex indices. Canonicalizing by value once - now that Vertex3.Equals
+    // is correct - means the position-edge adjacency check in GetEdgesMapper recognizes
+    // two triangles as sharing an edge whenever they're at the same actual location,
+    // regardless of which duplicate index each one happens to reference. Without this,
+    // position-edge matching on raw indices sees almost no adjacency at all on meshes
+    // like this, shattering every UV island into near-single-triangle fragments.
+    private int[] GetCanonicalPositionIndices()
+    {
+        var canonicalPosition = new Dictionary<Vertex3, int>(_vertices.Count);
+        var canonicalIndex = new int[_vertices.Count];
+        for (var i = 0; i < _vertices.Count; i++)
+        {
+            if (!canonicalPosition.TryGetValue(_vertices[i], out var canonical))
+            {
+                canonical = i;
+                canonicalPosition[_vertices[i]] = canonical;
+            }
+            canonicalIndex[i] = canonical;
+        }
+
+        return canonicalIndex;
+    }
+
+    private sealed class SingleAtlasChart
+    {
+        public Material Material { get; }
+        public List<int> FaceIndexes { get; }
+        public RectangleF UvBounds { get; }
+        public Image<Rgba32>? DiffuseTexture { get; }
+        public Image<Rgba32>? NormalTexture { get; }
+        public int NaturalWidth { get; }
+        public int NaturalHeight { get; }
+
+        /// <summary>
+        /// Bleed ring (pixels) reserved around the chart in the atlas.
+        /// </summary>
+        public int Padding { get; }
+
+        /// <summary>
+        /// Padding actually used by the selected packing scale. Charts with either dimension smaller
+        /// than one texel do not receive a bleed ring: there is no texel detail to protect, and the
+        /// ring would disproportionately consume atlas space.
+        /// </summary>
+        public int EffectivePadding { get; set; }
+
+        /// <summary>
+        /// True when the packer placed the chart rotated 90° clockwise; the blit and the UV remap
+        /// account for it.
+        /// </summary>
+        public bool Rotated { get; set; }
+
+        public PackingRectangle PackedRectangle { get; set; } = new();
+
+        public SingleAtlasChart(Material material, List<int> faceIndexes, RectangleF uvBounds,
+            Image<Rgba32>? diffuseTexture, Image<Rgba32>? normalTexture, int naturalWidth, int naturalHeight,
+            int padding)
+        {
+            Material = material;
+            FaceIndexes = faceIndexes;
+            UvBounds = uvBounds;
+            DiffuseTexture = diffuseTexture;
+            NormalTexture = normalTexture;
+            NaturalWidth = naturalWidth;
+            NaturalHeight = naturalHeight;
+            Padding = padding;
+            EffectivePadding = padding;
+        }
+    }
+
+    /// <summary>
+    /// Packs every material used by this mesh into one atlas.
+    /// </summary>
+    private void MergeMaterialsIntoSingleAtlas(string targetFolder)
+    {
+        LoadTexturesCache();
+
+        var facesByMaterial = GetFacesByMaterial();
+        var usedMaterials = new List<Material>();
+        var hasNormalMap = false;
+
+        // Bleed ring reserved around each chart. Stored per chart so it can potentially become per-chart in the
+        // future. Currently defined by Padding const.
+        var chartPadding = MaxTextureSize > 0
+            ? Math.Min(Padding, Math.Max(0, (MaxTextureSize - 1) / 2))
+            : Padding;
+
+        // First pass: collect the chart data and each chart's source texel density (px per UV unit).
+        var chartData = new List<(Material Material, List<int> FaceIndexes, RectangleF UvBounds,
+            Image<Rgba32>? Diffuse, Image<Rgba32>? Normal, double DensityU, double DensityV)>();
+        var maxSourceDensity = 0.0;
+        var canonicalIndex = GetCanonicalPositionIndices();
+
+        for (var materialIndex = 0; materialIndex < facesByMaterial.Count; materialIndex++)
+        {
+            var faceIndexes = facesByMaterial[materialIndex];
+            if (faceIndexes.Count == 0)
+                continue;
+
+            var material = _materials[materialIndex];
+            usedMaterials.Add(material);
+
+            var diffuse = material.Texture != null ? TexturesCache.GetTexture(material.Texture) : null;
+            var normal = material.NormalMap != null ? TexturesCache.GetTexture(material.NormalMap) : null;
+            hasNormalMap |= normal != null;
+
+            var edgesMapper = GetEdgesMapper(faceIndexes, canonicalIndex);
+            var facesMapper = GetFacesMapper(edgesMapper);
+            var clusters = GetFacesClusters(faceIndexes, facesMapper);
+
+            foreach (var cluster in clusters)
+            {
+                var bounds = GetClusterRect(cluster);
+                var referenceTexture = diffuse ?? normal;
+
+                // The chart's native texel density is its source texture's resolution, per UV axis
+                double densityU = 0d, densityV = 0d;
+                if (referenceTexture != null)
+                {
+                    densityU = referenceTexture.Width;
+                    densityV = referenceTexture.Height;
+                    maxSourceDensity = Math.Max(maxSourceDensity, Math.Max(densityU, densityV));
+                }
+
+                chartData.Add((material, cluster, bounds, diffuse, normal, densityU, densityV));
+            }
+        }
+
+        if (chartData.Count == 0)
+            return;
+
+        // Every chart keeps its own native per-axis texel density; targetDensity is a shared multiplier
+        // (user downscale, plus a shrink factor when the largest chart would not fit the capped atlas).
+        var targetDensity = (double)Math.Clamp(TextureDownscale, float.Epsilon, 1.0f);
+
+        if (MaxTextureSize > 0)
+        {
+            // The largest chart (including padding) must fit the capped atlas edge.
+            double maxScaledSpan = 0d;
+            foreach (var data in chartData)
+            {
+                if (data.DensityU > 0)
+                {
+                    maxScaledSpan = Math.Max(maxScaledSpan,
+                        Math.Max(data.UvBounds.Width * data.DensityU, data.UvBounds.Height * data.DensityV));
+                }
+            }
+
+            if (maxScaledSpan > 0)
+            {
+                int available = Math.Max(1, MaxTextureSize - 2 * chartPadding);
+
+                if (maxScaledSpan > available)
+                {
+                    targetDensity = available / maxScaledSpan;
+                }
+            }
+        }
+
+        var charts = new List<SingleAtlasChart>(chartData.Count);
+        foreach (var data in chartData)
+        {
+            int naturalWidth, naturalHeight;
+            if (data.DensityU > 0 || data.DensityV > 0)
+            {
+                naturalWidth = Math.Max(1, (int)Math.Round(data.UvBounds.Width * data.DensityU * targetDensity));
+                naturalHeight = Math.Max(1, (int)Math.Round(data.UvBounds.Height * data.DensityV * targetDensity));
+            }
+            else
+            {
+                // Texture-less charts carry no texel data: a single solid-color pixel is enough.
+                naturalWidth = 1;
+                naturalHeight = 1;
+            }
+
+            charts.Add(new SingleAtlasChart(data.Material, data.FaceIndexes, data.UvBounds,
+                       data.Diffuse, data.Normal, naturalWidth, naturalHeight, chartPadding));
+        }
+
+        // Sort charts by padded area (descending) for better skyline packing.
+        charts.Sort((a, b) =>
+        {
+            long areaA = (a.NaturalWidth + 2 * a.Padding) * (a.NaturalHeight + 2 * a.Padding);
+            long areaB = (b.NaturalWidth + 2 * b.Padding) * (b.NaturalHeight + 2 * b.Padding);
+            return areaB.CompareTo(areaA);
+        });
+
+        // Estimate the atlas edge from the padded chart sizes.
+        long estimatedArea = 0;
+        var largestPaddedDimension = 1;
+        foreach (var chart in charts)
+        {
+            var width = chart.NaturalWidth + 2 * chart.Padding;
+            var height = chart.NaturalHeight + 2 * chart.Padding;
+            estimatedArea += (long)width * height;
+            largestPaddedDimension = Math.Max(largestPaddedDimension, Math.Max(width, height));
+        }
+
+        // Hard ceiling for the atlas edge: the user cap when set, otherwise the built-in maximum.
+        int atlasEdgeCeiling = MaxTextureSize > 0
+            ? Math.Min(MaxTextureSize, MaximumAtlasTextureSize)
+            : MaximumAtlasTextureSize;
+        var estimatedEdge = Math.Max(largestPaddedDimension, (int)Math.Ceiling(Math.Sqrt(estimatedArea)));
+        var atlasEdge = Math.Min(Math.Max(32, Common.NextPowerOfTwo(estimatedEdge)), atlasEdgeCeiling);
+
+        // Packs every chart into an atlas of the given edge length at the given uniform scale using
+        // the skyline algorithm (rotations allowed).
+        bool TryPack(double scale, int edge,
+                     out PackingRectangle?[]? placements,
+                     out bool[]? rotated, out float occupancy)
+        {
+            var sizes = new (int Width, int Height)[charts.Count];
+            for (var i = 0; i < charts.Count; i++)
+            {
+                var chart = charts[i];
+                var padding = chart.NaturalWidth * scale < 1.0 || chart.NaturalHeight * scale < 1.0
+                    ? 0
+                    : chart.Padding;
+                sizes[i] = (Math.Max(1, (int)Math.Round(chart.NaturalWidth * scale)) + 2 * padding,
+                    Math.Max(1, (int)Math.Round(chart.NaturalHeight * scale)) + 2 * padding);
+            }
+
+            SkylineBinPack packer = new SkylineBinPack(edge, edge, true);
+            placements = new PackingRectangle?[charts.Count];
+            rotated = new bool[charts.Count];
+
+            // Insert charts one-by-one in pre-sorted order (largest area first).
+            for (var i = 0; i < charts.Count; i++)
+            {
+                var (w, h) = sizes[i];
+                var rect = packer.Insert(w, h, out var wasRotated);
+                if (rect.Height == 0)
+                {
+                    placements[i] = null;
+                    rotated[i] = false;
+                }
+                else
+                {
+                    placements[i] = rect;
+                    rotated[i] = wasRotated;
+                }
+            }
+
+            occupancy = packer.Occupancy();
+
+            for (var i = 0; i < placements.Length; i++)
+            {
+                if (placements[i] == null)
+                    return false;
+            }
+
+            return true;
+        }
+
+        // Find the largest uniform chart scale that fits every chart into the atlas.
+        PackingRectangle?[]? placements;
+        bool[]? rotated;
+        float occupancy;
+        double chartScale;
+        var binarySearchAttempts = 0;
+
+        if (MaxTextureSize == 0) // Preserve 1:1 texel density: grow the atlas edge until everything fits.
+        {
+            while (!TryPack(1.0, atlasEdge, out placements, out rotated, out occupancy))
+            {
+                if (atlasEdge >= atlasEdgeCeiling)
+                {
+                    placements = null;
+                    break;
+                }
+
+                Console.WriteLine(
+                    $" -> [{DebugName}] WARNING: {charts.Count} texture charts do not fit in a " +
+                    $"{atlasEdge}x{atlasEdge} atlas; retrying at {atlasEdge * 2}x{atlasEdge * 2}.");
+                atlasEdge *= 2;
+            }
+            chartScale = 1.0;
+        }
+        else // binary search best scale
+        {
+            void FindCappedPacking()
+            {
+                if (TryPack(1.0, atlasEdge, out placements, out rotated, out occupancy))
+                {
+                    chartScale = 1.0;
+                    return;
+                }
+
+                placements = null;
+                rotated = null;
+                occupancy = 0f;
+
+                var low = 0.0; // largest scale known to fit
+                var high = 1.0; // smallest scale known not to fit)
+
+                for (int i = 0; i < ScaleSearchMaxIterations && high - low > ScaleSearchTolerance; i++)
+                {
+                    binarySearchAttempts++;
+                    var mid = (low + high) / 2;
+                    if (TryPack(mid, atlasEdge, out var attemptPlacements, out var attemptRotated,
+                            out var attemptOccupancy))
+                    {
+                        low = mid;
+                        placements = attemptPlacements;
+                        rotated = attemptRotated;
+                        occupancy = attemptOccupancy;
+                    }
+                    else
+                    {
+                        high = mid;
+                    }
+                }
+
+                chartScale = low;
+            }
+
+            FindCappedPacking();
+
+            // If its smallest viable chart scale cannot be packed, retry this atlas at progressively larger sizes
+            // but never past the configured cap.
+            while (placements == null && atlasEdge < atlasEdgeCeiling)
+            {
+                int previousEdge = atlasEdge;
+                atlasEdge = Math.Min(atlasEdge * 2, atlasEdgeCeiling);
+
+                Console.WriteLine(
+                    $" -> [{DebugName}] WARNING: {charts.Count} texture charts do not fit in a " +
+                    $"{previousEdge}x{previousEdge} atlas; retrying this atlas at " +
+                    $"{atlasEdge}x{atlasEdge} (atlas ceiling {atlasEdgeCeiling}, " +
+                    $"configured --max-texture-size: {MaxTextureSize}).");
+
+                FindCappedPacking();
+            }
+        }
+
+        if (placements == null || rotated == null)
+        {
+            throw new InvalidOperationException(
+                $"{DebugName}: cannot fit {charts.Count} texture charts into one atlas within the " +
+                $"{atlasEdgeCeiling}x{atlasEdgeCeiling} limit" +
+                (MaxTextureSize > 0 ? $" imposed by --max-texture-size ({MaxTextureSize})" : string.Empty) +
+                ". Increase --max-texture-size or --divisions so each part carries fewer charts.");
+        }
+
+        for (var i = 0; i < charts.Count; i++)
+        {
+            charts[i].PackedRectangle = placements[i]!;
+            charts[i].Rotated = rotated[i];
+
+            if (charts[i].NaturalWidth * chartScale < 1.0 || charts[i].NaturalHeight * chartScale < 1.0)
+            {
+                charts[i].EffectivePadding = 0;
+            }
+            else
+            {
+                charts[i].EffectivePadding = charts[i].Padding;
+            }
+        }
+
+        // Report atlas statistics and warn about charts that ended up smaller than one pixel.
+        var achievedDensity = maxSourceDensity * targetDensity * chartScale;
+        Console.WriteLine(
+            $" -> [{DebugName}] Single atlas: {atlasEdge}x{atlasEdge}px, {charts.Count} charts, " +
+            $"occupancy {occupancy * 100:F1}%, texel density {achievedDensity:F1} px/uv" +
+            (chartScale < 1.0
+                ? $" (target {targetDensity:F1} px/uv, scale {chartScale:F3}, {binarySearchAttempts} bin-search attempts)"
+                : string.Empty));
+
+        var subPixelCharts = 0;
+        string? worstChart = null;
+        var worstChartSize = double.MaxValue;
+        foreach (var chart in charts)
+        {
+            var chartWidth = chart.NaturalWidth * chartScale;
+            var chartHeight = chart.NaturalHeight * chartScale;
+            if (chartWidth >= 1.0 && chartHeight >= 1.0)
+                continue;
+
+            subPixelCharts++;
+            var minDimension = Math.Min(chartWidth, chartHeight);
+            if (minDimension < worstChartSize)
+            {
+                worstChartSize = minDimension;
+                worstChart = $"{chart.Material.Name} ({chartWidth:F2}x{chartHeight:F2} px)";
+            }
+        }
+
+        if (subPixelCharts > 0)
+        {
+            Console.WriteLine(
+                $" -> [{DebugName}] WARNING: {subPixelCharts} of {charts.Count} charts are smaller than one " +
+                $"pixel in the atlas (worst: {worstChart}); texture detail is lost for these charts. " +
+                "Increase --max-texture-size or set it to 0.");
+        }
+
+        // Create the atlas images.
+        using var baseColorAtlas = new Image<Rgba32>(atlasEdge, atlasEdge);
+        using var normalAtlas = hasNormalMap
+            ? new Image<Rgba32>(atlasEdge, atlasEdge, new Rgba32(128, 128, 255, 255))
+            : null;
+        var newTextureVertices = new Dictionary<Vertex2, int>(_textureVertices.Count);
+
+        foreach (var chart in charts)
+        {
+            int padding = chart.EffectivePadding;
+            int scaledWidth = (chart.Rotated ? chart.PackedRectangle.Height : chart.PackedRectangle.Width) -
+                              2 * padding;
+            int scaledHeight = (chart.Rotated ? chart.PackedRectangle.Width : chart.PackedRectangle.Height) -
+                               2 * padding;
+
+            using (var block = BuildBaseColorBlock(chart, padding, scaledWidth, scaledHeight))
+            {
+                if (chart.Rotated) block.Mutate(context => context.Rotate(RotateMode.Rotate90));
+
+                baseColorAtlas.Mutate(context =>
+                    context.DrawImage(block,
+                        new Point(chart.PackedRectangle.X, chart.PackedRectangle.Y), 1f));
+            }
+
+            if (normalAtlas != null)
+            {
+                using var block = BuildNormalBlock(chart, padding, scaledWidth, scaledHeight);
+                if (chart.Rotated) block.Mutate(context => context.Rotate(RotateMode.Rotate90));
+
+                normalAtlas.Mutate(context =>
+                    context.DrawImage(block,
+                        new Point(chart.PackedRectangle.X, chart.PackedRectangle.Y), 1f));
+            }
+
+            // Rewrite UV coords
+            var u0 = chart.UvBounds.Left;
+            var v0 = chart.UvBounds.Top;
+            var uRange = Math.Max(chart.UvBounds.Width, float.Epsilon);
+            var vRange = Math.Max(chart.UvBounds.Height, float.Epsilon);
+
+            double atlasU0, atlasV0, atlasWidth, atlasHeight;
+            if (chart.Rotated)
+            {
+                // The chart block was rotated 90° clockwise: chart U runs top-to-bottom along the
+                // packed rect's vertical axis, chart V runs left-to-right along its horizontal axis.
+                atlasU0 = (chart.PackedRectangle.X + padding) / (double)atlasEdge;
+                atlasV0 = (atlasEdge - (chart.PackedRectangle.Y + padding)) / (double)atlasEdge;
+                atlasWidth = scaledHeight / (double)atlasEdge;
+                atlasHeight = scaledWidth / (double)atlasEdge;
+            }
+            else
+            {
+                atlasU0 = (chart.PackedRectangle.X + padding) / (double)atlasEdge;
+                atlasV0 = (atlasEdge - (chart.PackedRectangle.Y + padding + scaledHeight)) /
+                          (double)atlasEdge;
+                atlasWidth = scaledWidth / (double)atlasEdge;
+                atlasHeight = scaledHeight / (double)atlasEdge;
+            }
+
+            Vertex2 MapUv(Vertex2 uv)
+            {
+                var relativeU = (uv.X - u0) / uRange;
+                var relativeV = (uv.Y - v0) / vRange;
+                return chart.Rotated
+                    ? new Vertex2(
+                        Math.Clamp(atlasU0 + relativeV * atlasWidth, 0, 1),
+                        Math.Clamp(atlasV0 - relativeU * atlasHeight, 0, 1))
+                    : new Vertex2(
+                        Math.Clamp(atlasU0 + relativeU * atlasWidth, 0, 1),
+                        Math.Clamp(atlasV0 + relativeV * atlasHeight, 0, 1));
+            }
+
+            foreach (var faceIndex in chart.FaceIndexes)
+            {
+                var face = _faces[faceIndex];
+                face.TextureIndexA = newTextureVertices.AddIndex(MapUv(_textureVertices[face.TextureIndexA]));
+                face.TextureIndexB = newTextureVertices.AddIndex(MapUv(_textureVertices[face.TextureIndexB]));
+                face.TextureIndexC = newTextureVertices.AddIndex(MapUv(_textureVertices[face.TextureIndexC]));
+                face.MaterialIndex = 0;
+            }
+        }
+
+        _textureVertices = newTextureVertices.OrderBy(item => item.Value).Select(item => item.Key).ToList();
+
+        // Save as image
+        var anyPngSource = usedMaterials.Any(m => m.Texture != null &&
+            Path.GetExtension(m.Texture).Equals(".png", StringComparison.OrdinalIgnoreCase));
+        var extension = SingleAtlasExtension(TexturesStrategy, TextureFormat, anyPngSource);
+        var baseColorFileName = $"{Name}-texture-diffuse{extension}";
+        SaveSingleAtlas(baseColorAtlas, Path.Combine(targetFolder, baseColorFileName));
+
+        string? normalFileName = null;
+        if (normalAtlas != null)
+        {
+            normalFileName = $"{Name}-texture-normal{extension}";
+            SaveSingleAtlas(normalAtlas, Path.Combine(targetFolder, normalFileName));
+        }
+
+        var representative = usedMaterials[0];
+        _materials =
+        [
+            new Material(
+                $"{Name}-material",
+                baseColorFileName,
+                normalFileName,
+                ambientColor: new RGB(1, 1, 1),
+                diffuseColor: new RGB(1, 1, 1),
+                specularColor: representative.SpecularColor,
+                specularExponent: representative.SpecularExponent,
+                dissolve: 1.0,
+                illuminationModel: representative.IlluminationModel)
+        ];
+    }
+
+    /// <summary>
+    /// Builds a padded base-color tile for <paramref name="chart"/>.
+    /// </summary>
+    /// <remarks>Returns a solid white block when no diffuse texture exists.</remarks>
+    private Image<Rgba32> BuildBaseColorBlock(SingleAtlasChart chart, int padding, int scaledWidth, int scaledHeight)
+    {
+        if (chart.DiffuseTexture == null)
+        {
+            return new Image<Rgba32>(
+                scaledWidth + 2 * padding,
+                scaledHeight + 2 * padding,
+                new Rgba32(255, 255, 255, 255));
+        }
+
+        var sourceRectangle = GetSourceRectangle(
+            chart.UvBounds, chart.DiffuseTexture.Width, chart.DiffuseTexture.Height);
+        return BuildPaddedBlock(chart.DiffuseTexture, sourceRectangle, padding, scaledWidth, scaledHeight);
+    }
+
+    /// <summary>
+    /// Builds a padded normal-map tile for <paramref name="chart"/>.
+    /// </summary>
+    /// <remarks>Returns a flat tangent-space normal block when no normal map exists.</remarks>
+    private static Image<Rgba32> BuildNormalBlock(SingleAtlasChart chart, int padding, int scaledWidth,
+        int scaledHeight)
+    {
+        if (chart.NormalTexture == null)
+        {
+            return new Image<Rgba32>(
+                scaledWidth + 2 * padding,
+                scaledHeight + 2 * padding,
+                new Rgba32(128, 128, 255, 255));
+        }
+
+        var sourceRectangle = GetSourceRectangle(
+            chart.UvBounds, chart.NormalTexture.Width, chart.NormalTexture.Height);
+
+        return BuildPaddedBlock(chart.NormalTexture, sourceRectangle, padding, scaledWidth, scaledHeight);
+    }
+
+    /// <summary>
+    /// Converts a UV sub-rectangle (UDIM-aware) to the corresponding pixel rectangle inside a single source texture.
+    /// flips Y to ImageSharp's top-left origin.
+    /// </summary>
+    private static Rectangle GetSourceRectangle(RectangleF uvBounds, int textureWidth, int textureHeight)
+    {
+        var u0 = uvBounds.Left;
+        var v0 = uvBounds.Top;
+        var u1 = u0 + uvBounds.Width;
+        var v1 = v0 + uvBounds.Height;
+
+        var tileU = (int)Math.Floor(u0 + 1e-4);
+        var tileV = (int)Math.Floor(v0 + 1e-4);
+
+        var u0Fraction = Math.Clamp(u0 - tileU, 0.0, 1.0);
+        var v0Fraction = Math.Clamp(v0 - tileV, 0.0, 1.0);
+        var u1Fraction = Math.Clamp(u1 - tileU, 0.0, 1.0);
+        var v1Fraction = Math.Clamp(v1 - tileV, 0.0, 1.0);
+
+        var startX = Math.Clamp((int)Math.Floor(u0Fraction * textureWidth + 0.5), 0, textureWidth - 1);
+        var endX = Math.Clamp((int)Math.Ceiling(u1Fraction * textureWidth - 0.5), 1, textureWidth);
+        var startBottom = Math.Clamp((int)Math.Floor(v0Fraction * textureHeight + 0.5), 0, textureHeight - 1);
+        var endBottom = Math.Clamp((int)Math.Ceiling(v1Fraction * textureHeight - 0.5), 1, textureHeight);
+
+        var width = Math.Max(1, endX - startX);
+        var height = Math.Max(1, endBottom - startBottom);
+        var startY = Math.Clamp(textureHeight - endBottom, 0, textureHeight - height);
+
+        return new Rectangle(startX, startY, width, height);
+    }
+
+    /// <summary>
+    /// Picks the file extension for the single-atlas output.
+    /// </summary>
+    private static string SingleAtlasExtension(TexturesStrategy strategy, TextureFormat format, bool anyPngSource) =>
+        format == TextureFormat.Webp
+        ? ".webp"
+        : (strategy == TexturesStrategy.Compress
+            ? ".jpg"
+            : (anyPngSource ? ".png" : ".jpg"));
+
+    /// <summary>
+    /// Saves a single-atlas image using the encoder implied by <paramref name="path"/>'s extension.
+    /// </summary>
+    private void SaveSingleAtlas(Image image, string path)
+    {
+        if (TextureFormat == TextureFormat.Webp)
+        {
+            image.SaveAsWebp(path, new WebpEncoder
+            {
+                FileFormat = WebpFileFormatType.Lossy,
+                Quality = Math.Clamp(TextureQuality, 1, 100)
+            });
+        }
+        else if (Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            image.SaveAsPng(path);
+        }
+        else
+        {
+            image.SaveAsJpeg(path, CreateEncoder());
         }
     }
 
@@ -629,8 +1238,6 @@ public class MeshT : IMesh
     private void BinPackTextures(string targetFolder, int materialIndex, IReadOnlyList<List<int>> clusters,
         IDictionary<Vertex2, int> newTextureVertices, ICollection<Task> tasks)
     {
-        const int PADDING = 2; // <-- bleed ring
-
         var packSw = Stopwatch.StartNew();
         long nextProgressMs = 5000;
 
@@ -660,7 +1267,7 @@ public class MeshT : IMesh
 
         var clustersRects = clusters.Select(GetClusterRect).ToArray();
 
-        CalculateMaxMinAreaRect(clustersRects, effWidth, effHeight, PADDING, out var maxWidth, out var maxHeight,
+        CalculateMaxMinAreaRect(clustersRects, effWidth, effHeight, Padding, out var maxWidth, out var maxHeight,
             out var textureArea);
 
         var edgeLength = Math.Max(Common.NextPowerOfTwo((int)Math.Sqrt(textureArea)), 32);
@@ -727,7 +1334,7 @@ public class MeshT : IMesh
             int scaledSh = Math.Max(1, (int)Math.Round(sh * scale));
 
             // ---------- reserve atlas space WITH padding ----------
-            var packRect = binPack.Insert(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING,
+            var packRect = binPack.Insert(scaledSw + 2 * Padding, scaledSh + 2 * Padding,
                                           FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
 
             // If we ran out of room: save current atlas, start a new one (keeps your behavior)
@@ -765,26 +1372,26 @@ public class MeshT : IMesh
                 materialIndex = _materials.Count - 1;
 
                 // try again
-                packRect = binPack.Insert(scaledSw + 2 * PADDING, scaledSh + 2 * PADDING,
+                packRect = binPack.Insert(scaledSw + 2 * Padding, scaledSh + 2 * Padding,
                                           FreeRectangleChoiceHeuristic.RectangleBestAreaFit);
                 if (packRect.Width == 0)
                     throw new Exception($"Packing failed for {scaledSw}x{scaledSh} into {edgeLength}x{edgeLength} (occ {binPack.Occupancy()})");
             }
 
-            int destInnerX = packRect.X + PADDING;
-            int destInnerY = packRect.Y + PADDING;
-            int destOuterX = destInnerX - PADDING;
-            int destOuterY = destInnerY - PADDING;
+            int destInnerX = packRect.X + Padding;
+            int destInnerY = packRect.Y + Padding;
+            int destOuterX = destInnerX - Padding;
+            int destOuterY = destInnerY - Padding;
 
 
             if (material.Texture != null)
             {
-                using var block = BuildPaddedBlock(texture!, srcRect, PADDING, scaledSw, scaledSh);
+                using var block = BuildPaddedBlock(texture!, srcRect, Padding, scaledSw, scaledSh);
                 newTexture!.Mutate(c => c.DrawImage(block, new Point(destOuterX, destOuterY), 1f));
             }
             if (material.NormalMap != null)
             {
-                using var blockN = BuildPaddedBlock(normalMap!, srcRect, PADDING, scaledSw, scaledSh);
+                using var blockN = BuildPaddedBlock(normalMap!, srcRect, Padding, scaledSw, scaledSh);
                 newNormalMap!.Mutate(c => c.DrawImage(blockN, new Point(destOuterX, destOuterY), 1f));
             }
 
@@ -1454,7 +2061,9 @@ public class MeshT : IMesh
 
         var folderPath = Path.GetDirectoryName(path) ?? string.Empty;
 
-        if (TexturesStrategy == TexturesStrategy.Repack || TexturesStrategy == TexturesStrategy.RepackCompressed)
+        if (SingleMaterialPerPart)
+            MergeMaterialsIntoSingleAtlas(folderPath);
+        else if (TexturesStrategy == TexturesStrategy.Repack || TexturesStrategy == TexturesStrategy.RepackCompressed)
             TrimTextures(folderPath);
         using (var writer = new FormattingStreamWriter(path, CultureInfo.InvariantCulture))
         {
@@ -1518,7 +2127,7 @@ public class MeshT : IMesh
             {
                 var material = _materials[index];
 
-                if (material.Texture != null)
+                if (material.Texture != null && !SingleMaterialPerPart)
                 {
                     switch (TexturesStrategy)
                     {

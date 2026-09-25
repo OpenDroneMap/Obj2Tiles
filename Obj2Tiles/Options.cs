@@ -40,7 +40,10 @@ public sealed class Options
     [Option("ignore-normal-maps", Required = false, HelpText = "Excludes normal maps entirely: not copied as a dependency and not referenced in the output materials/textures.", Default = false)]
     public bool IgnoreNormalMaps { get; set; }
 
-    [Option('g', "split-strategy", Required = false, HelpText = "Split strategy: AbsoluteCenter, VertexBaricenter, or VertexMedian (balanced tiles)", Default = SplitPointStrategy.VertexBaricenter)]
+    [Option("single-material-per-part", Required = false, HelpText = "Forces every sliced part to use one material with at most one texture per supported map.", Default = false)]
+    public bool SingleMaterialPerPart { get; set; }
+
+    [Option('g', "split-strategy", Required = false, HelpText = "Split strategy: AbsoluteCenter, GlobalBounding (global square grid), VertexBaricenter, or VertexMedian (balanced tiles)", Default = SplitPointStrategy.VertexBaricenter)]
     public SplitPointStrategy SplitPointStrategy { get; set; } = SplitPointStrategy.VertexBaricenter;
 
     [Option("lat", Required = false, HelpText = "Latitude of the mesh", Default = null)]

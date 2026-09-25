@@ -17,7 +17,7 @@ CLI (Program.cs + Options.cs)  ← CommandLineParser
                             └─ Obj2Tiles/Tiles/B3dm (GLB→B3DM wrapper)
 ```
 
-**Key design decision**: Two independent OBJ parsers exist — `Stages/Model/ObjMesh` (used only by decimation to interface with `MeshDecimatorCore`) and `Obj2Tiles.Library/Geometry/MeshUtils.LoadMesh` (used by splitting, returns `IMesh`). Do not mix them.
+**Key design decision**: Two independent OBJ parsers are used by the pipeline — `Stages/Model/ObjMesh` (used only by decimation to interface with `MeshDecimatorCore`) and `Obj2Tiles.Library/Geometry/MeshUtils.LoadMesh` (used by splitting, returns `IMesh`). Do not mix them. A third parser, `Obj2Gltf/WaveFront/ObjParser.cs`, belongs to the Obj2Gltf conversion library.
 
 ### Project Structure
 
@@ -71,8 +71,11 @@ Target framework is **net10.0** with `InvariantGlobalization=true` and nullable 
 - **`FormattingStreamWriter`**: Custom `StreamWriter` subclass (in `Common.cs`) that forces `InvariantCulture` — always use it when writing OBJ files to ensure decimal separator consistency.
 - **Extension method `AddIndex<T>`** (in `Extenders.cs`): Adds an element to a collection/dictionary and returns its index. Used extensively during vertex merging in split operations.
 - **Vertex colors**: Three independent OBJ parsers (`MeshUtils.LoadMesh`, `ObjMesh.ReadFile`, `ObjParser.Parse`) all read extended vertex lines (`v x y z r g b`). Colors flow through Split (interpolated at edge intersections via `RGB.CutEdgePerc`), Decimation (via `MeshDecimatorCore.Mesh.Colors`), and glTF export (as `COLOR_0` VEC3/F32 with sRGB→linear conversion in `Converter.cs`).
+- **KTX2 textures**: encoding runs **in-process** via P/Invoke to the bundled native libktx (`Obj2Tiles/native/<rid>/`, resolved from `--ktx-path` → `OBJ2TILES_KTX` → exe dir → PATH). Never shell out to an external ktx tool; refresh binaries with `Obj2Tiles/native/update-libktx.ps1`.
+- **3D Tiles Archive (.3tz)**: writing a `.3tz` forces the full Tiling stage (uses a temp folder internally). Keep ZIP output below 4 GB per file (no ZIP64).
 
 ## CI/CD
 
-- **Build & Test** (`.github/workflows/build-test.yml`): Runs on push/PR to `master` — restore → build → test on `ubuntu-latest` with .NET 9.0.x.
-- **Publish** (`.github/workflows/publish.yml`): Triggered by `v*` tags. Publishes self-contained binaries for `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` via `.pubxml` profiles, zips them, and creates a GitHub Release.
+- **Build & Test** (`.github/workflows/build-test.yml`): Runs on push/PR to `master` — restore → build → test on `ubuntu-latest` with a .NET SDK matching the csproj target framework (read `dotnet-version` from the workflow; do not assume a fixed number).
+- **Publish** (`.github/workflows/publish.yml`): Triggered by `v*` tags. Publishes self-contained binaries for `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` via `.pubxml` profiles (in `Obj2Tiles/Properties/PublishProfiles/`), zips them, and creates a GitHub Release.
+- **Container image** (`.github/workflows/image.yml`): builds/pushes the `ghcr.io/opendronemap/obj2tiles` image (QEMU multi-arch).

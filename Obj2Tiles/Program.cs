@@ -165,11 +165,13 @@ namespace Obj2Tiles
                     ? opts.Output
                     : createTempFolder($"{pipelineId}-obj2tiles-split");
 
-                Console.WriteLine($" ?> Keep original textures: {opts.KeepOriginalTextures}, Split strategy: {opts.SplitPointStrategy}");
+                Console.WriteLine(
+                    $" ?> Keep original textures: {opts.KeepOriginalTextures}, Single material per part: {opts.SingleMaterialPerPart}, Split strategy: {opts.SplitPointStrategy}");
 
                 var boundsMapper = await StagesFacade.Split(decimateRes.DestFiles, destFolderSplit, opts.Divisions,
                     opts.EffectiveZSplit, opts.KeepOriginalTextures, opts.SplitPointStrategy, opts.EffectiveOctree, (float)opts.LodTextureScale,
-                    opts.Overlap, opts.IgnoreNormalMaps, opts.MaxTextureSize, opts.TextureQuality, opts.TextureFormat, opts.FineTextureQuality);
+                    opts.Overlap, opts.IgnoreNormalMaps, opts.MaxTextureSize, opts.TextureQuality, opts.TextureFormat, opts.FineTextureQuality,
+                    opts.SingleMaterialPerPart);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
 
@@ -214,12 +216,32 @@ namespace Obj2Tiles
                         // smaller user cap when one is set). 256px keeps the root - the first tile the
                         // viewer downloads - small (a few MB) without any visible loss at overview zoom.
                         const int rootTextureSizeCap = 256;
-                        var rootMaxTextureSize = opts.MaxTextureSize > 0
-                            ? Math.Min(opts.MaxTextureSize, rootTextureSizeCap)
-                            : rootTextureSizeCap;
+
+                        // When SingleMaterialPerPart is used, we do however know that there can only be
+                        // a single texture for the root tiles. In this case we don't need to enforce a
+                        // per-texture cap, but rather a max-size for the one texture we have.
+                        const int singleMaterialTextureSizeCap = 2048;
+
+                        int rootMaxTextureSize;
+
+                        if (opts.SingleMaterialPerPart)
+                        {
+                            // MaxTextureSize == 0 means "no cap" and must not disable the root bound.
+                            rootMaxTextureSize = opts.MaxTextureSize > 0
+                                ? Math.Min(opts.MaxTextureSize, singleMaterialTextureSizeCap)
+                                : singleMaterialTextureSizeCap;
+                        }
+                        else
+                        {
+                            rootMaxTextureSize = opts.MaxTextureSize > 0
+                                ? Math.Min(opts.MaxTextureSize, rootTextureSizeCap)
+                                : rootTextureSizeCap;
+                        }
+
                         await StagesFacade.Split(rootSourceObj, rootTempDir, 0,
                             textureDownscale: rootDownscale, maxTextureSize: rootMaxTextureSize, textureQuality: opts.TextureQuality,
-                            textureFormat: opts.TextureFormat, ignoreNormalMaps: opts.IgnoreNormalMaps);
+                            textureFormat: opts.TextureFormat, ignoreNormalMaps: opts.IgnoreNormalMaps,
+                            singleMaterialPerPart: opts.SingleMaterialPerPart);
                         var compressedRoot = Directory.GetFiles(rootTempDir, "*.obj").FirstOrDefault();
                         if (compressedRoot != null)
                             rootSourceObj = compressedRoot;
