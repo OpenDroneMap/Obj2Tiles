@@ -148,6 +148,52 @@ public class StagesTests
 
     }
 
+    [TestCase(false, "Mesh-XL-YL")]
+    [TestCase(true, "Mesh-XL-YL-ZR")]
+    public async Task SplitStage_GlobalBounding_UsesTheSuppliedGridInsteadOfLocalMeshBounds(bool zSplit,
+        string expectedTileName)
+    {
+        var testPath = GetTestOutputPath(nameof(SplitStage_GlobalBounding_UsesTheSuppliedGridInsteadOfLocalMeshBounds));
+        var sourcePath = Path.Combine(testPath, "mesh.obj");
+        File.WriteAllText(sourcePath, "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n");
+
+        var result = await StagesFacade.Split(
+            sourcePath,
+            Path.Combine(testPath, "output"),
+            divisions: 1,
+            zSplit: zSplit,
+            bounds: new Box3(0, 0, 0, 4, 4, 0),
+            splitPointStrategy: SplitPointStrategy.GlobalBounding);
+
+        result.Keys.ShouldBe([expectedTileName]);
+    }
+
+    [Test]
+    public async Task SplitStage_GlobalBounding_OctreeLods_ShareTheSameGridAcrossLods()
+    {
+        var testPath = GetTestOutputPath(nameof(SplitStage_GlobalBounding_OctreeLods_ShareTheSameGridAcrossLods));
+        var files = new List<string>();
+        for (var i = 0; i < 3; i++)
+        {
+            var f = Path.Combine(testPath, $"lod{i}.obj");
+            File.WriteAllText(f, "v 0 0 0\nv 4 0 0\nv 0 4 0\nv 4 4 0\nf 1 2 4\nf 1 4 3\n");
+            files.Add(f);
+        }
+
+        var results = await StagesFacade.Split(files.ToArray(), Path.Combine(testPath, "output"),
+            divisions: 1, zsplit: false, splitPointStrategy: SplitPointStrategy.GlobalBounding, isOctree: true);
+
+        results.Length.ShouldBe(3);
+        foreach (var r in results)
+            r.Keys.ShouldNotBeEmpty();
+
+        // The finest LOD splits deepest; every coarser tile must be a grid prefix of finer tiles.
+        var finest = results[0].Keys.ToList();
+        foreach (var coarse in results.Skip(1).SelectMany(r => r.Keys))
+            finest.ShouldContain(k => k == coarse || k.StartsWith(coarse + "-"),
+                $"coarse tile '{coarse}' must align with the finest grid");
+    }
+
     #region GpsCoords / ECEF Tests
 
     [Test]
