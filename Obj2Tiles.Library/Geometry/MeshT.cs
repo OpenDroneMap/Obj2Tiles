@@ -598,8 +598,8 @@ public class MeshT : IMesh
 
         // First pass: collect the chart data and each chart's source texel density (px per UV unit).
         var chartData = new List<(Material Material, List<int> FaceIndexes, RectangleF UvBounds,
-            Image<Rgba32>? Diffuse, Image<Rgba32>? Normal, double Density)>();
-        var targetDensity = 0.0;
+            Image<Rgba32>? Diffuse, Image<Rgba32>? Normal, double DensityU, double DensityV)>();
+        var maxSourceDensity = 0.0;
 
         for (var materialIndex = 0; materialIndex < facesByMaterial.Count; materialIndex++)
         {
@@ -623,44 +623,46 @@ public class MeshT : IMesh
                 var bounds = GetClusterRect(cluster);
                 var referenceTexture = diffuse ?? normal;
 
-                // The chart's native texel density is its source texture's resolution (px per UV unit)
-                float density = 0f;
+                // The chart's native texel density is its source texture's resolution, per UV axis
+                double densityU = 0d, densityV = 0d;
                 if (referenceTexture != null)
                 {
-                    density = Math.Min(referenceTexture.Width, referenceTexture.Height);
-                    targetDensity = Math.Max(targetDensity, density);
+                    densityU = referenceTexture.Width;
+                    densityV = referenceTexture.Height;
+                    maxSourceDensity = Math.Max(maxSourceDensity, Math.Max(densityU, densityV));
                 }
 
-                chartData.Add((material, cluster, bounds, diffuse, normal, density));
+                chartData.Add((material, cluster, bounds, diffuse, normal, densityU, densityV));
             }
         }
 
         if (chartData.Count == 0)
             return;
 
-        // Unified texel density: every chart is sized for the same pixels-per-UV-unit density, even
-        // if that means upscaling charts coming from smaller source textures.
-        targetDensity *= Math.Clamp(TextureDownscale, float.Epsilon, 1.0f);
+        // Every chart keeps its own native per-axis texel density; targetDensity is a shared multiplier
+        // (user downscale, plus a shrink factor when the largest chart would not fit the capped atlas).
+        var targetDensity = (double)Math.Clamp(TextureDownscale, float.Epsilon, 1.0f);
 
-        if (MaxTextureSize > 0 && targetDensity > 0)
+        if (MaxTextureSize > 0)
         {
             // The largest chart (including padding) must fit the capped atlas edge.
-            float maxUvSpan = 0f;
+            double maxScaledSpan = 0d;
             foreach (var data in chartData)
             {
-                if (data.Density > 0)
+                if (data.DensityU > 0)
                 {
-                    maxUvSpan = Math.Max(maxUvSpan, Math.Max(data.UvBounds.Width, data.UvBounds.Height));
+                    maxScaledSpan = Math.Max(maxScaledSpan,
+                        Math.Max(data.UvBounds.Width * data.DensityU, data.UvBounds.Height * data.DensityV));
                 }
             }
 
-            if (maxUvSpan > 0)
+            if (maxScaledSpan > 0)
             {
                 int available = Math.Max(1, MaxTextureSize - 2 * chartPadding);
 
-                if (maxUvSpan * targetDensity > available)
+                if (maxScaledSpan > available)
                 {
-                    targetDensity = available / maxUvSpan;
+                    targetDensity = available / maxScaledSpan;
                 }
             }
         }
@@ -669,10 +671,10 @@ public class MeshT : IMesh
         foreach (var data in chartData)
         {
             int naturalWidth, naturalHeight;
-            if (data.Density > 0)
+            if (data.DensityU > 0 || data.DensityV > 0)
             {
-                naturalWidth = Math.Max(1, (int)Math.Round(data.UvBounds.Width * targetDensity));
-                naturalHeight = Math.Max(1, (int)Math.Round(data.UvBounds.Height * targetDensity));
+                naturalWidth = Math.Max(1, (int)Math.Round(data.UvBounds.Width * data.DensityU * targetDensity));
+                naturalHeight = Math.Max(1, (int)Math.Round(data.UvBounds.Height * data.DensityV * targetDensity));
             }
             else
             {
@@ -691,7 +693,7 @@ public class MeshT : IMesh
             long areaA = (a.NaturalWidth + 2 * a.Padding) * (a.NaturalHeight + 2 * a.Padding);
             long areaB = (b.NaturalWidth + 2 * b.Padding) * (b.NaturalHeight + 2 * b.Padding);
             return areaB.CompareTo(areaA);
-        }); 
+        });
 
         // Estimate the atlas edge from the padded chart sizes.
         long estimatedArea = 0;
@@ -704,15 +706,17 @@ public class MeshT : IMesh
             largestPaddedDimension = Math.Max(largestPaddedDimension, Math.Max(width, height));
         }
 
+        // Hard ceiling for the atlas edge: the user cap when set, otherwise the built-in maximum.
+        int atlasEdgeCeiling = MaxTextureSize > 0
+            ? Math.Min(MaxTextureSize, MaximumAtlasTextureSize)
+            : MaximumAtlasTextureSize;
         var estimatedEdge = Math.Max(largestPaddedDimension, (int)Math.Ceiling(Math.Sqrt(estimatedArea)));
-        var atlasEdge = Math.Max(32, Common.NextPowerOfTwo(estimatedEdge));
-        if (MaxTextureSize > 0)
-            atlasEdge = Math.Min(atlasEdge, MaxTextureSize);
+        var atlasEdge = Math.Min(Math.Max(32, Common.NextPowerOfTwo(estimatedEdge)), atlasEdgeCeiling);
 
         // Packs every chart into an atlas of the given edge length at the given uniform scale using
         // the skyline algorithm (rotations allowed).
-        bool TryPack(double scale, int edge, 
-                     out PackingRectangle?[]? placements, 
+        bool TryPack(double scale, int edge,
+                     out PackingRectangle?[]? placements,
                      out bool[]? rotated, out float occupancy)
         {
             var sizes = new (int Width, int Height)[charts.Count];
@@ -734,7 +738,7 @@ public class MeshT : IMesh
             for (var i = 0; i < charts.Count; i++)
             {
                 var (w, h) = sizes[i];
-                var rect = packer.Insert(w, h, LevelChoiceHeuristic.LevelBottomLeft, out var wasRotated);
+                var rect = packer.Insert(w, h, out var wasRotated);
                 if (rect.Height == 0)
                 {
                     placements[i] = null;
@@ -765,10 +769,21 @@ public class MeshT : IMesh
         double chartScale;
         var binarySearchAttempts = 0;
 
-        if (MaxTextureSize == 0) // Grow atlas edge until everything fits at full scale.
+        if (MaxTextureSize == 0) // Preserve 1:1 texel density: grow the atlas edge until everything fits.
         {
             while (!TryPack(1.0, atlasEdge, out placements, out rotated, out occupancy))
+            {
+                if (atlasEdge >= atlasEdgeCeiling)
+                {
+                    placements = null;
+                    break;
+                }
+
+                Console.WriteLine(
+                    $" -> [{DebugName}] WARNING: {charts.Count} texture charts do not fit in a " +
+                    $"{atlasEdge}x{atlasEdge} atlas; retrying at {atlasEdge * 2}x{atlasEdge * 2}.");
                 atlasEdge *= 2;
+            }
             chartScale = 1.0;
         }
         else // binary search best scale
@@ -811,17 +826,19 @@ public class MeshT : IMesh
 
             FindCappedPacking();
 
-            // If its smallest viable chart scale cannot be packed, retry this atlas at progressively larger sizes.
-            while (placements == null && atlasEdge < MaximumAtlasTextureSize)
+            // If its smallest viable chart scale cannot be packed, retry this atlas at progressively larger sizes
+            // but never past the configured cap.
+            while (placements == null && atlasEdge < atlasEdgeCeiling)
             {
                 int previousEdge = atlasEdge;
-                atlasEdge = Math.Min(atlasEdge * 2, MaximumAtlasTextureSize);
+                atlasEdge = Math.Min(atlasEdge * 2, atlasEdgeCeiling);
 
                 Console.WriteLine(
                     $" -> [{DebugName}] WARNING: {charts.Count} texture charts do not fit in a " +
                     $"{previousEdge}x{previousEdge} atlas; retrying this atlas at " +
-                    $"{atlasEdge}x{atlasEdge} (configured --max-texture-size: {MaxTextureSize}).");
-                
+                    $"{atlasEdge}x{atlasEdge} (atlas ceiling {atlasEdgeCeiling}, " +
+                    $"configured --max-texture-size: {MaxTextureSize}).");
+
                 FindCappedPacking();
             }
         }
@@ -829,9 +846,10 @@ public class MeshT : IMesh
         if (placements == null || rotated == null)
         {
             throw new InvalidOperationException(
-                $"Cannot fit {charts.Count} texture charts into one atlas up to " +
-                $"{MaximumAtlasTextureSize}x{MaximumAtlasTextureSize}. " +
-                "Increase the atlas size cap in MeshT or disable --max-texture-size.");
+                $"{DebugName}: cannot fit {charts.Count} texture charts into one atlas within the " +
+                $"{atlasEdgeCeiling}x{atlasEdgeCeiling} limit" +
+                (MaxTextureSize > 0 ? $" imposed by --max-texture-size ({MaxTextureSize})" : string.Empty) +
+                ". Increase --max-texture-size or --divisions so each part carries fewer charts.");
         }
 
         for (var i = 0; i < charts.Count; i++)
@@ -850,7 +868,7 @@ public class MeshT : IMesh
         }
 
         // Report atlas statistics and warn about charts that ended up smaller than one pixel.
-        var achievedDensity = targetDensity * chartScale;
+        var achievedDensity = maxSourceDensity * targetDensity * chartScale;
         Console.WriteLine(
             $" -> [{DebugName}] Single atlas: {atlasEdge}x{atlasEdge}px, {charts.Count} charts, " +
             $"occupancy {occupancy * 100:F1}%, texel density {achievedDensity:F1} px/uv" +
@@ -970,7 +988,9 @@ public class MeshT : IMesh
         _textureVertices = newTextureVertices.OrderBy(item => item.Value).Select(item => item.Key).ToList();
 
         // Save as image
-        var extension = SingleAtlasExtension();
+        var anyPngSource = usedMaterials.Any(m => m.Texture != null &&
+            Path.GetExtension(m.Texture).Equals(".png", StringComparison.OrdinalIgnoreCase));
+        var extension = SingleAtlasExtension(TexturesStrategy, TextureFormat, anyPngSource);
         var baseColorFileName = $"{Name}-texture-diffuse{extension}";
         SaveSingleAtlas(baseColorAtlas, Path.Combine(targetFolder, baseColorFileName));
 
@@ -1071,10 +1091,12 @@ public class MeshT : IMesh
     /// <summary>
     /// Picks the file extension for the single-atlas output.
     /// </summary>
-    private string SingleAtlasExtension() => 
-        TextureFormat == TextureFormat.Webp
+    private static string SingleAtlasExtension(TexturesStrategy strategy, TextureFormat format, bool anyPngSource) =>
+        format == TextureFormat.Webp
         ? ".webp"
-        : (TexturesStrategy is TexturesStrategy.Repack or TexturesStrategy.KeepOriginal ? ".png" : ".jpg");
+        : (strategy == TexturesStrategy.Compress
+            ? ".jpg"
+            : (anyPngSource ? ".png" : ".jpg"));
 
     /// <summary>
     /// Saves a single-atlas image using the encoder implied by <paramref name="path"/>'s extension.

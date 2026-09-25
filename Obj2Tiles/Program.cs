@@ -175,13 +175,16 @@ namespace Obj2Tiles
                         // When SingleMaterialPerPart is used, we do however know that there can only be
                         // a single texture for the root tiles. In this case we don't need to enforce a
                         // per-texture cap, but rather a max-size for the one texture we have.
-                        const int singleMaterialTextureSizeCap = 4096;
+                        const int singleMaterialTextureSizeCap = 2048;
 
                         int rootMaxTextureSize;
 
                         if (opts.SingleMaterialPerPart)
                         {
-                            rootMaxTextureSize = Math.Min(opts.MaxTextureSize, singleMaterialTextureSizeCap);
+                            // MaxTextureSize == 0 means "no cap" and must not disable the root bound.
+                            rootMaxTextureSize = opts.MaxTextureSize > 0
+                                ? Math.Min(opts.MaxTextureSize, singleMaterialTextureSizeCap)
+                                : singleMaterialTextureSizeCap;
                         }
                         else
                         {

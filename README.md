@@ -137,17 +137,17 @@ For every decimated mesh, the program splits it recursively along the X and Y ax
 
 **Single-material tiles** (`--single-material-per-part`):
 
-When source meshes come with UDIM meshes that are scattered all over the place, sliced meshes can receive a lot of materials (and thereby also textures) each.
+When source meshes come with UDIM tiles scattered all over the place, sliced meshes can receive a lot of materials (and thereby also textures) each.
 
-When enabling this, each sliced mesh combines all of its used materials into one material, texture inputs are packed into one single atlas. In most scenarios, this may reduce overall resolution, can however be counteracted by using a higher `--max-texture-size`.
+When enabling this, each sliced mesh combines all of its used materials into one material; texture inputs are packed into one single atlas. In most scenarios this may reduce overall resolution, which can be counteracted by using a higher `--max-texture-size`.
 
-When using this with  `--max-texture-size 0`. The repacking maintains the original Texel Density 1:1, resulting in lossless texture transfer. The resulting textures, while automatically choose an adequate resolution, that fits all charts at the original texel density, while optimizing for space. This can result in textures with vastly varying resoltions. Optimization can be done be either reducing the resolution of the input textures, or by increasing `--divisions`.
+When using this with `--max-texture-size 0`, the repacking preserves the original texel density of each chart, so texture detail is carried over as-is (subject to the per-LOD `--lod-texture-scale` downscaling and the built-in 16384px atlas limit). The atlas resolution is chosen automatically to fit all charts while optimizing for space, which can result in textures with vastly varying resolutions. To reduce resolutions, either reduce the resolution of the input textures, or increase `--divisions` so each part carries fewer charts.
 
-The option works with every split strategy, LOD mode, texture format.
+The option works with every split strategy, LOD mode and texture format.
 
-`--keeptextures` is ignored when this is specified.
+`--keeptextures` is ignored when this is specified: textures are always repacked into the atlas.
 
-Note: When there are to many charts to fit into an atlas of the specified size, instead of failing we chooses the smallest possible texture size, which can fit all charts.
+Note: When there are too many charts (or too much texture detail) to fit into an atlas of the configured `--max-texture-size`, the converter fails with an error rather than silently dropping resolution. Increase `--max-texture-size` or `--divisions`.
 
 **Octree mode** (`--octree`):
 

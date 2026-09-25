@@ -248,11 +248,11 @@ public static partial class StagesFacade
 
     private static Box3 CreateGlobalSquareBounds(Box3 sourceBounds)
     {
-        // If we would adhere to a regular 3-axis AABB, where all sides are the same length, 
+        // If we would adhere to a regular 3-axis AABB, where all sides are the same length,
         // z-splitting would be meaningless in almost every case, as it would performn no cuts on the z-axis.
         // In order to provide a use case for z-splitting, the box does not behave like a cube, once z-splitting is enabled.
         // Instead. When z-splitting is enabled, we simply clamp to sourceBounds.z, so that the mesh does get segmented across the entire height.
-        
+
         var side = Math.Max(sourceBounds.Width, sourceBounds.Height);
 
         var center = sourceBounds.Center;
@@ -489,7 +489,7 @@ public static partial class StagesFacade
 public enum SplitPointStrategy
 {
     AbsoluteCenter,
-    GlobalBounding,
     VertexBaricenter,
-    VertexMedian
+    VertexMedian,
+    GlobalBounding
 }
