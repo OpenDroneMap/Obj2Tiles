@@ -125,4 +125,71 @@ public class TilesetInspectorTests
 
         problems.ShouldContain(p => p.Contains("2 materials although --single-material-per-part was set"));
     }
+
+    // Minimal JPEG header (SOI + SOF0) the sniffer reads dimensions from.
+    private static byte[] JpegWithEdge(int edge) =>
+        new byte[] { 0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, (byte)(edge >> 8), (byte)edge, (byte)(edge >> 8), (byte)edge, 0, 0, 0, 0, 0 };
+
+    // One tile per LOD (LOD-k image edge = edges[k]) chained root -> LOD-(n-1) -> ... -> LOD-0.
+    private static string WriteLodTileset(string name, params int[] edges)
+    {
+        var dir = Path.Combine(CliHarness.TestOutputRoot, "inspector-" + name);
+        if (Directory.Exists(dir)) Directory.Delete(dir, true);
+
+        JObject? chain = null;
+        for (var lod = 0; lod < edges.Length; lod++)
+        {
+            var jpeg = JpegWithEdge(edges[lod]);
+            var gltf = new JObject
+            {
+                ["asset"] = new JObject { ["version"] = "2.0" },
+                ["images"] = new JArray(new JObject { ["bufferView"] = 0 }),
+                ["bufferViews"] = new JArray(new JObject { ["buffer"] = 0, ["byteOffset"] = 0, ["byteLength"] = jpeg.Length }),
+                ["buffers"] = new JArray(new JObject { ["byteLength"] = jpeg.Length }),
+            };
+            Directory.CreateDirectory(Path.Combine(dir, $"LOD-{lod}"));
+            File.WriteAllBytes(Path.Combine(dir, $"LOD-{lod}", "Mesh.b3dm"), B3dmWithGlb(gltf, jpeg));
+
+            var tile = new JObject
+            {
+                ["geometricError"] = 10 * lod,
+                ["refine"] = "REPLACE",
+                ["content"] = new JObject { ["uri"] = $"LOD-{lod}/Mesh.b3dm" },
+            };
+            if (chain != null) tile["children"] = new JArray(chain);
+            chain = tile;
+        }
+
+        var root = new JObject { ["geometricError"] = 100, ["refine"] = "REPLACE", ["children"] = new JArray(chain!) };
+        File.WriteAllText(Path.Combine(dir, "tileset.json"),
+            new JObject { ["asset"] = new JObject { ["version"] = "1.0" }, ["geometricError"] = 100, ["root"] = root }.ToString());
+        return dir;
+    }
+
+    private static QualityExpectations ExpectLods(int lods, Action<QualityExpectations>? configure = null) =>
+        Expect(e =>
+        {
+            e.Lods = lods;
+            e.LodTextureScale = 0.5;
+            e.NoRootContent = true;
+            configure?.Invoke(e);
+        });
+
+    [Test]
+    public void HalvedDownscaleTier_isClean()
+    {
+        var dir = WriteLodTileset("halved-tier", 256, 128, 64);
+
+        TilesetInspector.Inspect(dir, ExpectLods(3)).ShouldBeEmpty();
+    }
+
+    [Test]
+    public void OctreeMissingLod_isReported()
+    {
+        var dir = WriteLodTileset("octree-missing-lod", 256);
+
+        var problems = TilesetInspector.Inspect(dir, ExpectLods(2, e => e.Octree = true));
+
+        problems.ShouldContain(p => p.Contains("LOD-1 has no tiles"));
+    }
 }

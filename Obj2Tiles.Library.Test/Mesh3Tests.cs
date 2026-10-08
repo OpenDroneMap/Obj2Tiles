@@ -318,6 +318,61 @@ public class Mesh3Tests
             "the vast majority of inlier pixels must be pure stripes; grayish pixels indicate a downscaled U axis");
     }
 
+    // Single full-UV face over a 1024px texture, written with MaxTextureSize 256; returns the face's texel span
+    // in the output texture (atlas edges are power-of-two rounded, so they can hide a missing downscale).
+    private static int WriteCappedTextureMesh(string testName, TexturesStrategy strategy, bool singleMaterial,
+        float downscale, bool downscaleAfterCap = false)
+    {
+        var testPath = GetTestOutputPath(testName);
+        var texturePath = Path.Combine(testPath, "source.png");
+        using (var texture = new Image<Rgba32>(1024, 1024, new Rgba32(0, 128, 255, 255)))
+            texture.SaveAsPng(texturePath);
+
+        var vertices = new[] { new Vertex3(0, 0, 0), new Vertex3(1, 0, 0), new Vertex3(0, 1, 0) };
+        var textureVertices = new List<Vertex2> { new(0, 0), new(1, 0), new(0, 1) };
+        var faces = new List<FaceT> { new(0, 1, 2, 0, 1, 2, 0) };
+
+        var mesh = new MeshT(vertices, textureVertices, faces, [new Materials.Material("capped", texturePath)])
+        {
+            TexturesStrategy = strategy,
+            SingleMaterialPerPart = singleMaterial,
+            MaxTextureSize = 256,
+            TextureDownscale = downscale,
+            DownscaleAfterCap = downscaleAfterCap
+        };
+
+        mesh.WriteObj(Path.Combine(testPath, "out.obj"));
+
+        var info = Image.Identify(Path.Combine(testPath, mesh.Materials[0].Texture!));
+        var face = mesh.Faces[0];
+        var uvs = new[] { face.TextureIndexA, face.TextureIndexB, face.TextureIndexC }
+            .Select(i => mesh.TextureVertices[i]).ToArray();
+        var spanU = (uvs.Max(v => v.X) - uvs.Min(v => v.X)) * info.Width;
+        var spanV = (uvs.Max(v => v.Y) - uvs.Min(v => v.Y)) * info.Height;
+        return (int)Math.Round(Math.Max(spanU, spanV));
+    }
+
+    [TestCase(true, 128)]
+    [TestCase(false, 256)]
+    public void WriteObj_Compress_MaxTextureSizeAndDownscale(bool downscaleAfterCap, int expectedEdge)
+    {
+        WriteCappedTextureMesh($"{nameof(WriteObj_Compress_MaxTextureSizeAndDownscale)}_{downscaleAfterCap}",
+                TexturesStrategy.Compress, singleMaterial: false, downscale: 0.5f, downscaleAfterCap)
+            .ShouldBe(expectedEdge);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void WriteObj_Repack_LodDownscaleAppliesBelowMaxTextureSize(bool singleMaterial)
+    {
+        var name = $"{nameof(WriteObj_Repack_LodDownscaleAppliesBelowMaxTextureSize)}_{singleMaterial}";
+        var lod0 = WriteCappedTextureMesh(name + "_lod0", TexturesStrategy.Repack, singleMaterial, 1.0f);
+        var lod1 = WriteCappedTextureMesh(name + "_lod1", TexturesStrategy.RepackCompressed, singleMaterial, 0.5f);
+
+        lod0.ShouldBeLessThanOrEqualTo(256);
+        lod1.ShouldBeLessThanOrEqualTo(lod0 / 2 + 1, "--lod-texture-scale must still shrink LOD-1 when the source exceeds --max-texture-size");
+    }
+
     [Test]
     public void WriteObj_SingleMaterialPerPart_TooManyChartsForCap_Throws()
     {

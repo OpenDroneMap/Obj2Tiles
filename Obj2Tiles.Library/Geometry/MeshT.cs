@@ -61,6 +61,12 @@ public class MeshT : IMesh
     public int MaxTextureSize { get; set; } = 0;
 
     /// <summary>
+    /// Compress strategy only: true applies TextureDownscale on top of the MaxTextureSize-capped size
+    /// (per-LOD semantics, as in repacking); false caps the downscaled size (tileset root tile).
+    /// </summary>
+    public bool DownscaleAfterCap { get; set; }
+
+    /// <summary>
     /// JPEG quality (1-100) used when saving compressed textures (RepackCompressed and Compress).
     /// </summary>
     public int TextureQuality { get; set; } = 75;
@@ -1224,8 +1230,15 @@ public class MeshT : IMesh
         if (MaxTextureSize > 0)
         {
             int maxDim = Math.Max(image.Width, image.Height);
-            if (maxDim * s > MaxTextureSize)
+            if (DownscaleAfterCap)
+            {
+                if (maxDim > MaxTextureSize)
+                    s = Math.Clamp(s * (MaxTextureSize / (float)maxDim), float.Epsilon, 1.0f);
+            }
+            else if (maxDim * s > MaxTextureSize)
+            {
                 s = Math.Clamp(MaxTextureSize / (float)maxDim, float.Epsilon, 1.0f);
+            }
         }
         if (s < 1.0f)
         {

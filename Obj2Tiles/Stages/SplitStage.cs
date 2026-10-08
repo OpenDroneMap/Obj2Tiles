@@ -96,7 +96,7 @@ public static partial class StagesFacade
 
             tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy,
                 replaySplitPoint, globalBounds, textureDownscale, maxTextureSize, effectiveTextureQuality, textureFormat,
-                overlap, ignoreNormalMaps, singleMaterialPerPart));
+                overlap, ignoreNormalMaps, singleMaterialPerPart, downscaleAfterCap: true));
         }
 
         await Task.WhenAll(tasks);
@@ -141,7 +141,8 @@ public static partial class StagesFacade
         int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg,
         double overlap = 0.0,
         bool ignoreNormalMaps = false,
-        bool singleMaterialPerPart = false)
+        bool singleMaterialPerPart = false,
+        bool downscaleAfterCap = false)
     {
         var sw = new Stopwatch();
         var tilesBounds = new Dictionary<string, TileBounds>();
@@ -165,6 +166,7 @@ public static partial class StagesFacade
                 t.TexturesStrategy = TexturesStrategy.Compress;
                 t.TextureDownscale = textureDownscale;
                 t.MaxTextureSize = maxTextureSize;
+                t.DownscaleAfterCap = downscaleAfterCap;
                 t.TextureQuality = textureQuality;
                 t.TextureFormat = textureFormat;
                 t.SingleMaterialPerPart = singleMaterialPerPart;

@@ -41,10 +41,7 @@ public class CliNegativeOptionTests
         run.ExitCode.ShouldBe(1,
             $"{negativeCase.Name} was expected to be rejected (exit 1)\n--- output tail ---\n{run.Tail}");
 
-        // A rejected run must not have produced a tileset.
-        var leftovers = Directory.Exists(Path.Combine(outBase, "out"))
-            ? Directory.GetFiles(Path.Combine(outBase, "out"), "tileset.json", SearchOption.AllDirectories)
-            : Array.Empty<string>();
-        leftovers.ShouldBeEmpty($"{negativeCase.Name} rejected but wrote a tileset.json");
+        // A rejected run must not have written anything (folder tree, .3tz archive or temp folders).
+        Directory.EnumerateFileSystemEntries(outBase).ShouldBeEmpty($"{negativeCase.Name} rejected but wrote output");
     }
 }

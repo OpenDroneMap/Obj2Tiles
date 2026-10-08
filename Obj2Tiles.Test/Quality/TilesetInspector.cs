@@ -243,13 +243,10 @@ public static class TilesetInspector
         Dictionary<int, List<(string Uri, JToken GlbJson, byte[] GlbBin, List<string> ImageProblems)>> contentByLod,
         QualityExpectations e, List<string> problems)
     {
-        if (!e.Octree)
+        for (var lod = 0; lod < e.Lods; lod++)
         {
-            for (var lod = 0; lod < e.Lods; lod++)
-            {
-                if (!contentByLod.TryGetValue(lod, out var tiles) || tiles.Count == 0)
-                    problems.Add($"LOD-{lod} has no tiles (expected >= 1 for --lods {e.Lods})");
-            }
+            if (!contentByLod.TryGetValue(lod, out var tiles) || tiles.Count == 0)
+                problems.Add($"LOD-{lod} has no tiles (expected >= 1 for --lods {e.Lods})");
         }
 
         foreach (var (lod, tiles) in contentByLod)
@@ -275,22 +272,22 @@ public static class TilesetInspector
             }
         }
 
+        // Octree LOD-k tiles cover several LOD-(k-1) tiles, so per-tile atlas sizes do not follow d^k there.
+        if (e.Octree || e.LodTextureScale >= 1.0 || lod0MaxDim is not > 0) return;
+
         // LOD scale budget: LOD-k images must match LOD-0 scaled by lod-texture-scale^k
-        if (lod0MaxDim is > 0 && e.LodTextureScale < 1.0)
+        foreach (var lod in contentByLod.Keys.Where(k => k > 0).OrderBy(k => k))
         {
-            foreach (var lod in contentByLod.Keys.Where(k => k > 0).OrderBy(k => k))
+            var expected = (int)Math.Round(lod0MaxDim.Value * Math.Pow(e.LodTextureScale, lod));
+            foreach (var (uri, glbJson, glbBin, _) in contentByLod[lod])
             {
-                var expected = (int)Math.Round(lod0MaxDim.Value * Math.Pow(e.LodTextureScale, lod));
-                foreach (var (uri, glbJson, glbBin, _) in contentByLod[lod])
+                foreach (var (w, h) in ImageDims(glbJson, glbBin))
                 {
-                    foreach (var (w, h) in ImageDims(glbJson, glbBin))
-                    {
-                        var maxDim = Math.Max(w, h);
-                        // One power-of-two atlas-edge step (ceil+padding floors push tiny tiles up a step)
-                        // plus encoder padding; a missing downscale tier shows as >=4x and is still caught.
-                        if (maxDim > expected * 2 + 8)
-                            problems.Add($"{uri}: image {w}x{h} exceeds LOD-{lod} budget {expected} (--lod-texture-scale {e.LodTextureScale} vs LOD-0 {lod0MaxDim})");
-                    }
+                    var maxDim = Math.Max(w, h);
+                    // One power-of-two atlas-edge step: a chart plus its padding rounds back up to the same PoT
+                    // edge, so atlas sizes cannot reveal a single skipped 0.5 tier (Mesh3Tests pin the scaling).
+                    if (maxDim > expected * 2 + 8)
+                        problems.Add($"{uri}: image {w}x{h} exceeds LOD-{lod} budget {expected} (--lod-texture-scale {e.LodTextureScale} vs LOD-0 {lod0MaxDim})");
                 }
             }
         }
@@ -473,22 +470,20 @@ public static class TilesetInspector
 
         var version = BitConverter.ToUInt32(data, 4);
         var byteLength = BitConverter.ToUInt32(data, 8);
-        var ftLen = BitConverter.ToUInt32(data, 12);
-        var btLen = BitConverter.ToUInt32(data, 16);
-        var jsonLen = BitConverter.ToUInt32(data, 20);
-        var binLen = BitConverter.ToUInt32(data, 24);
+        var featureTableJsonLen = BitConverter.ToUInt32(data, 12);
+        var featureTableBinLen = BitConverter.ToUInt32(data, 16);
+        var batchTableJsonLen = BitConverter.ToUInt32(data, 20);
+        var batchTableBinLen = BitConverter.ToUInt32(data, 24);
 
         if (version != 1) problems.Add($"{name}: b3dm version {version} != 1");
         if (byteLength != (uint)data.Length)
             problems.Add($"{name}: b3dm byteLength {byteLength} != file size {data.Length}");
-        if (jsonLen % 16 != 0) problems.Add($"{name}: b3dm jsonByteLength {jsonLen} not a multiple of 16");
-        if (binLen % 8 != 0) problems.Add($"{name}: b3dm binaryByteLength {binLen} not a multiple of 8");
 
-        var glbOffset = 28 + ftLen + btLen + jsonLen + binLen;
+        var glbOffset = 28 + featureTableJsonLen + featureTableBinLen + batchTableJsonLen + batchTableBinLen;
         if (glbOffset + 12 > data.Length)
         {
-            // Older/alternative framing: the GLB right after header+feature table without json/bin lengths.
-            glbOffset = 28 + ftLen + btLen;
+            // Older/alternative framing: the GLB right after header+feature table without batch table lengths.
+            glbOffset = 28 + featureTableJsonLen + featureTableBinLen;
             if (glbOffset + 12 > data.Length)
             {
                 problems.Add($"{name}: no GLB payload inside b3dm (offset {glbOffset}, size {data.Length})");

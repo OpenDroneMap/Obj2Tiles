@@ -36,9 +36,11 @@ jobs:
     - name: Install validator harness deps
       run: npm ci --prefix tools/validator
     - name: Quality gate (PICT matrix + official 3D Tiles validator)
+      # MapWarningTo=Failed: a skipped official validation (Assert.Warn) must fail CI, not report Skipped.
       run: >
         dotnet test Obj2Tiles.Test/Obj2Tiles.Test.csproj --no-build
         --filter "TestCategory=QualityGate" --logger "console;verbosity=normal"
+        -- NUnit.MapWarningTo=Failed
     - name: Upload validator reports
       if: always()
       uses: actions/upload-artifact@v4
@@ -75,6 +77,7 @@ jobs:
       run: >
         dotnet test Obj2Tiles.Test/Obj2Tiles.Test.csproj --no-build -c Release
         --filter "TestCategory=QualityGate" --logger "console;verbosity=normal"
+        -- NUnit.MapWarningTo=Failed
     - name: Upload validator reports
       if: always()
       uses: actions/upload-artifact@v4

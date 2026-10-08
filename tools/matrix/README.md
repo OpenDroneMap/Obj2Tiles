@@ -7,7 +7,7 @@ pairwise-covering set of option combinations produced by Microsoft PICT.
 
 | File | Role |
 |------|------|
-| `model.pict` | Parameter/computer definition. Single source of truth for the option space. |
+| `model.pict` | Parameter/constraint definition. Single source of truth for the option space. |
 | `generate.py` | Runs PICT, translates parameters into CLI arguments, self-checks the constraints, writes the committed matrix fixture. |
 | `../validator/` | Official CesiumGS validator harness used by the tests (see its README). |
 
