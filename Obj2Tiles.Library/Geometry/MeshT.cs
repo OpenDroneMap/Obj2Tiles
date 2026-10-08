@@ -696,7 +696,7 @@ public class MeshT : IMesh
 
                 if (maxScaledSpan > available)
                 {
-                    targetDensity = available / maxScaledSpan;
+                    targetDensity *= (double)available / maxScaledSpan;
                 }
             }
         }
@@ -1253,13 +1253,13 @@ public class MeshT : IMesh
 
         float scale = Math.Clamp(TextureDownscale, float.Epsilon, 1.0f);
 
-        // Absolute cap: never repack an atlas from a source resolution larger than MaxTextureSize
-        // per side. This bounds the dominant LOD-0 texture cost. 0 disables the cap.
+        // The cap bounds the LOD-0 baseline (min(source, MaxTextureSize)); the per-LOD
+        // --lod-texture-scale factor then multiplies that capped resolution. 0 disables the cap.
         if (MaxTextureSize > 0)
         {
             int maxSrcDim = Math.Max(textureWidth, textureHeight);
-            if (maxSrcDim * scale > MaxTextureSize)
-                scale = Math.Clamp(MaxTextureSize / (float)maxSrcDim, float.Epsilon, 1.0f);
+            if (maxSrcDim > MaxTextureSize)
+                scale = Math.Clamp(scale * (MaxTextureSize / (float)maxSrcDim), float.Epsilon, 1.0f);
         }
 
         int effWidth  = Math.Max(1, (int)(textureWidth  * scale));

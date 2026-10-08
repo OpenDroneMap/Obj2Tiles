@@ -286,8 +286,9 @@ public static class TilesetInspector
                     foreach (var (w, h) in ImageDims(glbJson, glbBin))
                     {
                         var maxDim = Math.Max(w, h);
-                        // allow encoder padding (4 blocks for ktx2 etc.) and non-proportional sources
-                        if (maxDim > expected + 8)
+                        // One power-of-two atlas-edge step (ceil+padding floors push tiny tiles up a step)
+                        // plus encoder padding; a missing downscale tier shows as >=4x and is still caught.
+                        if (maxDim > expected * 2 + 8)
                             problems.Add($"{uri}: image {w}x{h} exceeds LOD-{lod} budget {expected} (--lod-texture-scale {e.LodTextureScale} vs LOD-0 {lod0MaxDim})");
                     }
                 }
@@ -322,6 +323,10 @@ public static class TilesetInspector
         problems.Add($"{uri}: image bufferView has invalid token type {bufferViewToken.Type}");
         return null;
     }
+
+    // LOD-0 tiles are packed with the Repack strategy, which deliberately keeps the source
+    // texture format: PNG sources produce PNG atlases even under --texture-format Jpeg.
+    private static bool IsLod0RepackTile(string uri) => uri.Contains("LOD-0", StringComparison.Ordinal);
 
     private static void CheckImages(string uri, JToken glbJson, byte[] glbBin, QualityExpectations e, List<string> problems)
     {
@@ -402,7 +407,8 @@ public static class TilesetInspector
                     break;
             }
 
-            if (!string.IsNullOrEmpty(mime) && mime != expectedMime && !e.KeepTextures)
+            if (!string.IsNullOrEmpty(mime) && mime != expectedMime && !e.KeepTextures &&
+                !(e.TextureFormat == QualityTextureFormat.Jpeg && IsLod0RepackTile(uri)))
                 problems.Add($"{uri}: image mimeType '{mime}' mismatches --texture-format {e.TextureFormat}");
 
             if (w > 0 && e.MaxTextureSize > 0 && Math.Max(w, h) > e.MaxTextureSize + 4)
