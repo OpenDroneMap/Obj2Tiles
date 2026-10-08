@@ -61,6 +61,12 @@ public class MeshT : IMesh
     public int MaxTextureSize { get; set; } = 0;
 
     /// <summary>
+    /// Compress strategy only: true applies TextureDownscale on top of the MaxTextureSize-capped size
+    /// (per-LOD semantics, as in repacking); false caps the downscaled size (tileset root tile).
+    /// </summary>
+    public bool DownscaleAfterCap { get; set; }
+
+    /// <summary>
     /// JPEG quality (1-100) used when saving compressed textures (RepackCompressed and Compress).
     /// </summary>
     public int TextureQuality { get; set; } = 75;
@@ -696,7 +702,7 @@ public class MeshT : IMesh
 
                 if (maxScaledSpan > available)
                 {
-                    targetDensity = available / maxScaledSpan;
+                    targetDensity *= (double)available / maxScaledSpan;
                 }
             }
         }
@@ -1224,8 +1230,15 @@ public class MeshT : IMesh
         if (MaxTextureSize > 0)
         {
             int maxDim = Math.Max(image.Width, image.Height);
-            if (maxDim * s > MaxTextureSize)
+            if (DownscaleAfterCap)
+            {
+                if (maxDim > MaxTextureSize)
+                    s = Math.Clamp(s * (MaxTextureSize / (float)maxDim), float.Epsilon, 1.0f);
+            }
+            else if (maxDim * s > MaxTextureSize)
+            {
                 s = Math.Clamp(MaxTextureSize / (float)maxDim, float.Epsilon, 1.0f);
+            }
         }
         if (s < 1.0f)
         {
@@ -1253,13 +1266,13 @@ public class MeshT : IMesh
 
         float scale = Math.Clamp(TextureDownscale, float.Epsilon, 1.0f);
 
-        // Absolute cap: never repack an atlas from a source resolution larger than MaxTextureSize
-        // per side. This bounds the dominant LOD-0 texture cost. 0 disables the cap.
+        // The cap bounds the LOD-0 baseline (min(source, MaxTextureSize)); the per-LOD
+        // --lod-texture-scale factor then multiplies that capped resolution. 0 disables the cap.
         if (MaxTextureSize > 0)
         {
             int maxSrcDim = Math.Max(textureWidth, textureHeight);
-            if (maxSrcDim * scale > MaxTextureSize)
-                scale = Math.Clamp(MaxTextureSize / (float)maxSrcDim, float.Epsilon, 1.0f);
+            if (maxSrcDim > MaxTextureSize)
+                scale = Math.Clamp(scale * (MaxTextureSize / (float)maxSrcDim), float.Epsilon, 1.0f);
         }
 
         int effWidth  = Math.Max(1, (int)(textureWidth  * scale));
@@ -1277,6 +1290,24 @@ public class MeshT : IMesh
 
         if (edgeLength < maxHeight)
             edgeLength = Common.NextPowerOfTwo((int)maxHeight);
+
+        // The cap bounds the atlas itself, not only the source resolution: a chart filling the capped
+        // texture (plus its bleed) would otherwise PoT-round the atlas to twice --max-texture-size.
+        // Charts are shrunk to fit the capped edge, as the single-atlas path does.
+        if (MaxTextureSize > 0 && edgeLength > MaxTextureSize)
+        {
+            edgeLength = Math.Max(32, MaxTextureSize);
+
+            // Chart extents come from ceilings, so re-shrink until the widest padded chart fits.
+            for (var shrink = 0; shrink < 8 && Math.Max(maxWidth, maxHeight) > edgeLength; shrink++)
+            {
+                scale = Math.Clamp(scale * (float)(edgeLength / Math.Max(maxWidth, maxHeight)), float.Epsilon, 1.0f);
+                effWidth = Math.Max(1, (int)(textureWidth * scale));
+                effHeight = Math.Max(1, (int)(textureHeight * scale));
+                CalculateMaxMinAreaRect(clustersRects, effWidth, effHeight, Padding, out maxWidth, out maxHeight,
+                    out textureArea);
+            }
+        }
 
         // NOTE: We could enable rotations but it would be a bit more complex
         var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);

@@ -1,0 +1,33 @@
+# Cube with vertex colors AND textures
+mtllib cube.mtl
+o ColorTexCube
+v -1 -1 -1 1.0 0.0 0.0
+v  1 -1 -1 0.0 1.0 0.0
+v  1  1 -1 0.0 0.0 1.0
+v -1  1 -1 1.0 1.0 0.0
+v -1 -1  1 1.0 0.0 1.0
+v  1 -1  1 0.0 1.0 1.0
+v  1  1  1 0.5 0.5 0.5
+v -1  1  1 1.0 1.0 1.0
+vt 0 0
+vt 1 0
+vt 0 1
+vt 1 1
+usemtl CubeFront
+f 1/1 2/2 6/4
+f 1/1 6/4 5/3
+usemtl CubeBack
+f 3/1 4/2 8/4
+f 3/1 8/4 7/3
+usemtl CubeLeft
+f 4/1 1/2 5/4
+f 4/1 5/4 8/3
+usemtl CubeRight
+f 2/1 3/2 7/4
+f 2/1 7/4 6/3
+usemtl CubeTop
+f 5/1 6/2 7/4
+f 5/1 7/4 8/3
+usemtl CubeBottom
+f 4/1 3/2 2/4
+f 4/1 2/4 1/3
