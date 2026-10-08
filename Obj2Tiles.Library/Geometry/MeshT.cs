@@ -1291,6 +1291,24 @@ public class MeshT : IMesh
         if (edgeLength < maxHeight)
             edgeLength = Common.NextPowerOfTwo((int)maxHeight);
 
+        // The cap bounds the atlas itself, not only the source resolution: a chart filling the capped
+        // texture (plus its bleed) would otherwise PoT-round the atlas to twice --max-texture-size.
+        // Charts are shrunk to fit the capped edge, as the single-atlas path does.
+        if (MaxTextureSize > 0 && edgeLength > MaxTextureSize)
+        {
+            edgeLength = Math.Max(32, MaxTextureSize);
+
+            // Chart extents come from ceilings, so re-shrink until the widest padded chart fits.
+            for (var shrink = 0; shrink < 8 && Math.Max(maxWidth, maxHeight) > edgeLength; shrink++)
+            {
+                scale = Math.Clamp(scale * (float)(edgeLength / Math.Max(maxWidth, maxHeight)), float.Epsilon, 1.0f);
+                effWidth = Math.Max(1, (int)(textureWidth * scale));
+                effHeight = Math.Max(1, (int)(textureHeight * scale));
+                CalculateMaxMinAreaRect(clustersRects, effWidth, effHeight, Padding, out maxWidth, out maxHeight,
+                    out textureArea);
+            }
+        }
+
         // NOTE: We could enable rotations but it would be a bit more complex
         var binPack = new MaxRectanglesBinPack(edgeLength, edgeLength, false);
 

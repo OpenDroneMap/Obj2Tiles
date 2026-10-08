@@ -46,10 +46,10 @@ public class Mesh3Tests
         var testPath = GetTestOutputPath(nameof(WriteObj_Square_RemoveUnused));
 
         var mesh = MeshUtils.LoadMesh(Path.Combine(TestDataPath, "square-unused.obj"));
-        
+
         mesh.WriteObj(Path.Combine(testPath, "square.obj"));
     }
-    
+
     [Test]
     public void WriteObj_Cube2_Repacking()
     {
@@ -318,10 +318,16 @@ public class Mesh3Tests
             "the vast majority of inlier pixels must be pure stripes; grayish pixels indicate a downscaled U axis");
     }
 
-    // Single full-UV face over a 1024px texture, written with MaxTextureSize 256; returns the face's texel span
-    // in the output texture (atlas edges are power-of-two rounded, so they can hide a missing downscale).
-    private static int WriteCappedTextureMesh(string testName, TexturesStrategy strategy, bool singleMaterial,
-        float downscale, bool downscaleAfterCap = false)
+    private const int CappedTextureSize = 256;
+
+    // Atlas/bleed rounding the assertions must tolerate (2 bleed rings plus chart ceil/floor).
+    private const int BleedTolerance = 8;
+
+    // Single full-UV face over a 1024px texture written with MaxTextureSize 256; returns the output
+    // texture's edge and the texel span the face actually maps to (the edge is power-of-two rounded,
+    // so only the span reveals whether a --lod-texture-scale tier was applied).
+    private static (int Edge, int Span) WriteCappedTextureMesh(string testName, TexturesStrategy strategy,
+        bool singleMaterial, float downscale, bool downscaleAfterCap = false)
     {
         var testPath = GetTestOutputPath(testName);
         var texturePath = Path.Combine(testPath, "source.png");
@@ -336,7 +342,7 @@ public class Mesh3Tests
         {
             TexturesStrategy = strategy,
             SingleMaterialPerPart = singleMaterial,
-            MaxTextureSize = 256,
+            MaxTextureSize = CappedTextureSize,
             TextureDownscale = downscale,
             DownscaleAfterCap = downscaleAfterCap
         };
@@ -349,7 +355,7 @@ public class Mesh3Tests
             .Select(i => mesh.TextureVertices[i]).ToArray();
         var spanU = (uvs.Max(v => v.X) - uvs.Min(v => v.X)) * info.Width;
         var spanV = (uvs.Max(v => v.Y) - uvs.Min(v => v.Y)) * info.Height;
-        return (int)Math.Round(Math.Max(spanU, spanV));
+        return (Math.Max(info.Width, info.Height), (int)Math.Round(Math.Max(spanU, spanV)));
     }
 
     [TestCase(true, 128)]
@@ -358,7 +364,7 @@ public class Mesh3Tests
     {
         WriteCappedTextureMesh($"{nameof(WriteObj_Compress_MaxTextureSizeAndDownscale)}_{downscaleAfterCap}",
                 TexturesStrategy.Compress, singleMaterial: false, downscale: 0.5f, downscaleAfterCap)
-            .ShouldBe(expectedEdge);
+            .Edge.ShouldBe(expectedEdge);
     }
 
     [TestCase(false)]
@@ -366,11 +372,16 @@ public class Mesh3Tests
     public void WriteObj_Repack_LodDownscaleAppliesBelowMaxTextureSize(bool singleMaterial)
     {
         var name = $"{nameof(WriteObj_Repack_LodDownscaleAppliesBelowMaxTextureSize)}_{singleMaterial}";
-        var lod0 = WriteCappedTextureMesh(name + "_lod0", TexturesStrategy.Repack, singleMaterial, 1.0f);
-        var lod1 = WriteCappedTextureMesh(name + "_lod1", TexturesStrategy.RepackCompressed, singleMaterial, 0.5f);
+        var (lod0Edge, lod0Span) = WriteCappedTextureMesh(name + "_lod0", TexturesStrategy.Repack, singleMaterial, 1.0f);
+        var (lod1Edge, lod1Span) = WriteCappedTextureMesh(name + "_lod1", TexturesStrategy.RepackCompressed, singleMaterial, 0.5f);
 
-        lod0.ShouldBeLessThanOrEqualTo(256);
-        lod1.ShouldBeLessThanOrEqualTo(lod0 / 2 + 1, "--lod-texture-scale must still shrink LOD-1 when the source exceeds --max-texture-size");
+        lod0Edge.ShouldBeLessThanOrEqualTo(CappedTextureSize, "--max-texture-size must bound the atlas, not only the source");
+        lod1Edge.ShouldBeLessThanOrEqualTo(CappedTextureSize, "--max-texture-size must bound the atlas, not only the source");
+
+        // LOD-0 sits at the capped baseline, LOD-1 one --lod-texture-scale tier below it.
+        lod0Span.ShouldBeInRange(CappedTextureSize - BleedTolerance, CappedTextureSize);
+        lod1Span.ShouldBeInRange(lod0Span / 2 - BleedTolerance, lod0Span / 2 + BleedTolerance,
+            "--lod-texture-scale must still shrink LOD-1 when the source exceeds --max-texture-size");
     }
 
     [Test]
@@ -653,22 +664,22 @@ public class Mesh3Tests
         var v1 = new Vertex3(0, 0, 0);
         var v2 = new Vertex3(1, 0, 0);
         var v3 = new Vertex3(0, 1, 0);
-        
+
         var o = Common.Orientation(v1, v2, v3);
 
         o.Z.ShouldBe(1);
         o.X.ShouldBe(0);
         o.Y.ShouldBe(0);
     }
-    
-    
+
+
     [Test]
     public void Orientation_TestZero()
     {
         var v1 = new Vertex3(0, 0, 0);
         var v2 = new Vertex3(0, 0, 0);
         var v3 = new Vertex3(0, 0, 0);
-        
+
         var o = Common.Orientation(v1, v2, v3);
 
         o.Z.ShouldBe(0);
@@ -687,11 +698,11 @@ public class Mesh3Tests
         orientation.Y.ShouldBe(0);
         orientation.Z.ShouldBe(0);
     }
-    
+
     [Test]
     public void Orientation_TestBrighton()
     {
-        
+
         using var fs = new TestFS(BrightonTexturingTestUrl, nameof(Mesh3Tests));
 
         var mesh = (MeshT)MeshUtils.LoadMesh(Path.Combine(fs.TestFolder, "odm_textured_model_geo.obj"));
