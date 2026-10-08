@@ -20,6 +20,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { read: readKtx2 } = require("ktx-parse");
 
 const EXIT_OK = 0;
 const EXIT_VIOLATION = 1;
@@ -95,95 +96,48 @@ function loadAllowlist(file) {
  * so allowlisting can happen at the granularity of individual glTF issue codes
  * (a broken accessor is not noise; a broken image is).
  *
- * The bundled gltf-validator (2.0.0-dev, pre-KTX2) has two blind spots it can only
- * warn about blindly: it rejects the image/ktx2 mimeType (VALUE_NOT_IN_LIST) and cannot
- * sniff KTX2 payloads (IMAGE_UNRECOGNIZED_FORMAT). Those two findings are NOT allowlisted;
- * they are resolved here by actively parsing the KTX2 container of every suspicious image
- * (see verifyKtx2Images). A warning survives - and fails the gate - when the KTX2 file
- * itself is malformed.
+ * The bundled gltf-validator (2.0.0-dev, pre-KTX2) rejects the image/ktx2 mimeType
+ * (VALUE_NOT_IN_LIST) and cannot sniff KTX2 payloads (IMAGE_UNRECOGNIZED_FORMAT). Those two
+ * findings are NOT allowlisted: each one is attributed to its image through the issue's JSON
+ * pointer and dropped only when that exact image is a KTX2 container ktx-parse can read.
+ * Any other image keeps its warning, so a truncated JPEG/PNG still fails the gate.
  */
 
-// KTX 2.0 file layout (khronos KTX2 spec; field order as read by the reference parser
-// ktx-parse): 12-byte identifier, then uint32 vkFormat@12, typeSize@16, pixelWidth@20,
-// pixelHeight@24, pixelDepth@28, layerCount@32, faceCount@36, levelCount@40,
-// supercompressionScheme@44, followed by dfd/kvd offsets and the superegmentation/level
-// index. vkFormat==0 is the normal value for ETC1S/UASTC (the codec, not a fixed Vulkan
-// block format, is described by the DFD), so it is not treated as invalid.
-const KTX2_MAX_SUPERCOMPRESSION = 3;
-const KTX2_HEADER_BYTES = 80;
+const KTX2_IDENTIFIER = Buffer.from([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 function startsWithKtx2Magic(data) {
-  if (data.length < 12 || data[0] !== 0xab) return false;
-  return data.subarray(1, 12).toString("latin1") === "KTX 20\xBB\r\n\x1A\n";
+  return data.length >= KTX2_IDENTIFIER.length && data.subarray(0, KTX2_IDENTIFIER.length).equals(KTX2_IDENTIFIER);
 }
 
-function detectRasterMime(data) {
-  if (data.length >= 2 && data[0] === 0xff && data[1] === 0xd8) return "image/jpeg";
-  if (data.length >= 4 && data[0] === 0x89 && data.subarray(1, 4).toString("latin1") === "PNG") return "image/png";
-  if (data.length >= 12 && data.subarray(0, 4).toString("latin1") === "RIFF" &&
-      data.subarray(8, 12).toString("latin1") === "WEBP") return "image/webp";
-  if (data.length >= 6 && ["GIF87a", "GIF89a"].includes(data.subarray(0, 6).toString("latin1"))) return "image/gif";
+// Returns null for a structurally sound KTX2 container, an error string otherwise.
+function verifyKtx2Container(data) {
+  if (!startsWithKtx2Magic(data)) return "payload is not a KTX2 container";
+  let container;
+  try {
+    container = readKtx2(new Uint8Array(data));
+  } catch (e) {
+    return `KTX2 container unreadable (${e.message})`;
+  }
+  if (!(container.pixelWidth > 0 && container.pixelHeight > 0)) return "KTX2 has no pixel dimensions";
+  if (container.levels.length < 1) return "KTX2 has no mip levels";
+  if (container.levels.some((l) => l.levelData.byteLength === 0)) return "KTX2 has an empty mip level";
+  if (!container.dataFormatDescriptor.some((d) => d.samples.length > 0)) return "KTX2 data format descriptor has no samples";
   return null;
 }
 
-// Returns null when the payload is a structurally sound KTX2 file, an error string otherwise.
-function checkKtx2Header(data, label) {
-  if (!startsWithKtx2Magic(data)) return `${label}: unrecognized payload (not JPEG/PNG/WebP/GIF and not a KTX2 file)`;
-  if (data.length < KTX2_HEADER_BYTES) return `${label}: KTX2 header truncated (${data.length} bytes)`;
-  const u32 = (o) => data.readUInt32LE(o);
-  const typeSize = u32(16);
-  if (typeSize < 1 || typeSize > 16) return `${label}: KTX2 typeSize ${typeSize} out of range`;
-  const width = u32(20); const height = u32(24);
-  if (!(width > 0 && width <= 16384)) return `${label}: KTX2 pixelWidth ${width} invalid`;
-  if (!(height > 0 && height <= 16384)) return `${label}: KTX2 pixelHeight ${height} invalid`;
-  const faces = u32(36);
-  if (!(faces === 1 || faces === 6)) return `${label}: KTX2 faceCount ${faces} invalid`;
-  const levels = u32(40);
-  if (!(levels >= 1 && levels <= 16)) return `${label}: KTX2 levelCount ${levels} invalid`;
-  const scheme = u32(44);
-  if (scheme > KTX2_MAX_SUPERCOMPRESSION) return `${label}: KTX2 supercompressionScheme ${scheme} unknown`;
-  return null;
+function imageIndexFromPointer(pointer) {
+  const match = /^\/images\/(\d+)(\/|$)/.exec(pointer ?? "");
+  return match ? Number(match[1]) : null;
 }
 
-// Verifies every image in the GLB: payloads must be recognizable rasters or - when the
-// stale bundled validator could not recognize them (or the image claims image/ktx2) -
-// valid KTX2 containers. Returns null on success, list of problems otherwise.
-function verifyKtx2Images(glbJson, glbBin) {
-  const problems = [];
-  const images = Array.isArray(glbJson.images) ? glbJson.images : [];
-  if (images.length === 0) return ["no images[] in the GLB while the bundled validator complained about images"];
-
-  images.forEach((image, index) => {
-    const label = `images[${index}]`;
-    if (!image || typeof image !== "object") { problems.push(`${label}: not an object`); return; }
-
-    let bv = image.bufferView;
-    if (typeof bv === "number") bv = (glbJson.bufferViews || [])[bv];
-    let data = null;
-    if (bv && typeof bv === "object") {
-      const offset = bv.byteOffset || 0;
-      const length = bv.byteLength || 0;
-      if (length > 0 && offset + length <= glbBin.length) data = glbBin.subarray(offset, offset + length);
-    }
-
-    if (data === null) {
-      if (image.mimeType === "image/ktx2" || !image.uri)
-        problems.push(`${label}: image has no readable embedded payload (bufferView missing/out of range)`);
-      return;
-    }
-
-    const raster = detectRasterMime(data);
-    if (raster !== null) {
-      if (image.mimeType === "image/ktx2")
-        problems.push(`${label}: mimeType claims image/ktx2 but payload is ${raster}`);
-      return;
-    }
-
-    const ktx2Error = checkKtx2Header(data, label);
-    if (ktx2Error !== null) problems.push(ktx2Error);
-  });
-
-  return problems.length > 0 ? problems : null;
+function imagePayload(glbJson, glbBin, index) {
+  const image = Array.isArray(glbJson.images) ? glbJson.images[index] : null;
+  if (!image || typeof image.bufferView !== "number") return null;
+  const view = (glbJson.bufferViews || [])[image.bufferView];
+  if (!view) return null;
+  const offset = view.byteOffset || 0;
+  const length = view.byteLength || 0;
+  return length > 0 && offset + length <= glbBin.length ? glbBin.subarray(offset, offset + length) : null;
 }
 
 function parseGlbChunks(glb) {
@@ -280,29 +234,26 @@ async function drillContentIssues(target, validator, contentPaths) {
         if (severity === "INFO" || severity === "HINT") continue;
         const type = `GLTF_${issue.code}`;
         const message = `[${contentPath}] ${issue.message}`;
-        const key = `${severity}|${type}|${message}`;
+        const key = `${severity}|${type}|${issue.pointer ?? ""}|${message}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        out.push({ type, message, path: contentPath, severity });
+        out.push({ type, message, path: contentPath, severity, pointer: issue.pointer ?? "" });
       }
 
-      // Resolve the stale bundled validator's KTX2 blind spots with an active check
-      // instead of allowlisting them: only findings on images that verify as sound
-      // KTX2 containers are dropped; malformed payloads keep the warning (and any
-      // verification detail) so the gate fails.
-      const ktx2Blind = out.filter((r) =>
+      // Drop a blind-spot finding only when its own image is a readable KTX2 container.
+      const blindSpot = (r) =>
         (r.type === "GLTF_VALUE_NOT_IN_LIST" && r.message.includes("image/ktx2")) ||
-        r.type === "GLTF_IMAGE_UNRECOGNIZED_FORMAT");
-      if (ktx2Blind.length > 0) {
-        const chunks = parseGlbChunks(Buffer.from(glb));
-        const problems = chunks === null ? ["embedded GLB is not parseable"] : verifyKtx2Images(chunks.json, chunks.bin);
-        if (problems === null) {
-          for (const r of ktx2Blind) {
-            verified.push({ ...r, verification: "ktx2-container-verified" });
-            out.splice(out.indexOf(r), 1);
-          }
+        r.type === "GLTF_IMAGE_UNRECOGNIZED_FORMAT";
+      const chunks = out.some(blindSpot) ? parseGlbChunks(Buffer.from(glb)) : null;
+      for (const r of out.filter(blindSpot)) {
+        const index = imageIndexFromPointer(r.pointer);
+        const data = chunks !== null && index !== null ? imagePayload(chunks.json, chunks.bin, index) : null;
+        const problem = data === null ? "image payload not found" : verifyKtx2Container(data);
+        if (problem === null) {
+          verified.push({ ...r, verification: "ktx2-container-verified" });
+          out.splice(out.indexOf(r), 1);
         } else {
-          for (const r of ktx2Blind) r.message += ` (custom KTX2 verification failed: ${problems.join("; ")})`;
+          r.message += ` (not a valid KTX2 image: ${problem})`;
         }
       }
 

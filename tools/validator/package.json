@@ -5,7 +5,7 @@
   "description": "Official CesiumGS 3D Tiles validation harness for Obj2Tiles output (quality gate).",
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
     "3d-tiles-validator": "0.6.1",

@@ -115,7 +115,7 @@ public static class CliHarness
 
             var nodeIssue = NodeCheck.Value;
             if (nodeIssue != null)
-                return $"Node.js is not usable here ({nodeIssue}). Install Node >= 18 to run the quality gate.";
+                return $"Node.js is not usable here ({nodeIssue}). Install Node >= 22 to run the quality gate.";
 
             try
             {

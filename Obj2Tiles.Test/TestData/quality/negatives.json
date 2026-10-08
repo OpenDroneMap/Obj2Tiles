@@ -235,5 +235,69 @@
       "{input}",
       "{outdir}"
     ]
+  },
+  {
+    "name": "3tz-compression-negative",
+    "args": [
+      "--3tz",
+      "--3tz-compression",
+      "-1",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "fine-texture-quality-too-high",
+    "args": [
+      "--fine-texture-quality",
+      "101",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "fine-texture-quality-negative",
+    "args": [
+      "--fine-texture-quality",
+      "-1",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "error-negative",
+    "args": [
+      "--error",
+      "-5",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "error-factor-zero",
+    "args": [
+      "--error-factor",
+      "0",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "error-factor-negative",
+    "args": [
+      "--error-factor",
+      "-1",
+      "{input}",
+      "{outdir}"
+    ]
+  },
+  {
+    "name": "overlap-negative",
+    "args": [
+      "--overlap",
+      "-0.1",
+      "{input}",
+      "{outdir}"
+    ]
   }
 ]

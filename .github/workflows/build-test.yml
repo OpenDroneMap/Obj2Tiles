@@ -25,7 +25,7 @@ jobs:
         pwd
         dotnet build --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal --filter "TestCategory!=QualityGate"
 
     - name: Setup Node (validator harness)
       uses: actions/setup-node@v4
@@ -37,7 +37,7 @@ jobs:
       run: npm ci --prefix tools/validator
     - name: Quality gate (PICT matrix + official 3D Tiles validator)
       run: >
-        dotnet test Obj2Tiles.Test/Obj2Tiles.Test.csproj --no-build -c Release
+        dotnet test Obj2Tiles.Test/Obj2Tiles.Test.csproj --no-build
         --filter "TestCategory=QualityGate" --logger "console;verbosity=normal"
     - name: Upload validator reports
       if: always()
@@ -45,7 +45,7 @@ jobs:
       with:
         name: validator-reports
         path: Obj2Tiles.Test/bin/*/net*/TestOutput/**/validator-report.json
-        if-no-files-found: warning
+        if-no-files-found: warn
 
   quality-gate-large:
     # Nightly: real photogrammetry datasets (large downloads) on top of the PR-level gate.
@@ -81,4 +81,4 @@ jobs:
       with:
         name: validator-reports-large
         path: Obj2Tiles.Test/bin/*/net*/TestOutput/**/validator-report.json
-        if-no-files-found: warning
+        if-no-files-found: warn

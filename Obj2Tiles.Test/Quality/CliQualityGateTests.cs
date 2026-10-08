@@ -227,8 +227,8 @@ public class DeterminismTests
         run1.Tiles.ShouldBe(run2.Tiles, "tile content bytes differ between identical runs");
         run1.TilesetLength.ShouldBe(run2.TilesetLength, "tileset.json size changed between identical runs");
         // Map comparison (uri -> node): Shouldly reports precisely which tile diverges.
-        TilesetMap(Path.Combine(run1.Dir, "tileset.json"))
-            .ShouldBe(TilesetMap(Path.Combine(run2.Dir, "tileset.json")),
+        Ordered(TilesetMap(Path.Combine(run1.Dir, "tileset.json")))
+            .ShouldBe(Ordered(TilesetMap(Path.Combine(run2.Dir, "tileset.json"))),
                 "tileset.json is not reproducible between identical runs (volatile fields?)");
     }
 
@@ -261,6 +261,10 @@ public class DeterminismTests
     /// by tile uri - the contract consumers use - must still match exactly. Failures
     /// surface as a Shouldly map diff naming the diverging tile.
     /// </summary>
+    // Shouldly compares dictionaries positionally, so sibling insertion order must be canonicalized.
+    private static IEnumerable<KeyValuePair<string, string>> Ordered(Dictionary<string, string> map) =>
+        map.OrderBy(kv => kv.Key, StringComparer.Ordinal);
+
     private static Dictionary<string, string> TilesetMap(string path)
     {
         var token = Newtonsoft.Json.Linq.JToken.Parse(File.ReadAllText(path));

@@ -11,9 +11,8 @@ npm ci            # pinned 3d-tiles-validator@0.6.1 + gltf-validator + node-stre
 
 `3d-tiles-validator`, `gltf-validator@2.0.0-dev.3.10` (the older validator bundled
 inside the official one, invoked directly for the content drill-down),
-`node-stream-zip@1.16.0` (`.3tz` reading) and `ktx-parse@0.7.1` (reference KTX2
-parser, used to pin down the container layout the wrapper checks against) are all
-direct dependencies of this harness.
+`node-stream-zip@1.16.0` (`.3tz` reading) and `ktx-parse@0.7.1` (KTX2 container
+verification) are all direct dependencies of this harness. Node >= 22 is required.
 
 The .NET tests call this automatically (`CliHarness.RunValidator`) and run
 `npm ci` once on demand; CI does it as an explicit cached step. Set
@@ -42,14 +41,11 @@ is not allowlisted), `2` harness error.
    payload keep the collapsed warning.
 3. The bundled `gltf-validator` (2.0.0-dev) predates KTX2 ratification: it
    rejects `image/ktx2` mimeTypes and cannot sniff KTX2 payloads. Those two
-   blind-spot findings are **not** allowlisted — the harness actively parses
-   the KTX2 container of every suspicious image (12-byte identifier,
-   `typeSize`@16, `pixelWidth`@20, `pixelHeight`@24, `faceCount`@36,
-   `levelCount`@40, `supercompressionScheme`@44; offsets follow the reference
-   parser `ktx-parse`, which is bundled as a dev dependency of this harness).
-   `vkFormat` is deliberately not required to be non-zero: ETC1S/UASTC files
-   legitimately store 0 there (the DFD carries the format). A warning survives
-   and fails the gate when the KTX2 file is malformed; verified findings are
+   blind-spot findings are **not** allowlisted. Each one is attributed to its
+   image through the issue's JSON pointer (`/images/N`) and dropped only when
+   that image is a KTX2 container `ktx-parse` reads successfully (dimensions,
+   mip levels, data format descriptor). Any other image, e.g. a truncated
+   JPEG/PNG, keeps its warning and fails the gate. Dropped findings are
    reported under `verifiedContentIssues` in the JSON report.
 
 ## Allowlist (`allowlist.json`)
@@ -61,7 +57,7 @@ stale bundled validator are resolved by active verification (step 3 above),
 not by allowlisting.
 
 ```json
-{ "type": "GLTF_GLB_EXTRA_DATA", "reason": "..." }
+[{ "type": "GLTF_GLB_EXTRA_DATA", "reason": "..." }]
 ```
 
 Rejections (errors or unallowlisted warnings) print the offending issues;

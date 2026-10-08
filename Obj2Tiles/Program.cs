@@ -33,8 +33,13 @@ namespace Obj2Tiles
                 return Run(opts);
             });
 
-            if (oResult.Tag == ParserResultType.NotParsed)
+            if (oResult is NotParsed<Options> notParsed)
             {
+                // --help and --version surface as parse errors but are successful invocations.
+                if (notParsed.Errors.All(e => e.Tag is ErrorType.HelpRequestedError or ErrorType.HelpVerbRequestedError
+                        or ErrorType.VersionRequestedError))
+                    return 0;
+
                 Console.WriteLine("Usage: obj2tiles [options]");
                 return 1;
             }

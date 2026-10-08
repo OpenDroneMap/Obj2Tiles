@@ -44,8 +44,7 @@ cmake --build /tmp/pict-build
   (`[kthreads] = 0`, not `"0"`) or the constraints silently never match.
 - The generator asserts the constraints on its side too: if PICT ever emits a case
   violating a constraint, generation fails instead of committing a broken matrix.
-- `--scale` values must be plain decimal numbers: the CLI option parser rejects
-  fractional syntax like `1200/3937`.
+- `--scale` accepts a decimal (`0.3048`) or a fraction (`1200/3937`), see `Options.TryParseScale`.
 - Every row of the matrix must pass: CLI exit code 0, the structural inspector
   (`Obj2Tiles.Test/Quality/TilesetInspector.cs`) and the official validator harness
   (`tools/validator/validate.cjs` with `allowlist.json`).

@@ -265,9 +265,9 @@ public static class TilesetInspector
 
         foreach (var lod in contentByLod.Keys.OrderBy(k => k))
         {
-            foreach (var (uri, glbJson, glbBin, imageProblems) in contentByLod[lod])
+            foreach (var (uri, glbJson, glbBin, _) in contentByLod[lod])
             {
-                CheckImages(uri, glbJson, glbBin, e, imageProblems);
+                CheckImages(uri, glbJson, glbBin, e, problems);
 
                 var dims = ImageDims(glbJson, glbBin);
                 if (dims.Count > 0 && lod == 0)
@@ -418,7 +418,13 @@ public static class TilesetInspector
 
         if (e.SingleMaterialPerPart && !e.KeepTextures)
         {
-            var materials = (glbJson["materials"] as JArray)?.Count ?? 0;
+            // Obj2Gltf always emits an unreferenced "default" material, so count only the used ones.
+            var materials = (glbJson["meshes"] as JArray ?? new JArray())
+                .SelectMany(m => m["primitives"] as JArray ?? new JArray())
+                .Select(p => p["material"]?.Value<int?>())
+                .Where(i => i != null)
+                .Distinct()
+                .Count();
             if (materials > 1)
                 problems.Add($"{uri}: {materials} materials although --single-material-per-part was set");
         }
