@@ -50,8 +50,9 @@ jobs:
         if-no-files-found: warn
 
   quality-gate-large:
-    # Nightly: real photogrammetry datasets (large downloads) on top of the PR-level gate.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Real photogrammetry datasets on top of the PR-level gate: runs with every Build & Test trigger
+    # (push/PR/nightly/dispatch), in Release, in parallel with the build job. Observed ~14 min on a runner.
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
