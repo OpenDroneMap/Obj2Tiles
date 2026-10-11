@@ -33,6 +33,11 @@ namespace SilentWave.Obj2Gltf.Ktx2
         private static readonly SemaphoreSlim Gate =
             new SemaphoreSlim(Math.Max(1, Environment.ProcessorCount));
 
+        // Every this-many encodes (process-wide) a full GC runs after the encode, so the managed
+        // wrappers of disposed ImageSharp buffers are finalized and their memory returned promptly.
+        private const int GcEveryEncodes = 8;
+        private static int _encodeCount;
+
         private static readonly object InitLock = new object();
         private static bool _initialized;
         private static string _libHint;
@@ -244,17 +249,37 @@ namespace SilentWave.Obj2Gltf.Ktx2
                     if (pData == IntPtr.Zero)
                         throw new InvalidOperationException("libktx returned a null image data pointer.");
 
+                    // One staging buffer per encode, sized for level 0 (the largest) and reused by
+                    // every smaller level. It is local to this call, so concurrent encodes never share it.
+                    var buffer = new byte[checked(width * height * components)];
                     for (var level = 0; level < levels; level++)
                     {
                         var lw = Math.Max(1, width >> level);
                         var lh = Math.Max(1, height >> level);
-                        var buffer = ExtractLevelPixels(image, lw, lh, components);
+                        var byteCount = lw * lh * components;
+
+                        if (level == 0)
+                        {
+                            // Level 0 is the base image itself: copy it directly instead of cloning it
+                            // through a same-size resize (which ImageSharp reduces to a plain copy).
+                            PackPixels(image, buffer, components);
+                        }
+                        else
+                        {
+                            using var resized = image.Clone(ctx => ctx.Resize(new ResizeOptions
+                            {
+                                Size = new Size(lw, lh),
+                                Sampler = KnownResamplers.Lanczos3,
+                                Mode = ResizeMode.Stretch
+                            }));
+                            PackPixels(resized, buffer, components);
+                        }
 
                         err = ktxTexture2_GetImageOffset(texture, (uint)level, 0, 0, out var offset);
                         Check(err, "ktxTexture2_GetImageOffset");
 
                         var dest = new IntPtr(pData.ToInt64() + (long)offset.ToUInt64());
-                        Marshal.Copy(buffer, 0, dest, buffer.Length);
+                        Marshal.Copy(buffer, 0, dest, byteCount);
                     }
 
                     var basisParams = BuildParams(options);
@@ -297,7 +322,21 @@ namespace SilentWave.Obj2Gltf.Ktx2
             }
             finally
             {
-                Gate.Release();
+                try
+                {
+                    // Return ImageSharp's pooled buffers to the OS after every encode; otherwise the
+                    // allocator retains the high-water mark of all concurrent encodes.
+                    Configuration.Default.MemoryAllocator.ReleaseRetainedResources();
+                    if (Interlocked.Increment(ref _encodeCount) % GcEveryEncodes == 0)
+                    {
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
+                    }
+                }
+                finally
+                {
+                    Gate.Release();
+                }
             }
         }
 
@@ -364,18 +403,10 @@ namespace SilentWave.Obj2Gltf.Ktx2
             return p;
         }
 
-        // Resizes the base image to the requested mip dimensions (Lanczos) and packs tightly to the
-        // requested component count (RGB or RGBA), matching KTX2's unpadded level layout.
-        private static byte[] ExtractLevelPixels(Image<Rgba32> baseImage, int levelWidth, int levelHeight, int components)
+        // Packs the image's pixels tightly at the start of buffer with the requested component count
+        // (RGB or RGBA), matching KTX2's unpadded level layout. The buffer may be larger than needed.
+        private static void PackPixels(Image<Rgba32> level, byte[] buffer, int components)
         {
-            using var level = baseImage.Clone(ctx => ctx.Resize(new ResizeOptions
-            {
-                Size = new Size(levelWidth, levelHeight),
-                Sampler = KnownResamplers.Lanczos3,
-                Mode = ResizeMode.Stretch
-            }));
-
-            var buffer = new byte[levelWidth * levelHeight * components];
             var index = 0;
             level.ProcessPixelRows(accessor =>
             {
@@ -392,7 +423,6 @@ namespace SilentWave.Obj2Gltf.Ktx2
                     }
                 }
             });
-            return buffer;
         }
 
         private static bool HasAlpha(Image<Rgba32> image)

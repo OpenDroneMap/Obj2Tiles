@@ -12,6 +12,7 @@ using Obj2Tiles.Stages;
 using Obj2Tiles.Stages.Model;
 using Obj2Tiles.Tiles;
 using SilentWave.Obj2Gltf;
+using SixLabors.ImageSharp;
 
 namespace Obj2Tiles
 {
@@ -194,6 +195,14 @@ namespace Obj2Tiles
                     opts.SingleMaterialPerPart);
 
                 Console.WriteLine(" ?> Splitting stage done in {0}", sw.Elapsed);
+
+                // Only the Splitting stage reads the decoded source textures: drop them and hand
+                // ImageSharp's pooled buffers back to the OS so they do not inflate the Tiling peak.
+                TexturesCache.Clear();
+                Configuration.Default.MemoryAllocator.ReleaseRetainedResources();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
 
                 if (opts.StopAt == Stage.Splitting)
                     return;
