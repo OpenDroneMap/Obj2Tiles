@@ -50,14 +50,6 @@ namespace SilentWave.Obj2Gltf.Ktx2
                 image.Uri = ktx2Name;
                 image.MimeType = "image/ktx2";
                 encoded[i] = ktx2Name;
-
-                // The original raster is now superseded by the KTX2; remove it so it is not left behind.
-                try
-                {
-                    if (!string.Equals(inputFull, outputFull, StringComparison.OrdinalIgnoreCase))
-                        File.Delete(inputFull);
-                }
-                catch { /* ignore */ }
             }
 
             // Rewrite each texture to reference its image through KHR_texture_basisu, dropping the base
