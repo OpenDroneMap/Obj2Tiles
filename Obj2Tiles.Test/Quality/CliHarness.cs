@@ -291,6 +291,51 @@ public sealed class QualityDataset : IDisposable
         return Open(Path.Combine(extract, "odm_textured_model_geo.obj"), "odm-textured", extract);
     }
 
+    /// <summary>
+    /// A small model textured as OpenDroneMap textures the models of multispectral cameras: two
+    /// textures of one band of reflectance, 16 bit integers or 32 bit floats, tagged RGB, deflate, one
+    /// strip without RowsPerStrip, with a band of zeros (texels no photo covers). Generated, not stored.
+    /// </summary>
+    public static QualityDataset MultispectralTextured(bool floatingPoint)
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "obj2tiles_quality_gate",
+            "multispectral_" + CommonUtils.RandomString(8));
+        Directory.CreateDirectory(folder);
+
+        const int cells = 8;
+        var obj = new System.Text.StringBuilder("mtllib model.mtl\n");
+        for (var j = 0; j <= cells; j++)
+        for (var i = 0; i <= cells; i++)
+            obj.Append(FormattableString.Invariant($"v {i} {j} {0.05 * (i * j % 3)}\nvt {(double)i / cells} {(double)j / cells}\n"));
+
+        foreach (var (material, first, last) in new[] { ("band0", 0, cells / 2), ("band1", cells / 2, cells) })
+        {
+            obj.Append($"usemtl {material}\n");
+            for (var j = 0; j < cells; j++)
+            for (var i = first; i < last; i++)
+            {
+                int Index(int x, int y) => y * (cells + 1) + x + 1;
+                int a = Index(i, j), b = Index(i + 1, j), c = Index(i + 1, j + 1), d = Index(i, j + 1);
+                obj.Append($"f {a}/{a} {b}/{b} {c}/{c}\nf {a}/{a} {c}/{c} {d}/{d}\n");
+            }
+
+            TestTiff.Write(Path.Combine(folder, material + ".tif"), 64, 64, 1, floatingPoint ? 32 : 16, floatingPoint,
+                TestTiff.Rgb, (x, y, _) =>
+                {
+                    if (x < 4) return 0;
+                    var step = (x * 7 + y * 3 + (material == "band1" ? 20 : 0)) % 80;
+                    return floatingPoint ? 0.01 + 0.002 * step : 6000 + 400 * step;
+                });
+        }
+
+        File.WriteAllText(Path.Combine(folder, "model.obj"), obj.ToString());
+        File.WriteAllText(Path.Combine(folder, "model.mtl"),
+            "newmtl band0\nKd 1 1 1\nmap_Kd band0.tif\n\nnewmtl band1\nKd 1 1 1\nmap_Kd band1.tif\n");
+
+        return Open(Path.Combine(folder, "model.obj"), floatingPoint ? "multispectral-float" : "multispectral-16bit",
+            folder);
+    }
+
     private static IEnumerable<string> localCandidates(string relative)
     {
         var root = Environment.GetEnvironmentVariable(CliHarness.TestDataSetEnv);

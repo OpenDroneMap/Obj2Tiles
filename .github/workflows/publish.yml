@@ -49,6 +49,7 @@ jobs:
         files: |
           Release.txt
           LICENSE.md
+          THIRD_PARTY_NOTICES.md
           Obj2Tiles-Win64.zip
           Obj2Tiles-WinArm64.zip
           Obj2Tiles-Linux64.zip

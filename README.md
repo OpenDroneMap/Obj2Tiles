@@ -208,7 +208,11 @@ Each tile's texture atlas is repacked from the portion of the source texture wit
 | 1 | 0.5 | 512×512 JPEG |
 | 2 | 0.25 | 256×256 JPEG |
 
-Downscaling uses `Resize` with ImageSharp's default resampler. LOD-0 preserves the original texture format; coarser LODs are re-encoded JPEG at `--texture-quality` (default 75).
+Downscaling uses `Resize` with ImageSharp's default resampler. LOD-0 preserves the original texture format when a glTF can carry it (PNG, JPEG, WebP; any other source, such as a TIFF, is repacked to PNG); coarser LODs are re-encoded JPEG at `--texture-quality` (default 75).
+
+**Textures of more than 8 bits per sample** (multispectral and thermal models):
+
+The textures that OpenDroneMap writes for multispectral cameras are TIFFs of reflectance: one band of 16 bit integers or 32 bit floats, which fills a small part of the range of its type. Obj2Tiles brings them to 8 bits with a linear stretch from the 2nd to the 98th percentile of the non-zero samples (zero is the texel no photo covers and stays black), the stretch of the map view of most GIS programs. One stretch is computed over all the textures of the model, so a surface keeps one brightness from one texture to the next; when the samples are all one value the stretch spans the full range of the type. A band is shown as gray; the three channels of an RGB texture share the stretch. Textures of 8 bits per sample are read as they are.
 
 ### 3. Tiling
 

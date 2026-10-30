@@ -651,7 +651,7 @@ public class MeshT : IMesh
             usedMaterials.Add(material);
 
             var diffuse = material.Texture != null ? TexturesCache.GetTexture(material.Texture) : null;
-            var normal = material.NormalMap != null ? TexturesCache.GetTexture(material.NormalMap) : null;
+            var normal = material.NormalMap != null ? TexturesCache.GetNormalMap(material.NormalMap) : null;
             hasNormalMap |= normal != null;
 
             var edgesMapper = GetEdgesMapper(faceIndexes, canonicalIndex);
@@ -1168,7 +1168,7 @@ public class MeshT : IMesh
             if (!string.IsNullOrEmpty(material.Texture))
                 TexturesCache.GetTexture(material.Texture);
             if (!string.IsNullOrEmpty(material.NormalMap))
-                TexturesCache.GetTexture(material.NormalMap);
+                TexturesCache.GetNormalMap(material.NormalMap);
         });
     }
 
@@ -1176,14 +1176,26 @@ public class MeshT : IMesh
 
     private static readonly string[] JpegExtensions = { ".jpg", ".jpeg" };
 
+    // The image formats the tiling stage can put in a glTF (see Gltf2GlbConverter).
+    private static readonly string[] GltfImageExtensions = { ".png", ".jpg", ".jpeg", ".webp", ".gif" };
+
     /// <summary>
     /// Output file extension for a repacked atlas, honoring the selected texture format. Normal maps
-    /// are always PNG regardless of format/strategy - see <see cref="SaveAtlas"/>.
+    /// are always PNG regardless of format/strategy - see <see cref="SaveAtlas"/>. Repack keeps the
+    /// format of the source when a glTF can carry it; any other source (a TIFF, a BMP) is repacked to
+    /// PNG, lossless as the source, since the tiling stage could not embed the atlas otherwise.
     /// </summary>
     private string AtlasExtension(string sourcePath, bool isNormalMap)
         => isNormalMap ? ".png"
            : TextureFormat == TextureFormat.Webp ? ".webp"
-           : (TexturesStrategy == TexturesStrategy.Repack ? Path.GetExtension(sourcePath) : ".jpg");
+           : TexturesStrategy == TexturesStrategy.Repack ? RepackExtension(sourcePath)
+           : ".jpg";
+
+    private static string RepackExtension(string sourcePath)
+    {
+        var extension = Path.GetExtension(sourcePath);
+        return GltfImageExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase) ? extension : ".png";
+    }
 
     /// <summary>
     /// Saves a repacked atlas with the encoder matching the current strategy and format.
@@ -1259,7 +1271,7 @@ public class MeshT : IMesh
         if (material.Texture == null && material.NormalMap == null) return;
 
         var texture = material.Texture != null ? TexturesCache.GetTexture(material.Texture) : null;
-        var normalMap = material.NormalMap != null ? TexturesCache.GetTexture(material.NormalMap) : null;
+        var normalMap = material.NormalMap != null ? TexturesCache.GetNormalMap(material.NormalMap) : null;
 
         int textureWidth = material.Texture != null ? texture!.Width : normalMap!.Width;
         int textureHeight = material.Texture != null ? texture!.Height : normalMap!.Height;
@@ -2194,7 +2206,7 @@ public class MeshT : IMesh
 
                                 Console.WriteLine($" -> Compressing texture '{material.Texture}'");
 
-                                using (var image = Image.Load(material.Texture))
+                                using (var image = TexturesCache.ReadTexture(material.Texture))
                                 {
                                     ApplyTextureSizeLimit(image);
                                     if (TextureFormat == TextureFormat.Webp)

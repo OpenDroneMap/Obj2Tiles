@@ -225,6 +225,9 @@ public class MeshUtils
 
         var colors = vertexColors.Count > 0 ? vertexColors : null;
 
+        // The colour textures of a model are brought to 8 bits together (see TexturesCache.AddModel).
+        TexturesCache.AddModel(materials.Select(m => m.Texture).OfType<string>());
+
         return textureVertices.Count != 0
             ? new MeshT(vertices, textureVertices, facesT, materials, colors)
             : new Mesh(vertices, faces, colors);

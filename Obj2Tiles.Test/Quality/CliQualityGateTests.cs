@@ -209,6 +209,29 @@ public class RealWorldQualityTests
 }
 
 /// <summary>
+/// Models textured with reflectance (one band of 16 bit or float samples, as OpenDroneMap writes the
+/// textures of multispectral cameras) tile with every texture format: the samples are brought to 8 bits
+/// and the repacked atlases are images a glTF can carry.
+/// </summary>
+[TestFixture]
+[Category("QualityGate")]
+public class MultispectralQualityTests
+{
+    [TestCase(false, QualityTextureFormat.Jpeg)]
+    [TestCase(false, QualityTextureFormat.Webp)]
+    [TestCase(false, QualityTextureFormat.Ktx2)]
+    [TestCase(true, QualityTextureFormat.Jpeg)]
+    public void ReflectanceTextures_tileWithEveryTextureFormat(bool floatingPoint, QualityTextureFormat format)
+    {
+        using var dataset = QualityDataset.MultispectralTextured(floatingPoint);
+        var expected = new QualityExpectations { Lods = 2, Divisions = 1, Local = true, TextureFormat = format };
+        var args = new[] { "--lods", "2", "--divisions", "1", "--local", "--texture-format", format.ToString() };
+
+        CliQualityGateTests.RunValidateAndAssert($"{dataset.DisplayName}-{format}", dataset, args, expected);
+    }
+}
+
+/// <summary>
 /// The same invocation, twice: output must be reproducible (deterministic ordering and
 /// serialization - catches ConcurrentBag ordering leaks and unstable ids/uuids).
 /// </summary>
