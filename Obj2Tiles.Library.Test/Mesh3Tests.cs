@@ -367,6 +367,46 @@ public class Mesh3Tests
             .Edge.ShouldBe(expectedEdge);
     }
 
+    // A non-square JPEG colour texture and PNG normal map, as an ODM model has, written by Compress: the
+    // textures are decoded at their output size, which must stay exactly (int)(side * scale) of each side.
+    [TestCase(256, 1.0f, false, 256, 153)]
+    [TestCase(256, 0.5f, false, 256, 153)]
+    [TestCase(256, 0.5f, true, 128, 76)]
+    [TestCase(0, 0.5f, false, 500, 300)]
+    [TestCase(0, 1.0f, false, 1000, 600)]
+    public void WriteObj_Compress_NonSquareJpegKeepsTheExactSize(int maxTextureSize, float downscale,
+        bool downscaleAfterCap, int expectedWidth, int expectedHeight)
+    {
+        var testPath = GetTestOutputPath(
+            $"{nameof(WriteObj_Compress_NonSquareJpegKeepsTheExactSize)}_{maxTextureSize}_{downscale}_{downscaleAfterCap}");
+        var texturePath = Path.Combine(testPath, "source.jpg");
+        var normalMapPath = Path.Combine(testPath, "normal.png");
+        using (var texture = new Image<Rgb24>(1000, 600, new Rgb24(0, 128, 255)))
+            texture.SaveAsJpeg(texturePath);
+        using (var normalMap = new Image<Rgb24>(1000, 600, new Rgb24(128, 128, 255)))
+            normalMap.SaveAsPng(normalMapPath);
+
+        var vertices = new[] { new Vertex3(0, 0, 0), new Vertex3(1, 0, 0), new Vertex3(0, 1, 0) };
+        var textureVertices = new List<Vertex2> { new(0, 0), new(1, 0), new(0, 1) };
+        var faces = new List<FaceT> { new(0, 1, 2, 0, 1, 2, 0) };
+        var mesh = new MeshT(vertices, textureVertices, faces,
+            [new Materials.Material("jpeg", texturePath, normalMap: normalMapPath)])
+        {
+            TexturesStrategy = TexturesStrategy.Compress,
+            MaxTextureSize = maxTextureSize,
+            TextureDownscale = downscale,
+            DownscaleAfterCap = downscaleAfterCap
+        };
+
+        mesh.WriteObj(Path.Combine(testPath, "out.obj"));
+
+        foreach (var written in new[] { mesh.Materials[0].Texture!, mesh.Materials[0].NormalMap! })
+        {
+            var info = Image.Identify(Path.Combine(testPath, written));
+            (info.Width, info.Height).ShouldBe((expectedWidth, expectedHeight), written);
+        }
+    }
+
     [TestCase(false)]
     [TestCase(true)]
     public void WriteObj_Repack_LodDownscaleAppliesBelowMaxTextureSize(bool singleMaterial)

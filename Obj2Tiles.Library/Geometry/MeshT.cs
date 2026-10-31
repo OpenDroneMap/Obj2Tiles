@@ -1232,16 +1232,16 @@ public class MeshT : IMesh
     }
 
     /// <summary>
-    /// Downscales an image in place so that neither side exceeds MaxTextureSize (when set), after
-    /// applying TextureDownscale. Used by the Compress strategy (e.g. the tileset root tile) so its
-    /// textures are not stored at full source resolution.
+    /// The size a texture of <paramref name="source"/> size is written at by the Compress strategy (e.g. the
+    /// tileset root tile): TextureDownscale applied, and neither side above MaxTextureSize (when set), so
+    /// its textures are not stored at full source resolution. Null when it keeps its size.
     /// </summary>
-    private void ApplyTextureSizeLimit(Image image)
+    private Size? CompressedTextureSize(Size source)
     {
         var s = Math.Clamp(TextureDownscale, float.Epsilon, 1.0f);
         if (MaxTextureSize > 0)
         {
-            int maxDim = Math.Max(image.Width, image.Height);
+            int maxDim = Math.Max(source.Width, source.Height);
             if (DownscaleAfterCap)
             {
                 if (maxDim > MaxTextureSize)
@@ -1252,12 +1252,10 @@ public class MeshT : IMesh
                 s = Math.Clamp(MaxTextureSize / (float)maxDim, float.Epsilon, 1.0f);
             }
         }
-        if (s < 1.0f)
-        {
-            int w = Math.Max(1, (int)(image.Width * s));
-            int h = Math.Max(1, (int)(image.Height * s));
-            image.Mutate(x => x.Resize(w, h));
-        }
+        if (s >= 1.0f)
+            return null;
+
+        return new Size(Math.Max(1, (int)(source.Width * s)), Math.Max(1, (int)(source.Height * s)));
     }
 
     private void BinPackTextures(string targetFolder, int materialIndex, IReadOnlyList<List<int>> clusters,
@@ -2164,114 +2162,121 @@ public class MeshT : IMesh
 
         var mtlFilePath = Path.ChangeExtension(path, "mtl");
 
+        // The textures of the materials are independent (their file names come from the material's index),
+        // so they are read, resized and written in parallel: decoding them is most of the time of writing a
+        // mesh with few materials and many large textures, as the root tile of an ODM model.
+        Parallel.For(0, _materials.Count, index => WriteMaterialTextures(path, _materials[index], index));
+
         using (var writer = new FormattingStreamWriter(mtlFilePath, CultureInfo.InvariantCulture))
         {
-            for (var index = 0; index < _materials.Count; index++)
-            {
-                var material = _materials[index];
-
-                if (material.Texture != null && !SingleMaterialPerPart)
-                {
-                    switch (TexturesStrategy)
-                    {
-                        case TexturesStrategy.KeepOriginal:
-                            {
-                                var folder = Path.GetDirectoryName(path);
-
-                                var textureFileName =
-                                    $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}{Path.GetExtension(material.Texture)}";
-
-                                var newTexturePath =
-                                    folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
-
-                                if (!File.Exists(newTexturePath))
-                                    File.Copy(material.Texture, newTexturePath, true);
-
-                                material.Texture = textureFileName;
-                                break;
-                            }
-                        case TexturesStrategy.Compress:
-                            {
-                                var folder = Path.GetDirectoryName(path);
-
-                                var textureFileName =
-                                    $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}{(TextureFormat == TextureFormat.Webp ? ".webp" : ".jpg")}";
-
-                                var newTexturePath =
-                                    folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
-
-                                if (File.Exists(newTexturePath))
-
-                                    File.Delete(newTexturePath);
-
-                                Console.WriteLine($" -> Compressing texture '{material.Texture}'");
-
-                                using (var image = TexturesCache.ReadTexture(material.Texture))
-                                {
-                                    ApplyTextureSizeLimit(image);
-                                    if (TextureFormat == TextureFormat.Webp)
-                                        image.SaveAsWebp(newTexturePath, new WebpEncoder { FileFormat = WebpFileFormatType.Lossy, Quality = Math.Clamp(TextureQuality, 1, 100) });
-                                    else
-                                        image.SaveAsJpeg(newTexturePath, CreateEncoder());
-                                }
-
-                                material.Texture = textureFileName;
-                                break;
-                            }
-                    }
-                }
-
-                if (material.NormalMap != null)
-                {
-                    switch (TexturesStrategy)
-                    {
-                        case TexturesStrategy.KeepOriginal:
-                            {
-                                var folder = Path.GetDirectoryName(path);
-
-                                var normalMapFileName =
-                                    $"{Path.GetFileNameWithoutExtension(path)}-normalmap-{index}{Path.GetExtension(material.NormalMap)}";
-
-                                var newNormalMapPath =
-                                    folder != null ? Path.Combine(folder, normalMapFileName) : normalMapFileName;
-
-                                if (!File.Exists(newNormalMapPath))
-                                    File.Copy(material.NormalMap, newNormalMapPath, true);
-
-                                material.NormalMap = normalMapFileName;
-                                break;
-                            }
-                        case TexturesStrategy.Compress:
-                            {
-                                // Normal maps stay lossless (PNG) even under the "compress" strategy:
-                                // JPEG chroma subsampling corrupts the directional data encoded in
-                                // the RGB channels, producing visible lighting artifacts.
-                                var folder = Path.GetDirectoryName(path);
-
-                                var normalMapFileName =
-                                    $"{Path.GetFileNameWithoutExtension(path)}-normalmap-{index}.png";
-
-                                var newNormalMapPath =
-                                    folder != null ? Path.Combine(folder, normalMapFileName) : normalMapFileName;
-
-                                if (File.Exists(newNormalMapPath))
-                                    File.Delete(newNormalMapPath);
-
-                                Console.WriteLine($" -> Copying normal map '{material.NormalMap}'");
-
-                                using (var image = Image.Load(material.NormalMap))
-                                {
-                                    ApplyTextureSizeLimit(image);
-                                    image.SaveAsPng(newNormalMapPath);
-                                }
-
-                                material.NormalMap = normalMapFileName;
-                                break;
-                            }
-                    }
-                }
-
+            foreach (var material in _materials)
                 writer.WriteLine(material.ToMtl());
+        }
+    }
+
+    /// <summary>
+    /// Writes the texture and normal map of <paramref name="material"/> next to the mesh at <paramref name="path"/>
+    /// as TexturesStrategy says (copied, or compressed at the size of CompressedTextureSize), and points the
+    /// material at the written files.
+    /// </summary>
+    private void WriteMaterialTextures(string path, Material material, int index)
+    {
+        if (material.Texture != null && !SingleMaterialPerPart)
+        {
+            switch (TexturesStrategy)
+            {
+                case TexturesStrategy.KeepOriginal:
+                    {
+                        var folder = Path.GetDirectoryName(path);
+
+                        var textureFileName =
+                            $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}{Path.GetExtension(material.Texture)}";
+
+                        var newTexturePath =
+                            folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
+
+                        if (!File.Exists(newTexturePath))
+                            File.Copy(material.Texture, newTexturePath, true);
+
+                        material.Texture = textureFileName;
+                        break;
+                    }
+                case TexturesStrategy.Compress:
+                    {
+                        var folder = Path.GetDirectoryName(path);
+
+                        var textureFileName =
+                            $"{Path.GetFileNameWithoutExtension(path)}-texture-{index}{(TextureFormat == TextureFormat.Webp ? ".webp" : ".jpg")}";
+
+                        var newTexturePath =
+                            folder != null ? Path.Combine(folder, textureFileName) : textureFileName;
+
+                        if (File.Exists(newTexturePath))
+
+                            File.Delete(newTexturePath);
+
+                        Console.WriteLine($" -> Compressing texture '{material.Texture}'");
+
+                        using (var image = TexturesCache.ReadTexture(material.Texture, CompressedTextureSize))
+                        {
+                            if (TextureFormat == TextureFormat.Webp)
+                                image.SaveAsWebp(newTexturePath, new WebpEncoder { FileFormat = WebpFileFormatType.Lossy, Quality = Math.Clamp(TextureQuality, 1, 100) });
+                            else
+                                image.SaveAsJpeg(newTexturePath, CreateEncoder());
+                        }
+
+                        material.Texture = textureFileName;
+                        break;
+                    }
+            }
+        }
+
+        if (material.NormalMap != null)
+        {
+            switch (TexturesStrategy)
+            {
+                case TexturesStrategy.KeepOriginal:
+                    {
+                        var folder = Path.GetDirectoryName(path);
+
+                        var normalMapFileName =
+                            $"{Path.GetFileNameWithoutExtension(path)}-normalmap-{index}{Path.GetExtension(material.NormalMap)}";
+
+                        var newNormalMapPath =
+                            folder != null ? Path.Combine(folder, normalMapFileName) : normalMapFileName;
+
+                        if (!File.Exists(newNormalMapPath))
+                            File.Copy(material.NormalMap, newNormalMapPath, true);
+
+                        material.NormalMap = normalMapFileName;
+                        break;
+                    }
+                case TexturesStrategy.Compress:
+                    {
+                        // Normal maps stay lossless (PNG) even under the "compress" strategy:
+                        // JPEG chroma subsampling corrupts the directional data encoded in
+                        // the RGB channels, producing visible lighting artifacts.
+                        var folder = Path.GetDirectoryName(path);
+
+                        var normalMapFileName =
+                            $"{Path.GetFileNameWithoutExtension(path)}-normalmap-{index}.png";
+
+                        var newNormalMapPath =
+                            folder != null ? Path.Combine(folder, normalMapFileName) : normalMapFileName;
+
+                        if (File.Exists(newNormalMapPath))
+                            File.Delete(newNormalMapPath);
+
+                        Console.WriteLine($" -> Copying normal map '{material.NormalMap}'");
+
+                        using (var image = TexturesCache.LoadAtSize(material.NormalMap, CompressedTextureSize))
+                        {
+                            image.SaveAsPng(newNormalMapPath);
+                        }
+
+                        material.NormalMap = normalMapFileName;
+                        break;
+                    }
             }
         }
     }

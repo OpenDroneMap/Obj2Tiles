@@ -1,7 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using Obj2Tiles.Library.Textures;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Obj2Tiles.Library;
 
@@ -38,9 +40,37 @@ public static class TexturesCache
 
     /// <summary>
     /// A new copy of the colour texture at <paramref name="path"/>, for the caller to dispose: in the pixel
-    /// format of the file, or 8 bit RGBA when its samples are brought to 8 bits here.
+    /// format of the file, or 8 bit RGBA when its samples are brought to 8 bits here. With
+    /// <paramref name="sizeOf"/> it has the size that function gives for the size of the file (null: the
+    /// size of the file); see <see cref="LoadAtSize"/>.
     /// </summary>
-    public static Image ReadTexture(string path) => TiffSamples.TryRead(path, () => ToneMapOf(path)) ?? Image.Load(path);
+    public static Image ReadTexture(string path, Func<Size, Size?>? sizeOf = null) =>
+        TiffSamples.TryRead(path, () => ToneMapOf(path)) is { } samples
+            ? ResizeTo(samples, sizeOf?.Invoke(samples.Size))
+            : LoadAtSize(path, sizeOf);
+
+    /// <summary>
+    /// The image at <paramref name="path"/>, for the caller to dispose, at the size <paramref name="sizeOf"/>
+    /// gives for the size of the file (null: the size of the file). A smaller image is decoded at that size
+    /// (a JPEG at a reduced scale of its blocks) rather than decoded whole and then resized: an 8192 px
+    /// texture brought down to a 256 px one is never held at full size.
+    /// </summary>
+    public static Image LoadAtSize(string path, Func<Size, Size?>? sizeOf = null)
+    {
+        var target = sizeOf?.Invoke(Image.Identify(path).Size);
+        if (target is not { } size)
+            return Image.Load(path);
+
+        // The decoder fits the image inside the size, keeping its aspect; ResizeTo makes it exact.
+        return ResizeTo(Image.Load(new DecoderOptions { TargetSize = size }, path), size);
+    }
+
+    private static Image ResizeTo(Image image, Size? size)
+    {
+        if (size is { } s && image.Size != s)
+            image.Mutate(x => x.Resize(s.Width, s.Height));
+        return image;
+    }
 
     /// <summary>
     /// The normal map at <paramref name="path"/>, read once and shared. Its samples hold directions, not
