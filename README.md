@@ -265,6 +265,7 @@ Encoding runs **in-process** via the KTX-Software C library (libktx v4.4.2, Apac
 | Linux x64 | `libktx.so` | 3.25 MB |
 | Linux ARM64 | `libktx.so` | 2.91 MB |
 | macOS x64 | `libktx.dylib` | 2.67 MB |
+| macOS ARM64 (Apple Silicon) | `libktx.dylib` | 2.38 MB |
 
 For `dotnet build` without a RID (development builds), the library is resolved in order from: `--ktx-path` / `OBJ2TILES_KTX` environment variable, the executable directory, and finally the system `PATH`.
 
@@ -273,14 +274,14 @@ For `dotnet build` without a RID (development builds), the library is resolved i
 To refresh the vendored libraries to a new KTX-Software release, run the PowerShell script bundled in the repository:
 
 ```powershell
-# Refresh all 5 platforms to the default version
+# Refresh all 6 platforms to the default version
 pwsh Obj2Tiles/native/update-libktx.ps1
 
 # Bump to a new version
 pwsh Obj2Tiles/native/update-libktx.ps1 -Version 4.5.0
 
 # Refresh only Linux and macOS (no 7-Zip required)
-pwsh Obj2Tiles/native/update-libktx.ps1 -Rid linux-x64,linux-arm64,osx-x64
+pwsh Obj2Tiles/native/update-libktx.ps1 -Rid linux-x64,linux-arm64,osx-x64,osx-arm64
 
 # Skip checksum verification
 pwsh Obj2Tiles/native/update-libktx.ps1 -SkipChecksum

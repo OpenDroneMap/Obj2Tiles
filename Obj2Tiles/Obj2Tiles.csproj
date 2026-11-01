@@ -41,6 +41,7 @@
         linux-x64    libktx.so   <- KTX-Software-4.4.2-Linux-x86_64.tar.bz2  (lib/libktx.so.4.4.2)
         linux-arm64  libktx.so   <- KTX-Software-4.4.2-Linux-arm64.tar.bz2   (lib/libktx.so.4.4.2)
         osx-x64      libktx.dylib<- KTX-Software-4.4.2-Darwin-x86_64.pkg   (lib/libktx.4.4.2.dylib)
+        osx-arm64    libktx.dylib<- KTX-Software-4.4.2-Darwin-arm64.pkg    (lib/libktx.4.4.2.dylib)
 
       To refresh these libraries (download + verify + extract for all RIDs), run:
         pwsh native/update-libktx.ps1            (use -Version to bump; -? for help)

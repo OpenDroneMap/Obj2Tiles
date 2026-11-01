@@ -20,6 +20,7 @@
         linux-x64    libktx.so    <- KTX-Software-<v>-Linux-x86_64.tar.bz2 (lib/libktx.so.<v>)
         linux-arm64  libktx.so    <- KTX-Software-<v>-Linux-arm64.tar.bz2  (lib/libktx.so.<v>)
         osx-x64      libktx.dylib <- KTX-Software-<v>-Darwin-x86_64.pkg    (lib/libktx.<v>.dylib)
+        osx-arm64    libktx.dylib <- KTX-Software-<v>-Darwin-arm64.pkg     (lib/libktx.<v>.dylib)
 
     Tooling:
       * tar    - unpacks the Linux .tar.bz2 tarballs (and, where libarchive has xar
@@ -35,7 +36,7 @@
     KTX-Software release version to vendor. Default: 4.4.2.
 
 .PARAMETER Rid
-    One or more runtime identifiers to refresh. Default: all five supported RIDs.
+    One or more runtime identifiers to refresh. Default: all six supported RIDs.
 
 .PARAMETER SkipChecksum
     Skip SHA-256 verification of the downloaded assets (not recommended).
@@ -52,8 +53,8 @@
 param(
     [string]$Version = '4.4.2',
 
-    [ValidateSet('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64')]
-    [string[]]$Rid = @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64'),
+    [ValidateSet('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')]
+    [string[]]$Rid = @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64'),
 
     [switch]$SkipChecksum
 )
@@ -73,6 +74,7 @@ $Targets = [ordered]@{
     'linux-x64'   = @{ Asset = "KTX-Software-$Version-Linux-x86_64.tar.bz2"; Find = "libktx.so.$Version";    Out = 'libktx.so' }
     'linux-arm64' = @{ Asset = "KTX-Software-$Version-Linux-arm64.tar.bz2";  Find = "libktx.so.$Version";    Out = 'libktx.so' }
     'osx-x64'     = @{ Asset = "KTX-Software-$Version-Darwin-x86_64.pkg";    Find = "libktx.$Version.dylib"; Out = 'libktx.dylib' }
+    'osx-arm64'   = @{ Asset = "KTX-Software-$Version-Darwin-arm64.pkg";     Find = "libktx.$Version.dylib"; Out = 'libktx.dylib' }
 }
 
 function Get-SevenZip {

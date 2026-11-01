@@ -77,5 +77,5 @@ Target framework is **net10.0** with `InvariantGlobalization=true` and nullable 
 ## CI/CD
 
 - **Build & Test** (`.github/workflows/build-test.yml`): Runs on push/PR to `master` — restore → build → test on `ubuntu-latest` with a .NET SDK matching the csproj target framework (read `dotnet-version` from the workflow; do not assume a fixed number).
-- **Publish** (`.github/workflows/publish.yml`): Triggered by `v*` tags. Publishes self-contained binaries for `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` via `.pubxml` profiles (in `Obj2Tiles/Properties/PublishProfiles/`), zips them, and creates a GitHub Release.
+- **Publish** (`.github/workflows/publish.yml`): Triggered by `v*` tags. Publishes self-contained binaries for `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64` via `.pubxml` profiles (in `Obj2Tiles/Properties/PublishProfiles/`), zips them, and creates a GitHub Release.
 - **Container image** (`.github/workflows/image.yml`): builds/pushes the `ghcr.io/opendronemap/obj2tiles` image (QEMU multi-arch).
