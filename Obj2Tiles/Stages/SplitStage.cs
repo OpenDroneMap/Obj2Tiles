@@ -11,9 +11,12 @@ public static partial class StagesFacade
         bool zsplit, bool keepOriginalTextures = false, SplitPointStrategy splitPointStrategy = SplitPointStrategy.VertexBaricenter,
         bool isOctree = false, float lodTextureScale = 1.0f, double overlap = 0.0, bool ignoreNormalMaps = false,
         int maxTextureSize = 0, int textureQuality = 75, TextureFormat textureFormat = TextureFormat.Jpeg, int fineTextureQuality = 0,
-        bool singleMaterialPerPart = false)
+        bool singleMaterialPerPart = false, ProgressReporter? progress = null)
     {
         var results = new Dictionary<string, TileBounds>[sourceFiles.Length];
+
+        // One part per LOD; each LOD's tile count is known once its mesh has been split.
+        var counter = progress?.BeginParts("splitting", sourceFiles.Length);
 
         // In octree mode, LOD-0 (finest) gets the most divisions; the split plan must cover that maximum depth.
         int maxDivisions = isOctree ? divisions + sourceFiles.Length - 1 : divisions;
@@ -94,9 +97,12 @@ public static partial class StagesFacade
             // 0 (the default) falls back to the general --texture-quality for every LOD.
             int effectiveTextureQuality = index == 0 && fineTextureQuality > 0 ? fineTextureQuality : textureQuality;
 
+            var part = index;
             tasks.Add(Split(file, dest, lodDivisions, zsplit, textureStrategy, splitPointStrategy,
                 replaySplitPoint, globalBounds, textureDownscale, maxTextureSize, effectiveTextureQuality, textureFormat,
-                overlap, ignoreNormalMaps, singleMaterialPerPart, downscaleAfterCap: true));
+                overlap, ignoreNormalMaps, singleMaterialPerPart, downscaleAfterCap: true,
+                onTilesCounted: counter == null ? null : total => counter.SetTotal(part, total),
+                onTileWritten: counter == null ? null : () => counter.Advance(part)));
         }
 
         await Task.WhenAll(tasks);
@@ -142,7 +148,9 @@ public static partial class StagesFacade
         double overlap = 0.0,
         bool ignoreNormalMaps = false,
         bool singleMaterialPerPart = false,
-        bool downscaleAfterCap = false)
+        bool downscaleAfterCap = false,
+        Action<int>? onTilesCounted = null,
+        Action? onTileWritten = null)
     {
         var sw = new Stopwatch();
         var tilesBounds = new Dictionary<string, TileBounds>();
@@ -172,7 +180,9 @@ public static partial class StagesFacade
                 t.SingleMaterialPerPart = singleMaterialPerPart;
             }
 
+            onTilesCounted?.Invoke(1);
             mesh.WriteObj(Path.Combine(destPath, $"{mesh.Name}.obj"));
+            onTileWritten?.Invoke();
 
             return new Dictionary<string, TileBounds>
             {
@@ -222,6 +232,7 @@ public static partial class StagesFacade
         sw.Restart();
 
         var ms = meshes.ToArray();
+        onTilesCounted?.Invoke(ms.Length);
         var boundsMap = new ConcurrentDictionary<string, TileBounds>();
         var progress = 0;
         var lodName = Path.GetFileName(destPath);
@@ -248,6 +259,7 @@ public static partial class StagesFacade
             Console.WriteLine($" ?> [{m.DebugName}] Done in {sw.ElapsedMilliseconds - tileStart}ms");
 
             boundsMap[m.Name] = new TileBounds(m.Bounds, m.AverageEdgeLength, m.MaximumEdgeLength, m.FacesCount);
+            onTileWritten?.Invoke();
         });
 
         foreach (var kv in boundsMap)

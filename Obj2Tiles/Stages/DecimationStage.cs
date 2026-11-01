@@ -10,8 +10,10 @@ namespace Obj2Tiles.Stages;
 public static partial class StagesFacade
 {
     public static async Task<DecimateResult> Decimate(string sourcePath, string destPath, int lods,
-        DecimationMode mode = DecimationMode.Standard, bool ignoreNormalMaps = false)
+        DecimationMode mode = DecimationMode.Standard, bool ignoreNormalMaps = false, ProgressReporter? progress = null)
     {
+        // One step per LOD: LOD-0 is the copied source, every other LOD a decimated mesh.
+        var counter = progress?.Begin("decimation", lods);
 
         var qualities = Enumerable.Range(0, lods - 1).Select(i => 1.0f - ((i + 1) / (float)lods)).ToArray();
 
@@ -24,6 +26,7 @@ public static partial class StagesFacade
         File.Copy(sourcePath, originalSourceFile, true);
 
         var destFiles = new List<string> { originalSourceFile };
+        counter?.Advance();
 
         var tasks = new List<Task>();
 
@@ -37,7 +40,11 @@ public static partial class StagesFacade
 
             Console.WriteLine(" -> Decimating mesh {0} with quality {1:0.00}", fileName, quality);
 
-            tasks.Add(Task.Run(() => InternalDecimate(sourceObjMesh, destFile, quality, mode)));
+            tasks.Add(Task.Run(() =>
+            {
+                InternalDecimate(sourceObjMesh, destFile, quality, mode);
+                counter?.Advance();
+            }));
 
             destFiles.Add(destFile);
         }

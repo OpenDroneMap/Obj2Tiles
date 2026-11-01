@@ -192,6 +192,9 @@ public sealed class Options
     [Option("overlap", Required = false, HelpText = "Overlap distance between adjacent split tiles, in mesh units. Default 0.0 disables overlap entirely (tiles share an exact boundary). When > 0, each tile is extended past the split plane by this amount, so adjacent tiles carry a redundant band of duplicated surface at the seam - this hides sub-pixel precision gaps at the cost of extra geometry. Each overlapping tile is also nudged by a small random per-axis offset (up to 1e-4 of the tile's bounding-box diagonal, and never more than 20% of the overlap) to avoid z-fighting between the coincident duplicated surfaces.", Default = 0.0)]
     public double Overlap { get; set; }
 
+    [Option("progress", Required = false, HelpText = "Also writes machine-readable progress to stdout: one JSON object per line, e.g. {\"stage\":\"splitting\",\"lod\":0,\"done\":5,\"total\":64,\"percent\":37.5}, ending with {\"stage\":\"done\",...} or {\"stage\":\"error\",\"message\":...}. Stages are decimation, splitting, root (the root tile), tiling and packing (for .3tz). The usual log lines are unchanged and never start with '{', so keep the lines that do.", Default = false)]
+    public bool Progress { get; set; }
+
     [JsonIgnore]
     public bool EffectiveZSplit => ZSplit && !NoZSplit;
 

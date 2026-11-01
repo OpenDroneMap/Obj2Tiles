@@ -123,6 +123,7 @@ By default Obj2Tiles writes a loose folder tree (`tileset.json`, `LOD-*/` and `r
 | `--error-factor` | `0.1` (`*BoundingBoxDiagonal`) / `1.0` (`*AverageEdgeLength`, `*MaximumEdgeLength`) | Multiplier applied to the metric selected by `--error-estimation-mode` | `--error-factor 0.3` |
 | `--use-system-temp` | `false` | Use the system temp folder for intermediate files instead of the output folder | `--use-system-temp` |
 | `--keep-intermediate` | `false` | Keep intermediate files (decimated OBJs, split tiles) for debugging | `--keep-intermediate` |
+| `--progress` | `false` | Also write machine-readable progress on stdout, one JSON object per line: `{"stage":"decimation\|splitting\|root\|tiling\|packing","done":n,"total":m,"percent":p}` (splitting lines also carry `"lod"`; there done/total count that LOD's tiles and percent is the whole stage, each LOD weighing the same; the first splitting line, without `"lod"`, counts the LODs), ending with `{"stage":"done","percent":100,"elapsed":s}` or `{"stage":"error","message":"..."}`. Stages are `decimation`, `splitting`, `root` (the root tile), `tiling` and `packing` (for `.3tz`). The usual log lines are unchanged and never start with `{`: keep the lines that do | `--progress` |
 | `--help` |  | Display help screen | `--help` |
 | `--version` |  | Display version information | `--version` |
 

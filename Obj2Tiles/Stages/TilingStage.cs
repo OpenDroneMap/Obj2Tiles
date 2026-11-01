@@ -15,14 +15,20 @@ public static partial class StagesFacade
     public static void Tile(string sourcePath, string destPath, int lods, double? baseError, Dictionary<string, TileBounds>[] boundsMapper,
         GpsCoords? coords = null, bool localMode = false, bool isOctree = false,
         ErrorEstimationMode errorEstimationMode = ErrorEstimationMode.AverageEdgeLength, double? errorFactor = null,
-        bool useGlb = false, double lodTextureScale = 1.0, string? rootSourceObj = null, GltfConverterOptions? gltfOptions = null)
+        bool useGlb = false, double lodTextureScale = 1.0, string? rootSourceObj = null, GltfConverterOptions? gltfOptions = null,
+        ProgressReporter? progress = null)
     {
 
         Console.WriteLine(" ?> Working on objs conversion");
 
         var tileExtension = useGlb ? ".glb" : ".b3dm";
 
-        ConvertAllTiles(sourcePath, destPath, lods, useGlb, gltfOptions);
+        // The mesh of the root tile, when there is one.
+        var rootSource = rootSourceObj != null && File.Exists(rootSourceObj) ? rootSourceObj : null;
+
+        // One step per converted tile, plus the root tile when there is one.
+        ConvertAllTiles(sourcePath, destPath, lods, useGlb, gltfOptions,
+            progress == null ? null : count => progress.Begin("tiling", count + (rootSource != null ? 1 : 0)), out var counter);
 
         // Give the tileset root renderable content. The root tile spans the whole model but, in an
         // octree/multi-tile layout, its geometry lives only in the child tiles, leaving the root
@@ -34,28 +40,30 @@ public static partial class StagesFacade
         string? rootContentUri = null;
         TileBounds? rootBounds = null;
 
-        if (rootSourceObj != null && File.Exists(rootSourceObj))
+        if (rootSource != null)
         {
             try
             {
                 var rootFileName = "root" + tileExtension;
                 var rootTile = Path.Combine(destPath, rootFileName);
                 if (useGlb)
-                    Utils.ConvertGlb(rootSourceObj, rootTile, gltfOptions);
+                    Utils.ConvertGlb(rootSource, rootTile, gltfOptions);
                 else
-                    Utils.ConvertB3dm(rootSourceObj, rootTile, gltfOptions);
+                    Utils.ConvertB3dm(rootSource, rootTile, gltfOptions);
                 rootContentUri = rootFileName;
 
-                var rootMesh = MeshUtils.LoadMesh(rootSourceObj, out _, false);
+                var rootMesh = MeshUtils.LoadMesh(rootSource, out _, false);
                 rootBounds = new TileBounds(rootMesh.Bounds, rootMesh.AverageEdgeLength,
                     rootMesh.MaximumEdgeLength, rootMesh.FacesCount);
 
-                Console.WriteLine($" ?> Generated root content from '{Path.GetFileName(rootSourceObj)}'");
+                Console.WriteLine($" ?> Generated root content from '{Path.GetFileName(rootSource)}'");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($" !> Could not generate root content ({ex.Message}); the root tile will be empty.");
             }
+
+            counter?.Advance();
         }
 
         Console.WriteLine(" -> Generating tileset.json");
@@ -386,7 +394,8 @@ public static partial class StagesFacade
         return totalFaces == 0 ? 0 : weightedSum / totalFaces;
     }
 
-    private static void ConvertAllTiles(string sourcePath, string destPath, int lods, bool useGlb, GltfConverterOptions? gltfOptions = null)
+    private static void ConvertAllTiles(string sourcePath, string destPath, int lods, bool useGlb, GltfConverterOptions? gltfOptions,
+        Func<int, ProgressReporter.StageCounter>? beginProgress, out ProgressReporter.StageCounter? counter)
     {
         var tileExtension = useGlb ? ".glb" : ".b3dm";
         var filesToConvert = new List<Tuple<string, string>>();
@@ -405,6 +414,9 @@ public static partial class StagesFacade
             }
         }
 
+        var stageCounter = beginProgress?.Invoke(filesToConvert.Count);
+        counter = stageCounter;
+
         Parallel.ForEach(filesToConvert, (file) =>
         {
             Console.WriteLine($" -> Converting to {tileExtension.TrimStart('.')} '{file.Item1}'");
@@ -413,6 +425,8 @@ public static partial class StagesFacade
                 Utils.ConvertGlb(file.Item1, file.Item2, gltfOptions);
             else
                 Utils.ConvertB3dm(file.Item1, file.Item2, gltfOptions);
+
+            stageCounter?.Advance();
         });
     }
 
