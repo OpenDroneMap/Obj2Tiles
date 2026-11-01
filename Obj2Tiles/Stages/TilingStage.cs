@@ -417,7 +417,14 @@ public static partial class StagesFacade
         var stageCounter = beginProgress?.Invoke(filesToConvert.Count);
         counter = stageCounter;
 
-        Parallel.ForEach(filesToConvert, (file) =>
+        // One conversion per core. Without a cap Parallel.ForEach runs as many as the thread pool has
+        // threads, and earlier stages that block on file I/O (the textures of the root tile, written in
+        // parallel) leave the pool larger than the core count: the CPU-bound conversions then contend
+        // for the cores (an ODM model of 323K faces: tiling 17.5 s before the root textures were
+        // parallel, 21.5 s after, 16.1 s with the cap).
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Parallel.ForEach(filesToConvert, options, (file) =>
         {
             Console.WriteLine($" -> Converting to {tileExtension.TrimStart('.')} '{file.Item1}'");
 
