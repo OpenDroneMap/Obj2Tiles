@@ -25,6 +25,9 @@ namespace SilentWave.Obj2Gltf.Ktx2
 
         private const int KTX_TEXTURE_CREATE_ALLOC_STORAGE = 1;
         private const int KTX_SUCCESS = 0;
+        // ktx_basis_codec (libktx 5.0, which replaced the uastc flag of ktxBasisParams)
+        private const uint KTX_BASIS_CODEC_ETC1S = 1;
+        private const uint KTX_BASIS_CODEC_UASTC_LDR_4x4 = 2;
 
         // Bound the number of images encoded concurrently. libktx's Basis encoder is thread-safe for
         // concurrent per-texture calls once its one-time (non-thread-safe) global init has run - which
@@ -63,12 +66,12 @@ namespace SilentWave.Obj2Gltf.Ktx2
         private struct KtxBasisParams
         {
             public uint structSize;
-            public byte uastc;
+            public uint codec;           // ktx_basis_codec: KTX_BASIS_CODEC_ETC1S or KTX_BASIS_CODEC_UASTC_LDR_4x4
             public byte verbose;
             public byte noSSE;
             public uint threadCount;
             // ETC1S params
-            public uint compressionLevel;
+            public uint etc1sCompressionLevel;
             public uint qualityLevel;
             public uint maxEndpoints;
             public float endpointRDOThreshold;
@@ -92,6 +95,13 @@ namespace SilentWave.Obj2Gltf.Ktx2
             public float uastcRDOMaxSmoothBlockStdDev;
             public byte uastcRDODontFavorSimplerModes;
             public byte uastcRDONoMultithreading;
+            // UASTC HDR params (libktx 5.0): unused for the LDR textures encoded here
+            public uint uastcHDRQuality;
+            public byte uastcHDRUberMode;
+            public byte uastcHDRUltraQuant;
+            public byte uastcHDRFavorAstc;
+            public float uastcHDRLambda;
+            public uint uastcHDRLevel;
         }
 
         [DllImport("ktx", CallingConvention = CallingConvention.Cdecl)]
@@ -387,7 +397,7 @@ namespace SilentWave.Obj2Gltf.Ktx2
             var p = new KtxBasisParams
             {
                 structSize = (uint)Marshal.SizeOf<KtxBasisParams>(),
-                uastc = (byte)(uastc ? 1 : 0),
+                codec = uastc ? KTX_BASIS_CODEC_UASTC_LDR_4x4 : KTX_BASIS_CODEC_ETC1S,
                 threadCount = threads
             };
             if (uastc)
@@ -397,7 +407,7 @@ namespace SilentWave.Obj2Gltf.Ktx2
             }
             else
             {
-                p.compressionLevel = (uint)Math.Clamp(options.Ktx2CompressionLevel, 0, 6);
+                p.etc1sCompressionLevel = (uint)Math.Clamp(options.Ktx2CompressionLevel, 0, 6);
                 p.qualityLevel = (uint)Math.Clamp(options.Ktx2QualityLevel, 1, 255);
             }
             return p;

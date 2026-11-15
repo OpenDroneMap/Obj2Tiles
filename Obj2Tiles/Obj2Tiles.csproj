@@ -35,13 +35,14 @@
       The vendored libraries live in native/<rid>/ and are only copied when publishing for a specific
       runtime; a plain `dotnet build` (no RID) resolves libktx from OBJ2TILES_KTX / PATH instead.
 
-      Sources (KTX-Software v4.4.2, Apache-2.0):
-        win-x64      ktx.dll     <- KTX-Software-4.4.2-Windows-x64.exe    (bin/ktx.dll)
-        win-arm64    ktx.dll     <- KTX-Software-4.4.2-Windows-arm64.exe  (bin/ktx.dll)
-        linux-x64    libktx.so   <- KTX-Software-4.4.2-Linux-x86_64.tar.bz2  (lib/libktx.so.4.4.2)
-        linux-arm64  libktx.so   <- KTX-Software-4.4.2-Linux-arm64.tar.bz2   (lib/libktx.so.4.4.2)
-        osx-x64      libktx.dylib<- KTX-Software-4.4.2-Darwin-x86_64.pkg   (lib/libktx.4.4.2.dylib)
-        osx-arm64    libktx.dylib<- KTX-Software-4.4.2-Darwin-arm64.pkg    (lib/libktx.4.4.2.dylib)
+      Sources (KTX-Software v5.0.0-rc2, Apache-2.0; 4.4.2's Basis Universal encoder could hang for ever
+      when a multi-threaded encode ended, its job pool's stop flag set without its lock):
+        win-x64      ktx.dll     <- KTX-Software-5.0.0-rc2-Windows-x64.exe    (bin/ktx.dll)
+        win-arm64    ktx.dll     <- KTX-Software-5.0.0-rc2-Windows-arm64.exe  (bin/ktx.dll)
+        linux-x64    libktx.so   <- KTX-Software-5.0.0-rc2-Linux-x86_64.tar.bz2  (lib/libktx.so.5.0.0)
+        linux-arm64  libktx.so   <- KTX-Software-5.0.0-rc2-Linux-arm64.tar.bz2   (lib/libktx.so.5.0.0)
+        osx-x64      libktx.dylib<- KTX-Software-5.0.0-rc2-Darwin-x86_64.pkg   (lib/libktx.5.0.0.dylib)
+        osx-arm64    libktx.dylib<- KTX-Software-5.0.0-rc2-Darwin-arm64.pkg    (lib/libktx.5.0.0.dylib)
 
       To refresh these libraries (download + verify + extract for all RIDs), run:
         pwsh native/update-libktx.ps1            (use -Version to bump; -? for help)

@@ -257,7 +257,7 @@ Not all renderers support `KHR_texture_basisu`. Verified to work: CesiumJS, Cesi
 
 ### Bundled native library (libktx)
 
-Encoding runs **in-process** via the KTX-Software C library (libktx v4.4.2, Apache-2.0) through P/Invoke - no external tool is executed and no installation is required. The published single-file binaries bundle the matching native library for each platform:
+Encoding runs **in-process** via the KTX-Software C library (libktx v5.0.0-rc2, Apache-2.0) through P/Invoke - no external tool is executed and no installation is required. The published single-file binaries bundle the matching native library for each platform:
 
 | Platform | File | Size |
 |----------|------|------|

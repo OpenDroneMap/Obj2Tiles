@@ -33,7 +33,7 @@
     Set $env:GITHUB_TOKEN to raise the anonymous GitHub API rate limit if needed.
 
 .PARAMETER Version
-    KTX-Software release version to vendor. Default: 4.4.2.
+    KTX-Software release version to vendor (a pre-release such as 5.0.0-rc2 too). Default: 5.0.0-rc2.
 
 .PARAMETER Rid
     One or more runtime identifiers to refresh. Default: all six supported RIDs.
@@ -46,12 +46,12 @@
     Refreshes every vendored libktx to the default version.
 
 .EXAMPLE
-    ./update-libktx.ps1 -Version 4.4.2 -Rid linux-x64,linux-arm64
+    ./update-libktx.ps1 -Version 5.0.0-rc2 -Rid linux-x64,linux-arm64
     Refreshes only the Linux libraries (no 7-Zip required).
 #>
 [CmdletBinding()]
 param(
-    [string]$Version = '4.4.2',
+    [string]$Version = '5.0.0-rc2',
 
     [ValidateSet('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')]
     [string[]]$Rid = @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64'),
@@ -67,14 +67,17 @@ $NativeRoot = $PSScriptRoot
 $Repo = 'KhronosGroup/KTX-Software'
 $UserAgent = 'Obj2Tiles-update-libktx'
 
+# The libraries carry the version without its pre-release suffix (5.0.0-rc2 ships libktx.so.5.0.0)
+$LibVersion = ($Version -split '-')[0]
+
 # RID -> { release asset, extracted-file name to locate, vendored output name }
 $Targets = [ordered]@{
     'win-x64'     = @{ Asset = "KTX-Software-$Version-Windows-x64.exe";      Find = 'ktx.dll';               Out = 'ktx.dll' }
     'win-arm64'   = @{ Asset = "KTX-Software-$Version-Windows-arm64.exe";    Find = 'ktx.dll';               Out = 'ktx.dll' }
-    'linux-x64'   = @{ Asset = "KTX-Software-$Version-Linux-x86_64.tar.bz2"; Find = "libktx.so.$Version";    Out = 'libktx.so' }
-    'linux-arm64' = @{ Asset = "KTX-Software-$Version-Linux-arm64.tar.bz2";  Find = "libktx.so.$Version";    Out = 'libktx.so' }
-    'osx-x64'     = @{ Asset = "KTX-Software-$Version-Darwin-x86_64.pkg";    Find = "libktx.$Version.dylib"; Out = 'libktx.dylib' }
-    'osx-arm64'   = @{ Asset = "KTX-Software-$Version-Darwin-arm64.pkg";     Find = "libktx.$Version.dylib"; Out = 'libktx.dylib' }
+    'linux-x64'   = @{ Asset = "KTX-Software-$Version-Linux-x86_64.tar.bz2"; Find = "libktx.so.$LibVersion"; Out = 'libktx.so' }
+    'linux-arm64' = @{ Asset = "KTX-Software-$Version-Linux-arm64.tar.bz2";  Find = "libktx.so.$LibVersion"; Out = 'libktx.so' }
+    'osx-x64'     = @{ Asset = "KTX-Software-$Version-Darwin-x86_64.pkg";    Find = "libktx.$LibVersion.dylib"; Out = 'libktx.dylib' }
+    'osx-arm64'   = @{ Asset = "KTX-Software-$Version-Darwin-arm64.pkg";     Find = "libktx.$LibVersion.dylib"; Out = 'libktx.dylib' }
 }
 
 function Get-SevenZip {
@@ -179,18 +182,24 @@ function Expand-NativeLib {
         throw "Could not unpack $asset.$hint"
     }
 
+    # Each round unpacks every nested container found (a 5.0 .pkg holds several component packages:
+    # dev, jni, library, tools), so the depth, not the count of containers, bounds the rounds
     for ($i = 0; $i -lt 8; $i++) {
         $hit = Get-ExtractedFile $dest $Spec.Find
         if ($hit) { return $hit.FullName }
 
-        $nested = Get-ChildItem -LiteralPath $dest -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -in @('Payload', 'Payload~') -or $_.Extension -in @('.cpio', '.gz', '.xar', '.tar') } |
-            Select-Object -First 1
-        if (-not $nested) { break }
+        $nested = @(Get-ChildItem -LiteralPath $dest -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -in @('Payload', 'Payload~') -or $_.Extension -in @('.cpio', '.gz', '.xar', '.tar') })
+        if ($nested.Count -eq 0) { break }
 
-        $sub = Join-Path $dest "nested$i"
-        if (-not (Expand-Container $nested.FullName $sub)) { break }
-        Remove-Item -LiteralPath $nested.FullName -Force -ErrorAction SilentlyContinue
+        $j = 0
+        foreach ($container in $nested) {
+            $sub = Join-Path $dest "nested$i-$j"
+            $j++
+            if (Expand-Container $container.FullName $sub) {
+                Remove-Item -LiteralPath $container.FullName -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 
     throw "Could not locate '$($Spec.Find)' inside $asset after extraction."
