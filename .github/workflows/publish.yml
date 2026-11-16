@@ -45,6 +45,16 @@ jobs:
       run: cd Obj2Tiles/bin/Release/net10.0/publish/osx-x64/ && zip -r ../../../../../../Obj2Tiles-Osx64.zip *
     - name: Zip osx-arm64
       run: cd Obj2Tiles/bin/Release/net10.0/publish/osx-arm64/ && zip -r ../../../../../../Obj2Tiles-OsxArm64.zip *
+    - name: Check that every zip has its native libktx
+      # The single-file bundler of a newer SDK can drop a native library from the publish without failing it
+      # (NETSDK1236): a release without libktx cannot write KTX2 textures
+      run: |
+        set -e
+        for pair in Win64:ktx.dll WinArm64:ktx.dll Linux64:libktx.so LinuxArm64:libktx.so Osx64:libktx.dylib OsxArm64:libktx.dylib; do
+          zip="Obj2Tiles-${pair%%:*}.zip"; lib="${pair##*:}"
+          unzip -l "$zip" | grep -qE " ${lib}$" || { echo "::error::$zip has no $lib"; exit 1; }
+          echo "$zip has $lib"
+        done
       
     - name: Release
       uses: softprops/action-gh-release@v1

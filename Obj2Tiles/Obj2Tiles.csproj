@@ -48,10 +48,14 @@
         pwsh native/update-libktx.ps1            (use -Version to bump; -? for help)
     -->
     <ItemGroup Condition="'$(RuntimeIdentifier)' != '' And Exists('$(MSBuildProjectDirectory)/native/$(RuntimeIdentifier)')">
+      <!-- ExcludeFromSingleFile: next to the single-file executable, never in its bundle. Without it the
+           bundler of the .NET 11 SDK dropped ktx.dll from the Windows publish altogether (NETSDK1236), and
+           the v1.10.0 Windows zips had no libktx -->
       <None Include="native/$(RuntimeIdentifier)/*">
         <Link>%(Filename)%(Extension)</Link>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </None>
     </ItemGroup>
 
