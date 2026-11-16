@@ -268,11 +268,13 @@ Encoding runs **in-process** via the KTX-Software C library (libktx v5.0.0-rc2, 
 | macOS x64 | `libktx.dylib` | 2.67 MB |
 | macOS ARM64 (Apple Silicon) | `libktx.dylib` | 2.38 MB |
 
+libktx includes code of other projects (Basis Universal, astc-encoder, Zstandard, the Ericsson ETC decoder and others): their licences and notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which each release ships.
+
 For `dotnet build` without a RID (development builds), the library is resolved in order from: `--ktx-path` / `OBJ2TILES_KTX` environment variable, the executable directory, and finally the system `PATH`.
 
 ### Updating libktx
 
-To refresh the vendored libraries to a new KTX-Software release, run the PowerShell script bundled in the repository:
+To refresh the vendored libraries to a new KTX-Software release, run the PowerShell script bundled in the repository (then check the libktx section of THIRD_PARTY_NOTICES.md against the `LICENSES` and `REUSE.toml` of the new release):
 
 ```powershell
 # Refresh all 6 platforms to the default version
