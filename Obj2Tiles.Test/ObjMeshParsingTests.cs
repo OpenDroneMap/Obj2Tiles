@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -214,5 +215,110 @@ public class ObjMeshParsingTests
             File.Delete(tempFile);
             File.Delete(roundTripFile);
         }
+    }
+
+    // --- Statements of exporters that write several objects ---
+
+    private static ObjMesh ReadText(string obj)
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, obj);
+            var mesh = new ObjMesh();
+            mesh.ReadFile(file);
+            return mesh;
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    private static ObjMesh RoundTrip(ObjMesh mesh)
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            mesh.WriteFile(file);
+            var read = new ObjMesh();
+            read.ReadFile(file);
+            return read;
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Test]
+    public void ReadFile_TextureCoordinatesOnlyAfterSomeFaces_StayAtTheirVertices()
+    {
+        // As Blender writes an untextured object, then a textured one: the vt lines come after faces.
+        var mesh = ReadText(
+            "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n" +
+            "v 5 0 0\nv 6 0 0\nv 5 1 0\nvt 0.25 0.5\nvt 0.75 0.5\nvt 0.25 1\nf 4/1 5/2 6/3\n");
+
+        mesh.Vertices!.Length.ShouldBe(6);
+        mesh.TexCoords2D.ShouldNotBeNull();
+        mesh.TexCoords2D!.Length.ShouldBe(6);
+
+        // The untextured object's vertices get the default coordinate (0, 0).
+        var expected = new Dictionary<(double X, double Y), (float U, float V)>
+        {
+            [(0, 0)] = (0, 0), [(1, 0)] = (0, 0), [(0, 1)] = (0, 0),
+            [(5, 0)] = (0.25f, 0.5f), [(6, 0)] = (0.75f, 0.5f), [(5, 1)] = (0.25f, 1)
+        };
+        for (var i = 0; i < 6; i++)
+            (mesh.TexCoords2D[i].x, mesh.TexCoords2D[i].y)
+                .ShouldBe(expected[(mesh.Vertices[i].x, mesh.Vertices[i].y)], $"vertex {i}");
+    }
+
+    [Test]
+    public void ReadFile_NormalsOnlyAfterSomeFaces_StayAtTheirVertices()
+    {
+        var mesh = ReadText(
+            "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n" +
+            "v 5 0 0\nv 6 0 0\nv 5 1 0\nvn 0 0 1\nf 4//1 5//1 6//1\n");
+
+        mesh.Normals.ShouldNotBeNull();
+        mesh.Normals!.Length.ShouldBe(mesh.Vertices!.Length);
+        mesh.Normals.Count(n => n.z == 1).ShouldBe(3);
+    }
+
+    [Test]
+    public void ReadFile_FacesBeforeTheFirstUsemtl_HaveNoMaterial()
+    {
+        var mesh = ReadText(
+            "v 0 0 0\nv 1 0 0\nv 0 1 0\nv 1 1 0\n" +
+            "f 1 2 3\nusemtl A\nf 2 4 3\n");
+
+        mesh.SubMeshMaterials.ShouldBe(new[] { null, "A" });
+        mesh.SubMeshIndices!.Length.ShouldBe(2);
+
+        var read = RoundTrip(mesh);
+        read.SubMeshMaterials.ShouldBe(new[] { null, "A" });
+        read.SubMeshIndices!.Select(s => s.Length).ShouldBe(new[] { 3, 3 });
+    }
+
+    [Test]
+    public void ReadFile_UsemtlWithoutFaces_DoesNotShiftTheNamesOfTheNextSubMeshes()
+    {
+        var mesh = ReadText(
+            "v 0 0 0\nv 1 0 0\nv 0 1 0\nv 1 1 0\n" +
+            "usemtl Unused\nusemtl A\nf 1 2 3\nusemtl B\nf 2 4 3\n");
+
+        mesh.SubMeshMaterials.ShouldBe(new[] { "A", "B" });
+    }
+
+    [Test]
+    public void ReadFile_MaterialNameWithSpaces_IsTheRestOfTheLine()
+    {
+        var mesh = ReadText(
+            "v 0 0 0\nv 1 0 0\nv 0 1 0\nv 1 1 0\n" +
+            "usemtl Paint 1  Carmine \nf 1 2 3\nusemtl Body\nf 2 4 3\n");
+
+        mesh.SubMeshMaterials.ShouldBe(new[] { "Paint 1  Carmine", "Body" });
+        RoundTrip(mesh).SubMeshMaterials.ShouldBe(new[] { "Paint 1  Carmine", "Body" });
     }
 }

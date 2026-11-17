@@ -522,6 +522,14 @@ public class MeshT : IMesh
             if (facesIndexes.Count == 0)
                 continue;
 
+            // A material without texture has no atlas: its faces keep their texture coordinates, which must
+            // move to the new list as the coordinates of the packed faces do.
+            if (material.Texture == null && material.NormalMap == null)
+            {
+                KeepTextureVertices(facesIndexes, newTextureVertices);
+                continue;
+            }
+
             var edgesMapper = GetEdgesMapper(facesIndexes, canonicalIndex);
             var facesMapper = GetFacesMapper(edgesMapper);
             var clusters = GetFacesClusters(facesIndexes, facesMapper);
@@ -544,6 +552,17 @@ public class MeshT : IMesh
                 Console.WriteLine($" -> [{DebugName}] Saving texture atlases... ({saveSw.Elapsed.TotalSeconds:F0}s)");
                 nextSaveProgressMs += 5000;
             }
+        }
+    }
+
+    private void KeepTextureVertices(IEnumerable<int> facesIndexes, IDictionary<Vertex2, int> newTextureVertices)
+    {
+        foreach (var faceIndex in facesIndexes)
+        {
+            var face = _faces[faceIndex];
+            face.TextureIndexA = newTextureVertices.AddIndex(_textureVertices[face.TextureIndexA]);
+            face.TextureIndexB = newTextureVertices.AddIndex(_textureVertices[face.TextureIndexB]);
+            face.TextureIndexC = newTextureVertices.AddIndex(_textureVertices[face.TextureIndexC]);
         }
     }
 

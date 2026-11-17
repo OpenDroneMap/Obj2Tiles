@@ -20,4 +20,15 @@ public static class Extenders
         return dictionary.Count - 1;
 
     }
+
+    /// <summary>
+    /// Appends <paramref name="value"/> to <paramref name="list"/> until it has <paramref name="count"/> items:
+    /// a per-vertex attribute that only some vertices of a model give (a colour, a normal, a texture coordinate)
+    /// is given this default for the others, so the attribute of a vertex stays at the index of the vertex.
+    /// </summary>
+    public static void PadTo<T>(this List<T> list, int count, T value)
+    {
+        while (list.Count < count)
+            list.Add(value);
+    }
 }
