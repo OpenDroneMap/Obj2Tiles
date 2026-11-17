@@ -408,6 +408,11 @@ public static class TilesetInspector
                 !(e.TextureFormat == QualityTextureFormat.Jpeg && IsLod0RepackTile(uri)))
                 problems.Add($"{uri}: image mimeType '{mime}' mismatches --texture-format {e.TextureFormat}");
 
+            // KHR_texture_basisu: the GPU formats a KTX2 image is transcoded to are made of 4x4 blocks, and
+            // WebGL rejects a BC (S3TC) texture of another size, which viewers then show black.
+            if (format == ImageFormat.Ktx2 && (w % 4 != 0 || h % 4 != 0))
+                problems.Add($"{uri}: KTX2 image {w}x{h} is not a multiple of 4 in width and height (KHR_texture_basisu)");
+
             if (w > 0 && e.MaxTextureSize > 0 && Math.Max(w, h) > e.MaxTextureSize + 4)
                 problems.Add($"{uri}: image {w}x{h} exceeds --max-texture-size {e.MaxTextureSize}");
         }
