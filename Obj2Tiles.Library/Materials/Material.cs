@@ -171,10 +171,7 @@ public class Material : ICloneable
             if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line))
                 continue;
 
-            var lineTrimmed = line.Trim();
-            var spaceIdx = lineTrimmed.IndexOf(' ');
-            var keyword = spaceIdx >= 0 ? lineTrimmed[..spaceIdx] : lineTrimmed;
-            var remainder = spaceIdx >= 0 ? lineTrimmed[(spaceIdx + 1)..] : string.Empty;
+            var (keyword, remainder) = ObjStatement.Split(line);
             var parts = remainder.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             switch (keyword)
@@ -184,7 +181,7 @@ public class Material : ICloneable
                         materials.Add(new Material(name, texture, normalMap, ambientColor, diffuseColor, specularColor,
                             specularExponent, dissolve, illuminationModel));
 
-                    name = remainder.Trim();
+                    name = remainder;
                     texture = null;
                     normalMap = null;
                     ambientColor = null;

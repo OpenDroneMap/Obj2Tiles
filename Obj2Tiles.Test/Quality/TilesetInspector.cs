@@ -408,6 +408,11 @@ public static class TilesetInspector
                 !(e.TextureFormat == QualityTextureFormat.Jpeg && IsLod0RepackTile(uri)))
                 problems.Add($"{uri}: image mimeType '{mime}' mismatches --texture-format {e.TextureFormat}");
 
+            // KHR_texture_basisu: the GPU formats a KTX2 image is transcoded to are made of 4x4 blocks, and
+            // WebGL rejects a BC (S3TC) texture of another size, which viewers then show black.
+            if (format == ImageFormat.Ktx2 && (w % 4 != 0 || h % 4 != 0))
+                problems.Add($"{uri}: KTX2 image {w}x{h} is not a multiple of 4 in width and height (KHR_texture_basisu)");
+
             if (w > 0 && e.MaxTextureSize > 0 && Math.Max(w, h) > e.MaxTextureSize + 4)
                 problems.Add($"{uri}: image {w}x{h} exceeds --max-texture-size {e.MaxTextureSize}");
         }
@@ -450,6 +455,35 @@ public static class TilesetInspector
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// The triangles of each material (by name) in the b3dm tiles of one folder of a tileset directory, such as
+    /// "LOD-0" for the finest level: what a level shows of each part of the model.
+    /// </summary>
+    public static Dictionary<string, int> TrianglesByMaterial(string output, string levelFolder)
+    {
+        var triangles = new Dictionary<string, int>(StringComparer.Ordinal);
+        var problems = new List<string>();
+
+        foreach (var file in Directory.GetFiles(Path.Combine(output, levelFolder), "*.b3dm"))
+        {
+            var glb = TryParseB3dm(File.ReadAllBytes(file), file, problems)
+                      ?? throw new InvalidDataException(string.Join("; ", problems));
+            var materials = glb.Json["materials"] as JArray;
+
+            foreach (var primitive in glb.Json["meshes"]?.SelectMany(m => m["primitives"] ?? new JArray()) ?? [])
+            {
+                var material = primitive["material"]?.Value<int>() is { } index
+                    ? materials?[index]?["name"]?.Value<string>() ?? $"#{index}"
+                    : "";
+                var counted = primitive["indices"] ?? primitive["attributes"]?["POSITION"];
+                var count = glb.Json["accessors"]?[counted!.Value<int>()]?["count"]?.Value<int>() ?? 0;
+                triangles[material] = triangles.GetValueOrDefault(material) + count / 3;
+            }
+        }
+
+        return triangles;
     }
 
     // ---- b3dm / GLB framing ----------------------------------------------------------

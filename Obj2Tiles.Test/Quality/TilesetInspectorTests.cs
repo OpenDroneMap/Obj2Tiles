@@ -55,14 +55,17 @@ public class TilesetInspectorTests
     }
 
     // One JPEG image and the given primitive material indices; materials[0] is the unreferenced "default".
-    private static string WriteTileset(string name, params int[] primitiveMaterials)
+    private static string WriteTileset(string name, params int[] primitiveMaterials) =>
+        WriteTileset(name, JpegStub, primitiveMaterials);
+
+    private static string WriteTileset(string name, byte[] image, params int[] primitiveMaterials)
     {
         var gltf = new JObject
         {
             ["asset"] = new JObject { ["version"] = "2.0" },
             ["images"] = new JArray(new JObject { ["bufferView"] = 0 }),
-            ["bufferViews"] = new JArray(new JObject { ["buffer"] = 0, ["byteOffset"] = 0, ["byteLength"] = JpegStub.Length }),
-            ["buffers"] = new JArray(new JObject { ["byteLength"] = JpegStub.Length }),
+            ["bufferViews"] = new JArray(new JObject { ["buffer"] = 0, ["byteOffset"] = 0, ["byteLength"] = image.Length }),
+            ["buffers"] = new JArray(new JObject { ["byteLength"] = image.Length }),
             ["materials"] = new JArray(new JObject { ["name"] = "default" }, new JObject { ["name"] = "a" }, new JObject { ["name"] = "b" }),
             ["meshes"] = new JArray(new JObject
             {
@@ -74,7 +77,7 @@ public class TilesetInspectorTests
         if (Directory.Exists(dir)) Directory.Delete(dir, true);
         Directory.CreateDirectory(Path.Combine(dir, "LOD-0"));
 
-        File.WriteAllBytes(Path.Combine(dir, "LOD-0", "Mesh.b3dm"), B3dmWithGlb(gltf, JpegStub));
+        File.WriteAllBytes(Path.Combine(dir, "LOD-0", "Mesh.b3dm"), B3dmWithGlb(gltf, image));
         File.WriteAllText(Path.Combine(dir, "tileset.json"),
             """
             { "asset": { "version": "1.0" }, "geometricError": 100,
@@ -124,6 +127,39 @@ public class TilesetInspectorTests
         var problems = TilesetInspector.Inspect(dir, Expect(e => e.SingleMaterialPerPart = true));
 
         problems.ShouldContain(p => p.Contains("2 materials although --single-material-per-part was set"));
+    }
+
+    // KTX 2.0 header with the given size: identifier, vkFormat, typeSize, pixelWidth, pixelHeight, then zeros.
+    private static byte[] Ktx2Header(int width, int height)
+    {
+        var header = new byte[48];
+        new byte[] { 0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a }.CopyTo(header, 0);
+        BitConverter.GetBytes((uint)width).CopyTo(header, 20);
+        BitConverter.GetBytes((uint)height).CopyTo(header, 24);
+        return header;
+    }
+
+    [TestCase(250, 250)]
+    [TestCase(256, 250)]
+    [TestCase(1, 1)]
+    public void Ktx2ImageNotMultipleOf4_isReported(int width, int height)
+    {
+        var dir = WriteTileset($"ktx2-{width}x{height}", Ktx2Header(width, height), 1);
+
+        var problems = TilesetInspector.Inspect(dir, Expect(e => e.TextureFormat = QualityTextureFormat.Ktx2));
+
+        problems.ShouldContain(p => p.Contains($"KTX2 image {width}x{height} is not a multiple of 4"));
+    }
+
+    [TestCase(252, 248)]
+    [TestCase(4, 4)]
+    public void Ktx2ImageMultipleOf4_isNotReported(int width, int height)
+    {
+        var dir = WriteTileset($"ktx2-{width}x{height}", Ktx2Header(width, height), 1);
+
+        var problems = TilesetInspector.Inspect(dir, Expect(e => e.TextureFormat = QualityTextureFormat.Ktx2));
+
+        problems.ShouldNotContain(p => p.Contains("is not a multiple of 4"));
     }
 
     // Minimal JPEG header (SOI + SOF0) the sniffer reads dimensions from.

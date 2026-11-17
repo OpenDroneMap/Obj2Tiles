@@ -258,7 +258,8 @@ public class ObjParsingTests
 
         var mesh = MeshUtils.LoadMesh(obj);
 
-        mesh.ShouldBeOfType<MeshT>();
+        // No material, so no texture: the texture coordinates are not kept.
+        mesh.ShouldBeOfType<Mesh>();
         // Without TrimStart, the second face (leading tabs) would be silently skipped.
         // With the fix, both faces are parsed.
         mesh.FacesCount.ShouldBe(2);

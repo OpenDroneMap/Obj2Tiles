@@ -336,6 +336,34 @@ public sealed class QualityDataset : IDisposable
             folder);
     }
 
+    /// <summary>
+    /// A model written by the test in a folder of its own: model.obj, model.mtl when given, and a PNG
+    /// texture (a colour gradient) of the given size for each texture name. Generated, not stored.
+    /// </summary>
+    public static QualityDataset Generated(string displayName, string obj, string? mtl = null,
+        params (string Name, int Width, int Height)[] textures)
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "obj2tiles_quality_gate",
+            displayName + "_" + CommonUtils.RandomString(8));
+        Directory.CreateDirectory(folder);
+
+        File.WriteAllText(Path.Combine(folder, "model.obj"), obj);
+        if (mtl != null)
+            File.WriteAllText(Path.Combine(folder, "model.mtl"), mtl);
+
+        foreach (var (name, width, height) in textures)
+        {
+            using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(width, height);
+            for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+                image[x, y] = new SixLabors.ImageSharp.PixelFormats.Rgba32(
+                    (byte)(255 * x / width), (byte)(255 * y / height), 128, 255);
+            SixLabors.ImageSharp.ImageExtensions.SaveAsPng(image, Path.Combine(folder, name));
+        }
+
+        return Open(Path.Combine(folder, "model.obj"), displayName, folder);
+    }
+
     private static IEnumerable<string> localCandidates(string relative)
     {
         var root = Environment.GetEnvironmentVariable(CliHarness.TestDataSetEnv);

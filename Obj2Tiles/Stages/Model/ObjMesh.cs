@@ -28,6 +28,7 @@ SOFTWARE.
 
 using System.Globalization;
 using MeshDecimatorCore.Math;
+using Obj2Tiles.Library;
 using Obj2Tiles.Library.Geometry;
 
 namespace Obj2Tiles.Stages.Model
@@ -99,7 +100,7 @@ namespace Obj2Tiles.Stages.Model
         private Vector2[]? texCoords2D = null;
         private Vector3[]? texCoords3D = null;
         private int[][]? subMeshIndices = null;
-        private string[]? subMeshMaterials = null;
+        private string?[]? subMeshMaterials = null;
 
         private string[]? materialLibraries = null;
 
@@ -229,24 +230,13 @@ namespace Obj2Tiles.Stages.Model
         }
 
         /// <summary>
-        /// Gets or sets the names of each sub-mesh material.
+        /// Gets or sets the names of each sub-mesh material. A name is null for the faces before the first usemtl
+        /// of a file, which have no material.
         /// </summary>
-        public string[]? SubMeshMaterials
+        public string?[]? SubMeshMaterials
         {
             get => subMeshMaterials;
-            set
-            {
-                if (value != null)
-                {
-                    for (int i = 0; i < value.Length; i++)
-                    {
-                        if (value[i] == null)
-                            throw new ArgumentException($"The sub-mesh material name at index {i} is null.", "value");
-                    }
-                }
-
-                subMeshMaterials = value;
-            }
+            set => subMeshMaterials = value;
         }
 
         /// <summary>
@@ -317,7 +307,7 @@ namespace Obj2Tiles.Stages.Model
             List<Vector3>? texCoordList = null;
             var triangleIndexList = new List<int>(IndexInitialCapacity);
             var subMeshIndicesList = new List<int[]>();
-            var subMeshMaterialList = new List<string>();
+            var subMeshMaterialList = new List<string?>();
             var faceTable = new Dictionary<FaceIndex, int>(IndexInitialCapacity);
             var tempFaceList = new List<int>(6);
             bool texCoordsAre3D = false;
@@ -355,8 +345,7 @@ namespace Obj2Tiles.Stages.Model
                         {
                             readColorList ??= new List<Vector4>(VertexInitialCapacity);
                             // Back-fill default white for any previous vertices that had no color
-                            while (readColorList.Count < readVertexList.Count - 1)
-                                readColorList.Add(new Vector4(1f, 1f, 1f, 1f));
+                            readColorList.PadTo(readVertexList.Count - 1, White);
                             float.TryParse(lineSplit[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var cr);
                             float.TryParse(lineSplit[5], NumberStyles.Float, CultureInfo.InvariantCulture, out var cg);
                             float.TryParse(lineSplit[6], NumberStyles.Float, CultureInfo.InvariantCulture, out var cb);
@@ -368,7 +357,7 @@ namespace Obj2Tiles.Stages.Model
                         else if (readColorList != null)
                         {
                             // Vertex without color after colors were already detected: pad with default white
-                            readColorList.Add(new Vector4(1f, 1f, 1f, 1f));
+                            readColorList.Add(White);
                         }
 
                         if (x < minX) minX = x; else if (x > maxX) maxX = x;
@@ -486,47 +475,20 @@ namespace Obj2Tiles.Stages.Model
 
                                 vertexList.Add(readVertexList[vertexIndex]);
 
+                                // An attribute (colour, normal, texture coordinate) can first appear after some
+                                // faces, as in a file of several objects of which only the last has texture
+                                // coordinates: the vertices made before it get its default, so the attribute of
+                                // each vertex stays at the vertex's index.
                                 if (readColorList != null)
-                                {
-                                    colorList ??= new List<Vector4>(VertexInitialCapacity);
-
-                                    if (vertexIndex >= 0 && vertexIndex < readColorList.Count)
-                                    {
-                                        colorList.Add(readColorList[vertexIndex]);
-                                    }
-                                    else
-                                    {
-                                        colorList.Add(new Vector4(1f, 1f, 1f, 1f));
-                                    }
-                                }
+                                    AddVertexAttribute(ref colorList, vertexList.Count, readColorList, vertexIndex, White);
 
                                 if (readNormalList != null)
-                                {
-                                    normalList ??= new List<Vector3>(VertexInitialCapacity);
-
-                                    if (normalIndex >= 0 && normalIndex < readNormalList.Count)
-                                    {
-                                        normalList.Add(readNormalList[normalIndex]);
-                                    }
-                                    else
-                                    {
-                                        normalList.Add(Vector3.zero);
-                                    }
-                                }
+                                    AddVertexAttribute(ref normalList, vertexList.Count, readNormalList, normalIndex,
+                                        Vector3.zero);
 
                                 if (readTexCoordList != null)
-                                {
-                                    texCoordList ??= new List<Vector3>(VertexInitialCapacity);
-
-                                    if (texIndex >= 0 && texIndex < readTexCoordList!.Count)
-                                    {
-                                        texCoordList.Add(readTexCoordList[texIndex]);
-                                    }
-                                    else
-                                    {
-                                        texCoordList.Add(Vector3.zero);
-                                    }
-                                }
+                                    AddVertexAttribute(ref texCoordList, vertexList.Count, readTexCoordList, texIndex,
+                                        Vector3.zero);
                             }
                         }
 
@@ -548,56 +510,43 @@ namespace Obj2Tiles.Stages.Model
                     }
                     else if (string.Equals(firstPart, "g"))
                     {
-                        string groupName = string.Join(" ", lineSplit, 1, lineSplit.Length - 1);
-                        currentGroup = groupName;
+                        currentGroup = ObjStatement.Argument(line);
                     }
                     else if (string.Equals(firstPart, "o"))
                     {
-                        string objectName = string.Join(" ", lineSplit, 1, lineSplit.Length - 1);
-                        currentObject = objectName;
+                        currentObject = ObjStatement.Argument(line);
                     }
                     else if (string.Equals(firstPart, "mtllib"))
                     {
-                        string materialLibraryPath = string.Join(" ", lineSplit, 1, lineSplit.Length - 1);
-                        materialLibraryList.Add(materialLibraryPath);
+                        materialLibraryList.Add(ObjStatement.Argument(line));
                     }
                     else if (string.Equals(firstPart, "usemtl"))
                     {
-                        string materialName = string.Join(" ", lineSplit, 1, lineSplit.Length - 1);
-                        currentMaterial = materialName;
-
-                        if (triangleIndexList.Count > 0)
-                        {
-                            subMeshIndicesList.Add(triangleIndexList.ToArray());
-                            triangleIndexList.Clear();
-                            /*
-                            if (subMeshMaterialList.Count != subMeshIndicesList.Count)
-                            {
-                                subMeshMaterialList.Add("none");
-                            }*/
-                        }
-
-                        subMeshMaterialList.Add(materialName);
+                        CloseSubMesh();
+                        currentMaterial = ObjStatement.Argument(line);
                     }
                 }
             }
 
-            if (triangleIndexList.Count > 0)
+            CloseSubMesh();
+
+            // The faces read since the last usemtl make a sub-mesh of the material they were read with: a sub-mesh
+            // and its material are recorded together, so faces before the first usemtl (no material), a usemtl
+            // without faces (Issue #54) or two usemtl in a row never shift the names onto other sub-meshes.
+            void CloseSubMesh()
             {
+                if (triangleIndexList.Count == 0)
+                    return;
+
                 subMeshIndicesList.Add(triangleIndexList.ToArray());
+                subMeshMaterialList.Add(currentMaterial);
                 triangleIndexList.Clear();
             }
 
-            // Fix Issue #54: Remove orphan material entries that have no corresponding
-            // index arrays. This happens when a trailing 'usemtl' appears without
-            // subsequent faces, causing a mismatch between SubMeshMaterials and
-            // SubMeshIndices that crashes WriteFile.
-            while (subMeshMaterialList.Count > subMeshIndicesList.Count)
-                subMeshMaterialList.RemoveAt(subMeshMaterialList.Count - 1);
-
             int subMeshCount = subMeshIndicesList.Count;
-            bool hasNormals = (readNormalList != null);
-            bool hasTexCoords = (readTexCoordList != null);
+            // An attribute read after the last face is given to no vertex.
+            bool hasNormals = (normalList != null);
+            bool hasTexCoords = (texCoordList != null);
             bool hasColors = (colorList != null);
             int vertexCount = vertexList.Count;
             var processedVertexList = new List<Vector3d>(vertexCount);
@@ -672,7 +621,7 @@ namespace Obj2Tiles.Stages.Model
             }
 
             subMeshIndices = processedIndices.ToArray();
-            subMeshMaterials = subMeshMaterialList.Any() ? subMeshMaterialList.ToArray() : null;
+            subMeshMaterials = subMeshMaterialList.Any(name => name != null) ? subMeshMaterialList.ToArray() : null;
             materialLibraries = materialLibraryList.Any() ? materialLibraryList.ToArray() : null;
             Bounds = new Box3(minX, minY, minZ, maxX, maxY, maxZ);
         }
@@ -894,7 +843,7 @@ namespace Obj2Tiles.Stages.Model
             }
         }
 
-        private static void WriteSubMeshes(TextWriter writer, int[][] subMeshIndices, string[]? subMeshMaterials,
+        private static void WriteSubMeshes(TextWriter writer, int[][] subMeshIndices, string?[]? subMeshMaterials,
             int[] posIndexMap, int[]? texIndexMap, int[]? normalIndexMap, bool hasTexCoords, bool hasNormals)
         {
             for (int subMeshIndex = 0; subMeshIndex < subMeshIndices.Length; subMeshIndex++)
@@ -904,9 +853,9 @@ namespace Obj2Tiles.Stages.Model
                 writer.WriteLine();
                 writer.WriteLine("# Sub-mesh {0}", (subMeshIndex + 1));
 
-                if (subMeshMaterials != null)
+                // A sub-mesh without material can only be the first: it is written before any usemtl.
+                if (subMeshMaterials?[subMeshIndex] is { } materialName)
                 {
-                    string materialName = subMeshMaterials[subMeshIndex];
                     writer.Write("usemtl ");
                     writer.WriteLine(materialName);
                 }
@@ -953,6 +902,18 @@ namespace Obj2Tiles.Stages.Model
                 writer.Write('/');
                 writer.Write(normalIndexMap![originalIndex] + 1);
             }
+        }
+
+        private static readonly Vector4 White = new Vector4(1f, 1f, 1f, 1f);
+
+        // Adds to attributes (made on first use) the attribute of the vertex number vertexCount: read[index], or
+        // fallback for a vertex that gives none, after giving fallback to the earlier vertices it lacks.
+        private static void AddVertexAttribute<T>(ref List<T>? attributes, int vertexCount, List<T> read, int index,
+            T fallback)
+        {
+            attributes ??= new List<T>(VertexInitialCapacity);
+            attributes.PadTo(vertexCount - 1, fallback);
+            attributes.Add(index >= 0 && index < read.Count ? read[index] : fallback);
         }
 
         private static int ShiftIndex(int value, int count)

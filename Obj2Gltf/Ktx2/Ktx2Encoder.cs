@@ -228,6 +228,7 @@ namespace SilentWave.Obj2Gltf.Ktx2
             try
             {
                 using var image = Image.Load<Rgba32>(inputImagePath);
+                AlignToBlocks(image);
                 var width = image.Width;
                 var height = image.Height;
                 var hasAlpha = HasAlpha(image);
@@ -348,6 +349,34 @@ namespace SilentWave.Obj2Gltf.Ktx2
                     Gate.Release();
                 }
             }
+        }
+
+        /// <summary>
+        /// The size nearest to <paramref name="size"/> that is a whole number of 4x4 blocks (at least one).
+        /// </summary>
+        private static int BlockAlignedSize(int size) => Math.Max(BlockSize, (size + BlockSize / 2) / BlockSize * BlockSize);
+
+        private const int BlockSize = 4;
+
+        // KHR_texture_basisu requires the width and height of a KTX2 image to be multiples of 4: the GPU formats
+        // Basis Universal transcodes to (BC1-7, ETC, ASTC) are made of 4x4 blocks, and WebGL refuses a BC (S3TC)
+        // texture whose size is not a multiple of 4 (INVALID_OPERATION), so viewers show it black. An image of
+        // another size is stretched to the nearest aligned size: the texture coordinates are fractions of the
+        // image, so they still address the same texels (padding would move them). Every mip level of an aligned
+        // image is then valid too, as WebGL checks the level's size shifted back to level 0.
+        private static void AlignToBlocks(Image<Rgba32> image)
+        {
+            var width = BlockAlignedSize(image.Width);
+            var height = BlockAlignedSize(image.Height);
+            if (width == image.Width && height == image.Height)
+                return;
+
+            image.Mutate(ctx => ctx.Resize(new ResizeOptions
+            {
+                Size = new Size(width, height),
+                Sampler = KnownResamplers.Lanczos3,
+                Mode = ResizeMode.Stretch
+            }));
         }
 
         // Encode one tiny texture to force libktx's lazy, non-thread-safe Basis encoder init to run

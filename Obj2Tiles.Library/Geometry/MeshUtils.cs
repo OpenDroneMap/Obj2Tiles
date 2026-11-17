@@ -21,9 +21,11 @@ public class MeshUtils
         var textureVertices = new List<Vertex2>();
         var facesT = new List<FaceT>();
         var faces = new List<Face>();
+        // The material of each face of faces (a face without texture coordinates keeps it in a textured model).
+        var faceMaterials = new List<int>();
         var materials = new List<Material>();
         var materialsDict = new Dictionary<string, int>();
-        var currentMaterial = string.Empty;
+        var currentMaterial = NoMaterial;
         var deps = new List<string>();
 
         while (true)
@@ -47,6 +49,8 @@ public class MeshUtils
 
                     if (segs.Length >= 7)
                     {
+                        // A vertex without a colour in a model with vertex colours is white, as in the decimation.
+                        vertexColors.PadTo(vertices.Count - 1, White);
                         vertexColors.Add(new RGB(
                             double.Parse(segs[4], CultureInfo.InvariantCulture),
                             double.Parse(segs[5], CultureInfo.InvariantCulture),
@@ -78,12 +82,12 @@ public class MeshUtils
                 case "vn" when segs.Length >= 4:
                     // Skipping normals (recognized but not used)
                     break;
-                case "usemtl" when segs.Length == 2:
+                case "usemtl" when segs.Length >= 2:
                 {
-                    if (!materialsDict.ContainsKey(segs[1]))
-                        throw new Exception($"Material {segs[1]} not found");
+                    var materialName = ObjStatement.Argument(line);
+                    if (!materialsDict.TryGetValue(materialName, out currentMaterial))
+                        throw new Exception($"Material {materialName} not found");
 
-                    currentMaterial = segs[1];
                     break;
                 }
                 case "f" when segs.Length == 4:
@@ -108,12 +112,6 @@ public class MeshUtils
                         var vt2 = int.Parse(second[1]);
                         var vt3 = int.Parse(third[1]);
 
-                        var materialIndex = 0;
-                        if (currentMaterial != string.Empty)
-                        {
-                            materialIndex = materialsDict[currentMaterial];
-                        }
-
                         var faceT = new FaceT(
                             v1 - 1,
                             v2 - 1,
@@ -121,7 +119,7 @@ public class MeshUtils
                             vt1 - 1,
                             vt2 - 1,
                             vt3 - 1,
-                            materialIndex);
+                            currentMaterial);
 
                         facesT.Add(faceT);
                     }
@@ -133,6 +131,7 @@ public class MeshUtils
                             v3 - 1);
 
                         faces.Add(face);
+                        faceMaterials.Add(currentMaterial);
                     }
 
                     break;
@@ -174,15 +173,12 @@ public class MeshUtils
                             var ft1 = int.Parse(faceVerts[fi][1]) - 1;
                             var ft2 = int.Parse(faceVerts[fi + 1][1]) - 1;
 
-                            var materialIndex = 0;
-                            if (currentMaterial != string.Empty)
-                                materialIndex = materialsDict[currentMaterial];
-
-                            facesT.Add(new FaceT(fv0, fv1, fv2, ft0, ft1, ft2, materialIndex));
+                            facesT.Add(new FaceT(fv0, fv1, fv2, ft0, ft1, ft2, currentMaterial));
                         }
                         else
                         {
                             faces.Add(new Face(fv0, fv1, fv2));
+                            faceMaterials.Add(currentMaterial);
                         }
                     }
 
@@ -190,7 +186,7 @@ public class MeshUtils
                 }
                 case "mtllib" when segs.Length >= 2:
                 {
-                    var mtlFileName = string.Join(" ", segs, 1, segs.Length - 1);
+                    var mtlFileName = ObjStatement.Argument(line);
                     var mtlFilePath = Path.Combine(Path.GetDirectoryName(fileName) ?? string.Empty, mtlFileName);
 
                     var mats = Material.ReadMtl(mtlFilePath, out var mtlDeps, fileName, ignoreNormalMaps);
@@ -218,19 +214,61 @@ public class MeshUtils
 
         dependencies = deps.ToArray();
 
-        if (vertexColors.Count > 0 && vertexColors.Count != vertices.Count)
-            throw new InvalidDataException(
-                $"Vertex color count ({vertexColors.Count}) does not match vertex count ({vertices.Count}). " +
-                "All vertices must have colors or none.");
+        if (vertexColors.Count > 0)
+            vertexColors.PadTo(vertices.Count, White);
 
         var colors = vertexColors.Count > 0 ? vertexColors : null;
 
         // The colour textures of a model are brought to 8 bits together (see TexturesCache.AddModel).
         TexturesCache.AddModel(materials.Select(m => m.Texture).OfType<string>());
 
-        return textureVertices.Count != 0
-            ? new MeshT(vertices, textureVertices, facesT, materials, colors)
-            : new Mesh(vertices, faces, colors);
+        // Texture coordinates without a material have no texture to map: the model is untextured.
+        if (textureVertices.Count == 0 || materials.Count == 0)
+            return new Mesh(vertices, faces.Concat(facesT.Select(f => new Face(f.IndexA, f.IndexB, f.IndexC))),
+                colors);
+
+        // A textured model can also have faces without texture coordinates (an untextured part with its own
+        // material). They keep their material and map to one shared texture coordinate, as the decimated levels
+        // give them, so that the finest level keeps them too.
+        if (faces.Count > 0)
+        {
+            var noTexture = textureVertices.AddIndex(new Vertex2(0, 0));
+            for (var i = 0; i < faces.Count; i++)
+                facesT.Add(new FaceT(faces[i].IndexA, faces[i].IndexB, faces[i].IndexC,
+                    noTexture, noTexture, noTexture, faceMaterials[i]));
+        }
+
+        // Faces before the first usemtl have no material: they get the default one, as the glTF conversion gives
+        // them, not the first material of the MTL (the texture of another part).
+        int? defaultMaterial = null;
+        foreach (var face in facesT)
+        {
+            if (face.MaterialIndex == NoMaterial)
+                face.MaterialIndex = defaultMaterial ??= DefaultMaterialIndex(materials, materialsDict);
+        }
+
+        return new MeshT(vertices, textureVertices, facesT, materials, colors);
+    }
+
+    private static readonly RGB White = new(1, 1, 1);
+
+    private const int NoMaterial = -1;
+
+    /// <summary>
+    /// The name of the material of faces without usemtl: the name the glTF conversion gives them too.
+    /// </summary>
+    public const string DefaultMaterialName = "default";
+
+    // The index of the material named DefaultMaterialName, added (without colours or texture) if the MTL has none.
+    private static int DefaultMaterialIndex(List<Material> materials, Dictionary<string, int> materialsDict)
+    {
+        if (!materialsDict.TryGetValue(DefaultMaterialName, out var index))
+        {
+            index = materials.AddIndex(new Material(DefaultMaterialName));
+            materialsDict.Add(DefaultMaterialName, index);
+        }
+
+        return index;
     }
 
     #region Splitters
