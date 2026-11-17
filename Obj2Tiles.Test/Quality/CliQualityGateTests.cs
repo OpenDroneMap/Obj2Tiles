@@ -35,9 +35,9 @@ public class CliQualityGateTests
 
     /// <summary>
     /// Executes the CLI exactly like a user would, then runs the full gate on the output.
-    /// Shared between the PICT matrix and the curated real-world cases.
+    /// Shared between the PICT matrix and the curated real-world cases. Returns the output path.
     /// </summary>
-    public static void RunValidateAndAssert(
+    public static string RunValidateAndAssert(
         string caseId, QualityDataset dataset, IEnumerable<string> cliArgs, QualityExpectations expected)
     {
         var outBase = CliHarness.FreshOutputFolder(caseId);
@@ -55,11 +55,13 @@ public class CliQualityGateTests
             case Stage.Decimation:
             case Stage.Splitting:
                 ExpectIntermediateObjOutput(caseId, outPath);
-                return;
+                break;
             default:
                 ExpectTilingOutput(caseId, outBase, outPath, expected, run);
                 break;
         }
+
+        return outPath;
     }
 
     private static void ExpectIntermediateObjOutput(string caseId, string outPath)

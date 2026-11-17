@@ -457,6 +457,35 @@ public static class TilesetInspector
         return result;
     }
 
+    /// <summary>
+    /// The triangles of each material (by name) in the b3dm tiles of one folder of a tileset directory, such as
+    /// "LOD-0" for the finest level: what a level shows of each part of the model.
+    /// </summary>
+    public static Dictionary<string, int> TrianglesByMaterial(string output, string levelFolder)
+    {
+        var triangles = new Dictionary<string, int>(StringComparer.Ordinal);
+        var problems = new List<string>();
+
+        foreach (var file in Directory.GetFiles(Path.Combine(output, levelFolder), "*.b3dm"))
+        {
+            var glb = TryParseB3dm(File.ReadAllBytes(file), file, problems)
+                      ?? throw new InvalidDataException(string.Join("; ", problems));
+            var materials = glb.Json["materials"] as JArray;
+
+            foreach (var primitive in glb.Json["meshes"]?.SelectMany(m => m["primitives"] ?? new JArray()) ?? [])
+            {
+                var material = primitive["material"]?.Value<int>() is { } index
+                    ? materials?[index]?["name"]?.Value<string>() ?? $"#{index}"
+                    : "";
+                var counted = primitive["indices"] ?? primitive["attributes"]?["POSITION"];
+                var count = glb.Json["accessors"]?[counted!.Value<int>()]?["count"]?.Value<int>() ?? 0;
+                triangles[material] = triangles.GetValueOrDefault(material) + count / 3;
+            }
+        }
+
+        return triangles;
+    }
+
     // ---- b3dm / GLB framing ----------------------------------------------------------
 
     private static (JToken Json, byte[] Bin)? TryParseB3dm(byte[] data, string name, List<string> problems)
