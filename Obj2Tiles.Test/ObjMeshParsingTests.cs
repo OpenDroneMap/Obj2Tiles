@@ -312,6 +312,25 @@ public class ObjMeshParsingTests
     }
 
     [Test]
+    public void ReadFile_StatementsIndentedOrSeparatedByTabs_AreRead()
+    {
+        // ODM/WebODM write "\tmtllib model.mtl" (CRLF): the decimated LODs must keep the library, or the
+        // splitting stage that reads them finds no material for their usemtl.
+        var mesh = ReadText(
+            "\tmtllib model.mtl\r\n" +
+            "v\t0 0 0\r\n  v 1\t0 0\r\n\tv 0 1 0\r\n" +
+            "   \r\n\t# an indented comment\r\n" +
+            "\tusemtl A\r\n\tf\t1 2 3\r\n");
+
+        mesh.MaterialLibraries.ShouldBe(new[] { "model.mtl" });
+        mesh.Vertices!.Length.ShouldBe(3);
+        mesh.Vertices[1].x.ShouldBe(1);
+        mesh.SubMeshMaterials.ShouldBe(new[] { "A" });
+
+        RoundTrip(mesh).MaterialLibraries.ShouldBe(new[] { "model.mtl" });
+    }
+
+    [Test]
     public void ReadFile_MaterialNameWithSpaces_IsTheRestOfTheLine()
     {
         var mesh = ReadText(

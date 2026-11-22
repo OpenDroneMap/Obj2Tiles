@@ -326,10 +326,10 @@ namespace Obj2Tiles.Stages.Model
                 string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
-                    if (line.Length == 0 || line[0] == '#')
+                    string[] lineSplit = ObjStatement.Tokens(line);
+                    if (lineSplit.Length == 0 || lineSplit[0][0] == '#')
                         continue;
 
-                    string[] lineSplit = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
                     string firstPart = lineSplit[0];
                     if (string.Equals(firstPart, "v"))
                     {

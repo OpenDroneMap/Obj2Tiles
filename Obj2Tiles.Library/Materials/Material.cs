@@ -172,7 +172,7 @@ public class Material : ICloneable
                 continue;
 
             var (keyword, remainder) = ObjStatement.Split(line);
-            var parts = remainder.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var parts = ObjStatement.Tokens(remainder);
 
             switch (keyword)
             {

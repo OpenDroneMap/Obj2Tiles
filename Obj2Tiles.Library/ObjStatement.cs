@@ -24,6 +24,14 @@ public static class ObjStatement
     }
 
     /// <summary>
+    /// The words of the statement <paramref name="line"/>: OBJ and MTL separate them by spaces or tabs, and
+    /// exporters (ODM among them) indent statements with a tab, so a keyword is found only when both separate
+    /// words. A blank line has none.
+    /// </summary>
+    public static string[] Tokens(string line) =>
+        line.Split(Separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>
     /// The argument of the statement <paramref name="line"/>: see <see cref="Split"/>.
     /// </summary>
     public static string Argument(string line) => Split(line).Argument;

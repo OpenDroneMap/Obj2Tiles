@@ -34,10 +34,9 @@ public class MeshUtils
 
             if (line == null) break;
 
-            if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+            var segs = ObjStatement.Tokens(line);
+            if (segs.Length == 0 || segs[0][0] == '#')
                 continue;
-
-            var segs = line.TrimStart().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             switch (segs[0])
             {
